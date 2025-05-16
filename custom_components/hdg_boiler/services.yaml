@@ -1,0 +1,39 @@
+set_node_value:
+  name: Set HDG Boiler Node Value
+  description: >
+    Sets a specific numeric value on the HDG boiler for a configurable node.
+    The `node_id` must correspond to an entity defined as a 'number' platform with write access
+    in the integration's `SENSOR_DEFINITIONS`. Validation (type, range, step) is based
+    on this definition before sending the command to the boiler.
+    Example settable Node IDs: '6022', '6023', '6024', '6026', '6047', '6049'.
+  fields:
+    node_id:
+      name: Node ID
+      description: "The base ID of the HDG Node to set (e.g., '6022'). Must be defined as a writable number entity in SENSOR_DEFINITIONS."
+      required: true
+      example: "6022"
+      selector:
+        text:
+    value:
+      name: Value
+      description: "The value to send to the node. It will be validated against the entity's configured type, range, and step from SENSOR_DEFINITIONS."
+      required: true
+      example: "10"
+      selector:
+        text:
+get_node_value:
+  name: Get HDG Boiler Node Value
+  description: >
+    Retrieves the current raw string value of a specific node from the integration's internal data cache.
+    This cache is updated by polling the HDG boiler or after a successful 'set_node_value' call.
+    The returned value is the raw string as received from the boiler, before any type conversion applied by sensor or number entities.
+    This service can be used to query any node ID managed by the integration.
+    Example Node IDs: '22003' (Kesseltemperatur Ist), '6022' (HK1 Soll Normal).
+  fields:
+    node_id:
+      name: Node ID
+      description: "The base ID of the HDG Node to retrieve (e.g., '22003'). Numeric inputs will be treated as strings."
+      required: true
+      example: "6022"
+      selector:
+        text:

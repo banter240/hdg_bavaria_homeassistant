@@ -1,0 +1,246 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HDG Bavaria Boiler Setup",
+        "description": "Enter the IP address or hostname of your HDG Boiler. This integration will poll data in predefined groups with specific scan intervals.",
+        "data": {
+          "host_ip": "Boiler's Host IP Address or Hostname",
+          "device_alias": "Alias for the Boiler (optional, for device & entity names)",
+          "language": "Preferred Language (for future use)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the HDG Boiler. Please check the IP address and ensure the boiler is reachable and the API is enabled.",
+      "unknown": "An unknown error occurred during setup.",
+      "alias_already_exists": "This device alias is already in use by another HDG Boiler. Please choose a unique alias if you provide one."
+    },
+    "abort": {
+      "already_configured": "This HDG Boiler (based on host IP) is already configured.",
+      "host_ip_required": "The boiler's IP address or hostname is required."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HDG Bavaria Boiler Options",
+        "description": "Adjust scan intervals for data polling. Default values are chosen to balance data freshness with system load on the HDG boiler. \n\nGroup Realtime Core: Default {default_realtime_core}s\nGroup General Status: Default {default_status_general}s\nGroup Config/Counters 1: Default {default_config_counters_1}s\nGroup Config/Counters 2: Default {default_config_counters_2}s\nGroup Config/Counters 3: Default {default_config_counters_3}s",
+        "data": {
+          "scan_interval_realtime_core": "Scan Interval: Realtime Core Values (seconds)",
+          "scan_interval_status_general": "Scan Interval: General Status Values (seconds)",
+          "scan_interval_config_counters_1": "Scan Interval: Config/Counters Part 1 (seconds)",
+          "scan_interval_config_counters_2": "Scan Interval: Config/Counters Part 2 (seconds)",
+          "scan_interval_config_counters_3": "Scan Interval: Config/Counters Part 3 (seconds)",
+          "enable_debug_logging": "Enable Detailed Timestamp Logging (for troubleshooting, creates large logs)"
+        }
+      }
+    },
+    "error": {},
+    "abort": {}
+  },
+  "entity": {
+    "sensor": {
+      "aussentemperatur": { "name": "Outside Temperature" },
+      "brennraumtemperatur_soll": { "name": "Target Combustion Chamber Temp." },
+      "kessel_abgastemperatur_ist": { "name": "Boiler Flue Gas Temp. Actual" },
+      "kessel_restsauerstoff_ist": { "name": "Boiler Residual Oxygen Actual" },
+      "kesseltemperatur_ist": { "name": "Boiler Temperature Actual" },
+      "kessel_rucklauftemperatur_ist": { "name": "Boiler Return Temperature Actual" },
+      "materialmenge_aktuell": { "name": "Current Material Quantity" },
+      "primarluftklappe_ist": { "name": "Primary Air Flap Actual" },
+      "sekundarluftklappe_ist": { "name": "Secondary Air Flap Actual" },
+      "kessel_status": { "name": "Boiler Status" },
+      "primarluftklappe_soll": { "name": "Primary Air Flap Target" },
+      "kessel_externe_anforderung": { "name": "Boiler External Demand %" },
+      "kesselvorlauf_solltemperatur": { "name": "Boiler Flow Target Temperature" },
+      "kesselrucklauf_solltemperatur": { "name": "Boiler Return Target Temperature" },
+      "kesselleistung_ist": { "name": "Boiler Output Actual" },
+      "kessel_saugzuggeblase_ist": { "name": "Boiler Flue Gas Fan Actual" },
+      "kessel_unterdruck_ist": { "name": "Boiler Negative Pressure Actual" },
+      "sekundarluftklappe_soll": { "name": "Secondary Air Flap Target" },
+      "kessel_rucklaufmischer": { "name": "Boiler Return Mixer %" },
+      "abgasleitwert_ist": { "name": "Flue Gas Conductance Actual" },
+      "kessel_restsauerstoff_korr": { "name": "Boiler Residual Oxygen Corr. %" },
+      "abgasleitwert_soll": { "name": "Flue Gas Conductance Target" },
+      "kessel_o2_sollwert": { "name": "Boiler O2 Target Value" },
+      "kessel_nachlegemenge": { "name": "Boiler Refill Quantity %" },
+      "kessel_nachlegebedarf": { "name": "Boiler Refill Demand %" },
+      "stillstandszeit_soll": { "name": "Target Idle Time" },
+      "kessel_stillstandszeit": { "name": "Boiler Idle Time" },
+      "angeforderte_temperatur_abnehmer": { "name": "Requested Temperature Consumers" },
+      "puffer_temperatur_oben": { "name": "Buffer Temperature Top" },
+      "puffer_temperatur_mitte": { "name": "Buffer Temperature Middle" },
+      "puffer_temperatur_unten": { "name": "Buffer Temperature Bottom" },
+      "puffer_ladezustand": { "name": "Buffer Charge State" },
+      "hk1_vorlauftemperatur_ist": { "name": "HC1 Flow Temperature Actual" },
+      "hk1_vorlauftemperatur_soll": { "name": "HC1 Flow Temperature Target" },
+      "kessel_haupt_betriebsart": { "name": "Boiler Main Operating Mode" },
+      "kessel_betriebsphase_text": { "name": "Boiler Operating Phase" },
+      "kessel_ausbrandgrund": { "name": "Boiler Burn-out Reason" },
+      "puffer_status": { "name": "Buffer Status" },
+      "hk1_mischer_status_text": { "name": "HC1 Mixer Status" },
+      "hk1_pumpe_status_text": { "name": "HC1 Pump Status" },
+      "hk1_aktuelle_betriebsart": { "name": "HC1 Current Operating Mode" },
+      "sprache": { "name": "Language" },
+      "bauart": { "name": "System Type" },
+      "kesseltyp_kennung": { "name": "Boiler Type ID" },
+      "stromnetz": { "name": "Mains Electricity" },
+      "brennstoff": { "name": "Fuel Type" },
+      "automatische_zeitumstellung": { "name": "Automatic Time Adjustment" },
+      "einstiegsbild": { "name": "Initial Screen" },
+      "holzart": { "name": "Wood Type" },
+      "holzfeuchte": { "name": "Wood Moisture" },
+      "automatische_zundung_aktivieren": { "name": "Activate Automatic Ignition" },
+      "auto_zundung_webcontrol_erlauben": { "name": "Allow Auto Ignition via WebControl" },
+      "objektwarmebedarf": { "name": "Object Heating Demand" },
+      "minimale_nachlegemenge": { "name": "Minimum Refill Quantity" },
+      "nachlegeschritt_text": { "name": "Refill Step (Text)" },
+      "nachlegeschritt": { "name": "Refill Step" },
+      "nachlege_benachrichtigung": { "name": "Refill Notification" },
+      "offset_aussenfuhler": { "name": "Outside Sensor Offset" },
+      "kesseltemperatur_sollwert_param": { "name": "Boiler Target Temperature (Param)" },
+      "frostschutzprogramm_aktivieren": { "name": "Activate Frost Protection Program" },
+      "frostschutz_zirkulation_at_kleiner": { "name": "Frost Protection Circulation OT lower" },
+      "frostschutz_rlt_kleiner": { "name": "Frost Protection Return Temp lower" },
+      "frostschutz_rlt_groesser": { "name": "Frost Protection Return Temp greater" },
+      "offset_kesseltemperatur_soll_maximum": { "name": "Offset Boiler Target Temp Max" },
+      "anzunden_zeitdauer": { "name": "Ignition Duration" },
+      "anzunden_primarluft": { "name": "Ignition Primary Air" },
+      "anzunden_sekundarluft": { "name": "Ignition Secondary Air" },
+      "anheizen_zeitdauer": { "name": "Heating Up Duration" },
+      "auto_zundung_einschaltverzogerung": { "name": "Auto Ignition Switch-on Delay" },
+      "ausbrennen_primarluft": { "name": "Burn Out Primary Air" },
+      "ausbrennen_sekundarluft": { "name": "Burn Out Secondary Air" },
+      "ausbrennen_bezugsgrosse": { "name": "Burn Out Reference Point" },
+      "festwertvorgabe_primarluft": { "name": "Fixed Value Primary Air" },
+      "festwertvorgabe_sekundarluft": { "name": "Fixed Value Secondary Air" },
+      "pid3_o2_sekundarluft_minimum": { "name": "PID3 O2 Secondary Air Minimum" },
+      "pid3_o2_sekundarluft_maximum": { "name": "PID3 O2 Secondary Air Maximum" },
+      "rucklaufmischer_laufzeit_gesamt": { "name": "Mixer Total Runtime" },
+      "pid_sollwert_rucklauf_spreizung_minimum": {
+        "name": "PID Target Return Temp. Diff. Min"
+      },
+      "restwarmenutzung_puffer_bezug": { "name": "Residual Heat Buffer Reference" },
+      "freigabe_kesseltemperatur": { "name": "Enable Boiler Temperature" },
+      "freigabe_abgastemperatur": { "name": "Enable Flue Gas Temperature" },
+      "puffer_1_bezeichnung": { "name": "Buffer 1 Label" },
+      "puffer_1_ladung_abbruch_temperatur_oben": { "name": "Buffer 1 Charge Stop Temp Top" },
+      "puffer_1_fuhler_quelle": { "name": "Buffer 1 Sensor Source" },
+      "puffer_1_energieberechnung_aktivieren": { "name": "Buffer 1 Activate Energy Calc." },
+      "puffer_1_temperatur_kalt": { "name": "Buffer 1 Temperature Cold" },
+      "puffer_1_temperatur_warm": { "name": "Buffer 1 Temperature Warm" },
+      "puffer_1_nachlegemenge_optimieren": { "name": "Buffer 1 Optimize Refill Quantity" },
+      "puffer_1_grosse": { "name": "Buffer 1 Size" },
+      "puffer_1_umladesystem_aktivieren": { "name": "Buffer 1 Activate Reloading System" },
+      "puffer_1_beladeventil_aktivieren": { "name": "Buffer 1 Activate Load Valve" },
+      "puffer_1_zonenventil_aktivieren": { "name": "Buffer 1 Activate Zone Valve" },
+      "puffer_1_y2_ventil_aktivieren": { "name": "Buffer 1 Activate Y2 Valve" },
+      "puffer_art": { "name": "Buffer Type" },
+      "heizkreis_1_system": { "name": "Heating Circuit 1 System" },
+      "hk1_parallelverschiebung": { "name": "HC1 Parallel Shift" },
+      "hk1_raumeinflussfaktor": { "name": "HC1 Room Influence Factor" },
+      "hk1_vorlauftemperatur_minimum": { "name": "HC1 Flow Temperature Minimum" },
+      "hk1_vorlauftemperatur_maximum": { "name": "HC1 Flow Temperature Maximum" },
+      "hk1_raumeinheit_status": { "name": "HC1 Room Unit Status" },
+      "hk1_offset_raumfuhler": { "name": "HC1 Room Sensor Offset" },
+      "hk1_warmequelle": { "name": "HC1 Heat Source" },
+      "hk1_mischerlaufzeit_maximum": { "name": "HC1 Mixer Max Runtime" },
+      "hk1_pumpe_ein_freigabetemperatur": { "name": "HC1 Pump On Enable Temperature" },
+      "hk1_frostschutz_temp": { "name": "HC1 Frost Protection Temp" },
+      "heizgrenze_sommer": { "name": "Heating Limit Summer" },
+      "heizgrenze_winter": { "name": "Heating Limit Winter" },
+      "hk1_restwarme_aufnehmen": { "name": "HC1 Use Residual Heat" },
+      "software_version_touch": { "name": "Software Version (Touch)" },
+      "anlagenbezeichnung_sn": { "name": "System Label/SN" },
+      "mac_adresse": { "name": "MAC Address" },
+      "anlage_betriebsart": { "name": "System Operating Mode" },
+      "anlage_status_text": { "name": "System Status" },
+      "software_version_fa": { "name": "Software Version FA" },
+      "extra_version_info": { "name": "Extra Version Info" },
+      "hydraulikschema_nummer": { "name": "Hydraulic Diagram Number" },
+      "kessel_betriebsstunden": { "name": "Boiler Operating Hours" },
+      "laufzeit_wt_reinigung": { "name": "HE Cleaning Runtime" },
+      "laufzeit_entaschung": { "name": "De-ashing Runtime" },
+      "laufzeit_hauptgeblase": { "name": "Main Fan Runtime" },
+      "laufzeit_zundgeblase": { "name": "Ignition Fan Runtime" },
+      "anzahl_rostkippungen": { "name": "Number of Grate Tilts" },
+      "kessel_restlaufzeit_wartung": { "name": "Boiler Remaining Maintenance Time" },
+      "kessel_wirkungsgrad": { "name": "Boiler Efficiency" },
+      "betriebsstunden_rostmotor": { "name": "Grate Motor Operating Hours" },
+      "betriebsstunden_stokerschnecke": { "name": "Stoker Auger Operating Hours" },
+      "betriebsstunden_ascheschnecke": { "name": "Ash Auger Operating Hours" },
+      "restlaufzeit_schornsteinfeger": { "name": "Chimney Sweep Remaining Time" },
+      "kessel_typ_info_leer": { "name": "Boiler Type Info" },
+      "primarluft_korrektur_o2": { "name": "Primary Air Correction O2" },
+      "kessel_nachlegezeitpunkt_2": { "name": "Boiler Refill Timepoint" },
+      "kessel_energieverbrauch_tag_gesamt": { "name": "Boiler Energy Consumption Day/Total" },
+      "kessel_nachlegen_anzeige_text": { "name": "Boiler Refill Indication" },
+      "zeit_kesseluberhitzung_10_abbrande_std": {
+        "name": "Boiler Overheating Time 10 Cycles (Hrs)"
+      },
+      "zeit_kesseluberhitzung_10_abbrande_prozent": {
+        "name": "Boiler Overheating Time 10 Cycles (%)"
+      },
+      "zeit_kesseluberhitzung_gesamt_std": { "name": "Boiler Overheating Time Total (Hrs)" },
+      "zeit_kesseluberhitzung_gesamt_prozent": { "name": "Boiler Overheating Time Total (%)" },
+      "kessel_warmemenge_gesamt": { "name": "Boiler Total Heat Output" },
+      "puffer_soll_oben": { "name": "Buffer Target Top" },
+      "puffer_rucklauf_soll": { "name": "Buffer Target Return" },
+      "puffer_energie_max": { "name": "Buffer Energy Max" },
+      "puffer_energie_aktuell": { "name": "Buffer Energy Current" },
+      "puffer_ladezustand_alt": { "name": "Buffer Charge State Alt." },
+      "puffer_energie_gesamt_zahler": { "name": "Buffer Energy Total (Counter)" },
+      "puffer_energie_ist": { "name": "Buffer Energy Actual" },
+      "puffer_energie_aufnehmbar": { "name": "Buffer Energy Receivable" },
+      "puffer_vorlauf_extern": { "name": "Buffer Flow External" },
+      "puffer_rucklauf_extern": { "name": "Buffer Return External" },
+      "hk1_temp_quelle_status_wert": { "name": "HC1 Temp Source Status Value" }
+    },
+    "number": {
+      "hk1_soll_normal": { "name": "HC1 Target Normal" },
+      "hk1_parallelverschiebung": { "name": "HC1 Parallel Shift" },
+      "hk1_steilheit": { "name": "HC1 Heating Curve Slope" },
+      "hk1_pumpe_aus_aussentemperatur": { "name": "HC1 Pump Off Outside Temperature" },
+      "hk1_soll_absenk": { "name": "HC1 Target Reduced" },
+      "hk1_eco_absenken_aus_aussentemperatur": {
+        "name": "HC1 Eco Reduced Off Outside Temp"
+      }
+    }
+  },
+  "services": {
+    "set_node_value": {
+      "name": "Set HDG Boiler Node Value",
+      "description": "Sets a specific node value on the HDG boiler. The node_id must be configured in the integration's internal HDG_NODE_SETTER_CONFIG for validation.",
+      "fields": {
+        "node_id": {
+          "name": "Node ID",
+          "description": "The ID of the HDG Node to set (e.g., '6022')."
+        },
+        "value": {
+          "name": "Value",
+          "description": "The value to send to the node."
+        }
+      }
+    },
+    "get_node_value": {
+      "name": "Get HDG Boiler Node Value",
+      "description": "Retrieves the current value of a specific node from the integration's internal state.",
+      "fields": {
+        "node_id": {
+          "name": "Node ID",
+          "description": "The ID of the HDG Node to retrieve (e.g., '22003')."
+        }
+      }
+    }
+  },
+  "selector": {
+    "language": {
+      "options": {
+        "system": "System Default",
+        "de": "German",
+        "en": "English"
+      }
+    }
+  }
+}

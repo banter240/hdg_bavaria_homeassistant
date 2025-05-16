@@ -1,0 +1,252 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HDG Bavaria Kessel Einrichtung",
+        "description": "Geben Sie die IP-Adresse oder den Hostnamen Ihres HDG Kessels ein. Diese Integration fragt Daten in vordefinierten Gruppen mit spezifischen Scan-Intervallen ab.",
+        "data": {
+          "host_ip": "Host IP-Adresse oder Hostname des Kessels",
+          "device_alias": "Alias für den Kessel (optional, für Geräte- & Entitätsnamen)",
+          "language": "Bevorzugte Sprache (für zukünftige Nutzung)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zum HDG Kessel fehlgeschlagen. Bitte überprüfen Sie die IP-Adresse und stellen Sie sicher, dass der Kessel erreichbar ist und die API aktiviert wurde.",
+      "unknown": "Ein unbekannter Fehler ist während der Einrichtung aufgetreten.",
+      "alias_already_exists": "Dieser Geräte-Alias wird bereits von einem anderen HDG Kessel verwendet. Bitte wählen Sie einen eindeutigen Alias, falls Sie einen angeben."
+    },
+    "abort": {
+      "already_configured": "Dieser HDG Kessel (basierend auf der Host-IP) ist bereits konfiguriert.",
+      "host_ip_required": "Die IP-Adresse oder der Hostname des Kessels ist erforderlich."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HDG Kessel Optionen",
+        "description": "Passen Sie die Scan-Intervalle für die Datenabfrage an. Die Standardwerte wurden gewählt, um ein Gleichgewicht zwischen Datenaktualität und Systemlast auf dem HDG Kessel zu gewährleisten.\n\nGruppe Echtzeit-Kernwerte: Standard {default_realtime_core}s\nGruppe Status-Werte Allgemein: Standard {default_status_general}s\nGruppe Konfig/Zähler Teil 1: Standard {default_config_counters_1}s\nGruppe Konfig/Zähler Teil 2: Standard {default_config_counters_2}s\nGruppe Konfig/Zähler Teil 3: Standard {default_config_counters_3}s",
+        "data": {
+          "scan_interval_realtime_core": "Scan-Intervall: Echtzeit-Kernwerte (Sekunden)",
+          "scan_interval_status_general": "Scan-Intervall: Status-Werte Allgemein (Sekunden)",
+          "scan_interval_config_counters_1": "Scan-Intervall: Konfig/Zähler Teil 1 (Sekunden)",
+          "scan_interval_config_counters_2": "Scan-Intervall: Konfig/Zähler Teil 2 (Sekunden)",
+          "scan_interval_config_counters_3": "Scan-Intervall: Konfig/Zähler Teil 3 (Sekunden)",
+          "enable_debug_logging": "Detaillierte Zeitstempel-Protokollierung aktivieren (für Fehlersuche, erzeugt große Logs)"
+        }
+      }
+    },
+    "error": {},
+    "abort": {}
+  },
+  "entity": {
+    "sensor": {
+      "aussentemperatur": { "name": "Außentemperatur" },
+      "brennraumtemperatur_soll": { "name": "Brennraumtemperatur Soll" },
+      "kessel_abgastemperatur_ist": { "name": "Kessel Abgastemperatur Ist" },
+      "kessel_restsauerstoff_ist": { "name": "Kessel Restsauerstoff Ist" },
+      "kesseltemperatur_ist": { "name": "Kesseltemperatur Ist" },
+      "kessel_rucklauftemperatur_ist": { "name": "Kessel Rücklauftemperatur Ist" },
+      "materialmenge_aktuell": { "name": "Materialmenge Aktuell" },
+      "primarluftklappe_ist": { "name": "Primärluftklappe Ist" },
+      "sekundarluftklappe_ist": { "name": "Sekundärluftklappe Ist" },
+      "kessel_status": { "name": "Kessel Status" },
+      "primarluftklappe_soll": { "name": "Primärluftklappe Soll" },
+      "kessel_externe_anforderung": { "name": "Kessel Externe Anforderung %" },
+      "kesselvorlauf_solltemperatur": { "name": "Kesselvorlauf Solltemperatur" },
+      "kesselrucklauf_solltemperatur": { "name": "Kessel Solltemperatur Rücklauf" },
+      "kesselleistung_ist": { "name": "Kesselleistung Ist" },
+      "kessel_saugzuggeblase_ist": { "name": "Kessel Saugzuggebläse Ist" },
+      "kessel_unterdruck_ist": { "name": "Kessel Unterdruck Ist" },
+      "sekundarluftklappe_soll": { "name": "Sekundärluftklappe Soll" },
+      "kessel_rucklaufmischer": { "name": "Kessel Rücklaufmischer %" },
+      "abgasleitwert_ist": { "name": "Abgasleitwert Ist" },
+      "kessel_restsauerstoff_korr": { "name": "Kessel Restsauerstoff Korr. %" },
+      "abgasleitwert_soll": { "name": "Abgasleitwert Soll" },
+      "kessel_o2_sollwert": { "name": "Kessel O2 Sollwert" },
+      "kessel_nachlegemenge": { "name": "Kessel Nachlegemenge %" },
+      "kessel_nachlegebedarf": { "name": "Kessel Nachlegebedarf %" },
+      "stillstandszeit_soll": { "name": "Stillstandszeit Soll" },
+      "kessel_stillstandszeit": { "name": "Kessel Stillstandszeit" },
+      "angeforderte_temperatur_abnehmer": { "name": "Angeforderte Temperatur Abnehmer" },
+      "puffer_temperatur_oben": { "name": "Puffer Temperatur Oben" },
+      "puffer_temperatur_mitte": { "name": "Puffer Temperatur Mitte" },
+      "puffer_temperatur_unten": { "name": "Puffer Temperatur Unten" },
+      "puffer_ladezustand": { "name": "Puffer Ladezustand" },
+      "hk1_vorlauftemperatur_ist": { "name": "HK1 Vorlauftemperatur Ist" },
+      "hk1_vorlauftemperatur_soll": { "name": "HK1 Vorlauftemperatur Soll" },
+      "kessel_haupt_betriebsart": { "name": "Kessel Haupt-Betriebsart" },
+      "kessel_betriebsphase_text": { "name": "Kessel Betriebsphase" },
+      "kessel_ausbrandgrund": { "name": "Kessel Ausbrandgrund" },
+      "puffer_status": { "name": "Puffer Status" },
+      "hk1_mischer_status_text": { "name": "HK1 Mischer Status" },
+      "hk1_pumpe_status_text": { "name": "HK1 Pumpe Status" },
+      "hk1_aktuelle_betriebsart": { "name": "HK1 Aktuelle Betriebsart" },
+      "sprache": { "name": "Sprache" },
+      "bauart": { "name": "Bauart" },
+      "kesseltyp_kennung": { "name": "Kesseltyp Kennung" },
+      "stromnetz": { "name": "Stromnetz" },
+      "brennstoff": { "name": "Brennstoff" },
+      "automatische_zeitumstellung": { "name": "Automatische Zeitumstellung" },
+      "einstiegsbild": { "name": "Einstiegsbild" },
+      "holzart": { "name": "Holzart" },
+      "holzfeuchte": { "name": "Holzfeuchte" },
+      "automatische_zundung_aktivieren": { "name": "Automatische Zündung Aktivieren" },
+      "auto_zundung_webcontrol_erlauben": { "name": "Auto Zündung WebControl Erlauben" },
+      "objektwarmebedarf": { "name": "Objektwärmebedarf" },
+      "minimale_nachlegemenge": { "name": "Minimale Nachlegemenge" },
+      "nachlegeschritt_text": { "name": "Nachlegeschritt (Text)" },
+      "nachlegeschritt": { "name": "Nachlegeschritt" },
+      "nachlege_benachrichtigung": { "name": "Nachlege-Benachrichtigung" },
+      "offset_aussenfuhler": { "name": "Offset Außenfühler" },
+      "kesseltemperatur_sollwert_param": { "name": "Kesseltemperatur Sollwert (Param)" },
+      "frostschutzprogramm_aktivieren": { "name": "Frostschutzprogramm aktivieren" },
+      "frostschutz_zirkulation_at_kleiner": { "name": "Frostschutz Zirkulation AT kleiner" },
+      "frostschutz_rlt_kleiner": { "name": "Frostschutz RLT kleiner" },
+      "frostschutz_rlt_groesser": { "name": "Frostschutz RLT größer" },
+      "offset_kesseltemperatur_soll_maximum": {
+        "name": "Offset Kesseltemperatur Soll Maximum"
+      },
+      "anzunden_zeitdauer": { "name": "Anzünden Zeitdauer" },
+      "anzunden_primarluft": { "name": "Anzünden Primärluft" },
+      "anzunden_sekundarluft": { "name": "Anzünden Sekundärluft" },
+      "anheizen_zeitdauer": { "name": "Anheizen Zeitdauer" },
+      "auto_zundung_einschaltverzogerung": { "name": "Auto Zündung Einschaltverzögerung" },
+      "ausbrennen_primarluft": { "name": "Ausbrennen Primärluft" },
+      "ausbrennen_sekundarluft": { "name": "Ausbrennen Sekundärluft" },
+      "ausbrennen_bezugsgrosse": { "name": "Ausbrennen Bezugsgröße" },
+      "festwertvorgabe_primarluft": { "name": "Festwertvorgabe Primärluft" },
+      "festwertvorgabe_sekundarluft": { "name": "Festwertvorgabe Sekundärluft" },
+      "pid3_o2_sekundarluft_minimum": { "name": "PID3 O2 Sekundärluft Minimum" },
+      "pid3_o2_sekundarluft_maximum": { "name": "PID3 O2 Sekundärluft Maximum" },
+      "rucklaufmischer_laufzeit_gesamt": { "name": "Mischer Laufzeit Gesamt" },
+      "pid_sollwert_rucklauf_spreizung_minimum": { "name": "PID Sollwert Spreizung Minimum" },
+      "restwarmenutzung_puffer_bezug": { "name": "Restwärmenutzung Puffer Bezug" },
+      "freigabe_kesseltemperatur": { "name": "Freigabe Kesseltemperatur" },
+      "freigabe_abgastemperatur": { "name": "Freigabe Abgastemperatur" },
+      "puffer_1_bezeichnung": { "name": "Puffer 1 Bezeichnung" },
+      "puffer_1_ladung_abbruch_temperatur_oben": {
+        "name": "Puffer 1 Ladung Abbruch Temperatur Oben"
+      },
+      "puffer_1_fuhler_quelle": { "name": "Puffer 1 Fühler Quelle" },
+      "puffer_1_energieberechnung_aktivieren": {
+        "name": "Puffer 1 Energieberechnung Aktivieren"
+      },
+      "puffer_1_temperatur_kalt": { "name": "Puffer 1 Temperatur Kalt" },
+      "puffer_1_temperatur_warm": { "name": "Puffer 1 Temperatur Warm" },
+      "puffer_1_nachlegemenge_optimieren": { "name": "Puffer 1 Nachlegemenge Optimieren" },
+      "puffer_1_grosse": { "name": "Puffer 1 Größe" },
+      "puffer_1_umladesystem_aktivieren": { "name": "Puffer 1 Umladesystem Aktivieren" },
+      "puffer_1_beladeventil_aktivieren": { "name": "Puffer 1 Beladeventil Aktivieren" },
+      "puffer_1_zonenventil_aktivieren": { "name": "Puffer 1 Zonenventil Aktivieren" },
+      "puffer_1_y2_ventil_aktivieren": { "name": "Puffer 1 Y2 Ventil Aktivieren" },
+      "puffer_art": { "name": "Puffer Art" },
+      "heizkreis_1_system": { "name": "Heizkreis 1 System" },
+      "hk1_bezeichnung": { "name": "HK1 Bezeichnung" },
+      "hk1_soll_normal": { "name": "HK1 Soll Normal" },
+      "hk1_parallelverschiebung": { "name": "HK1 Parallelverschiebung" },
+      "hk1_raumeinflussfaktor": { "name": "HK1 Raumeinflussfaktor" },
+      "hk1_vorlauftemperatur_minimum": { "name": "HK1 Vorlauftemperatur Minimum" },
+      "hk1_vorlauftemperatur_maximum": { "name": "HK1 Vorlauftemperatur Maximum" },
+      "hk1_raumeinheit_status": { "name": "HK1 Raumeinheit Status" },
+      "hk1_offset_raumfuhler": { "name": "HK1 Offset Raumfühler" },
+      "hk1_warmequelle": { "name": "HK1 Wärmequelle" },
+      "hk1_mischerlaufzeit_maximum": { "name": "HK1 Mischerlaufzeit Maximum" },
+      "hk1_pumpe_ein_freigabetemperatur": { "name": "HK1 Pumpe Ein Freigabetemperatur" },
+      "hk1_frostschutz_temp": { "name": "HK1 Frostschutz Temperatur" },
+      "heizgrenze_sommer": { "name": "Heizgrenze Sommer" },
+      "heizgrenze_winter": { "name": "Heizgrenze Winter" },
+      "hk1_restwarme_aufnehmen": { "name": "HK1 Restwärme Aufnehmen" },
+      "software_version_touch": { "name": "Software Version (Touch)" },
+      "anlagenbezeichnung_sn": { "name": "Anlagenbezeichnung/SN" },
+      "mac_adresse": { "name": "MAC Adresse" },
+      "anlage_betriebsart": { "name": "Anlage Betriebsart" },
+      "anlage_status_text": { "name": "Anlage Status" },
+      "software_version_fa": { "name": "Software Version FA" },
+      "extra_version_info": { "name": "Extra Version Info" },
+      "hydraulikschema_nummer": { "name": "Hydraulikschema Nummer" },
+      "kessel_betriebsstunden": { "name": "Kessel Betriebsstunden" },
+      "laufzeit_wt_reinigung": { "name": "Laufzeit WT Reinigung" },
+      "laufzeit_entaschung": { "name": "Laufzeit Entaschung" },
+      "laufzeit_hauptgeblase": { "name": "Laufzeit Hauptgebläse" },
+      "laufzeit_zundgeblase": { "name": "Laufzeit Zündgebläse" },
+      "anzahl_rostkippungen": { "name": "Anzahl Rostkippungen" },
+      "kessel_restlaufzeit_wartung": { "name": "Kessel Restlaufzeit Wartung" },
+      "kessel_wirkungsgrad": { "name": "Kessel Wirkungsgrad" },
+      "betriebsstunden_rostmotor": { "name": "Betriebsstunden Rostmotor" },
+      "betriebsstunden_stokerschnecke": { "name": "Betriebsstunden Stokerschnecke" },
+      "betriebsstunden_ascheschnecke": { "name": "Betriebsstunden Ascheschnecke" },
+      "restlaufzeit_schornsteinfeger": { "name": "Restlaufzeit Schornsteinfeger" },
+      "kessel_typ_info_leer": { "name": "Kessel Typ Info" },
+      "primarluft_korrektur_o2": { "name": "Primärluft Korrektur O2" },
+      "kessel_nachlegezeitpunkt_2": { "name": "Kessel Nachlegezeitpunkt" },
+      "kessel_energieverbrauch_tag_gesamt": { "name": "Kessel Energieverbrauch Tag/Gesamt" },
+      "kessel_nachlegen_anzeige_text": { "name": "Kessel Nachlegen Anzeige" },
+      "zeit_kesseluberhitzung_10_abbrande_std": {
+        "name": "Zeit Kesselüberhitzung 10 Abbrände (Std)"
+      },
+      "zeit_kesseluberhitzung_10_abbrande_prozent": {
+        "name": "Zeit Kesselüberhitzung 10 Abbrände (%)"
+      },
+      "zeit_kesseluberhitzung_gesamt_std": { "name": "Zeit Kesselüberhitzung Gesamt (Std)" },
+      "zeit_kesseluberhitzung_gesamt_prozent": { "name": "Zeit Kesselüberhitzung Gesamt (%)" },
+      "kessel_warmemenge_gesamt": { "name": "Kessel Wärmemenge Gesamt" },
+      "puffer_soll_oben": { "name": "Puffer Soll Oben" },
+      "puffer_rucklauf_soll": { "name": "Puffer Soll Rücklauf" },
+      "puffer_energie_max": { "name": "Puffer Energie Max" },
+      "puffer_energie_aktuell": { "name": "Puffer Energie Aktuell" },
+      "puffer_ladezustand_alt": { "name": "Puffer Ladezustand Alt." },
+      "puffer_energie_gesamt_zahler": { "name": "Puffer Energie Gesamt (Zähler)" },
+      "puffer_energie_ist": { "name": "Puffer Energie Ist" },
+      "puffer_energie_aufnehmbar": { "name": "Puffer Energie Aufnehmbar" },
+      "puffer_vorlauf_extern": { "name": "Puffer Vorlauf Extern" },
+      "puffer_rucklauf_extern": { "name": "Puffer Rücklauf Extern" },
+      "hk1_temp_quelle_status_wert": { "name": "HK1 Temp Quelle Status Wert" }
+    },
+    "number": {
+      "hk1_soll_normal": { "name": "Tagbetrieb Raumtemperatur Soll" },
+      "hk1_parallelverschiebung": { "name": "HK1 Parallelverschiebung" },
+      "hk1_steilheit": { "name": "HK1 Steilheit" },
+      "hk1_pumpe_aus_aussentemperatur": { "name": "HK1 Pumpe Aus Außentemperatur" },
+      "hk1_soll_absenk": { "name": "HK1 Soll Absenk" },
+      "hk1_eco_absenken_aus_aussentemperatur": {
+        "name": "HK1 Eco Absenken Aus Außentemperatur"
+      }
+    }
+  },
+  "services": {
+    "set_node_value": {
+      "name": "Kessel Node-Wert setzen",
+      "description": "Setzt einen spezifischen Node-Wert am HDG Kessel. Die Node-ID muss für die Validierung in der internen HDG_NODE_SETTER_CONFIG der Integration konfiguriert sein.",
+      "fields": {
+        "node_id": {
+          "name": "Node ID",
+          "description": "Die ID des zu setzenden HDG Nodes (z.B. '6022')."
+        },
+        "value": {
+          "name": "Wert",
+          "description": "Der an den Node zu sendende Wert."
+        }
+      }
+    },
+    "get_node_value": {
+      "name": "Kessel Node-Wert abrufen",
+      "description": "Ruft den aktuellen Wert eines spezifischen Nodes aus dem internen Zustand der Integration ab.",
+      "fields": {
+        "node_id": {
+          "name": "Node ID",
+          "description": "Die ID des abzurufenden HDG Nodes (z.B. '22003')."
+        }
+      }
+    }
+  },
+  "selector": {
+    "language": {
+      "options": {
+        "system": "Systemstandard",
+        "de": "Deutsch",
+        "en": "Englisch"
+      }
+    }
+  }
+}
