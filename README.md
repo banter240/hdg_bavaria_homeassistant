@@ -1,6 +1,7 @@
 # HDG Bavaria Boiler Integration for Home Assistant
 
 [![HACS Default][hacs-shield]][hacs-url]
+[![GitHub Release][releases-shield]][releases-url]
 [![License][license-shield]][license-url]
 
 <!-- Optional: Add more badges like community forum, buy me a coffee if you set them up -->
