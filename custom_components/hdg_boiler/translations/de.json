@@ -36,7 +36,9 @@
         }
       }
     },
-    "error": {},
+    "error": {
+      "scan_interval_invalid_range_min_max": "Scan-Intervall muss zwischen 15 und 86400 Sekunden liegen."
+    },
     "abort": {}
   },
   "entity": {

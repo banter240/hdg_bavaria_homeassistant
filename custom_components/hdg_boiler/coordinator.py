@@ -1,18 +1,19 @@
 """
-DataUpdateCoordinator for the HDG Bavaria Boiler integration.
+Manages data fetching and updates for the HDG Bavaria Boiler integration.
 
-The HdgDataUpdateCoordinator is central to the integration. It periodically fetches
-data from the HDG boiler API in predefined groups, manages update intervals for these
-groups, and makes the latest data available to all entities. It also handles
-initial data population and error management during data fetching.
+Coordinates periodic API calls, handles data parsing, and provides updates
+to entities. Manages initial data population and error handling.
 """
 
-__version__ = "0.8.0"
+import time
+
+__version__ = "0.9.1"
 
 import asyncio
 import logging
+import numbers
 from datetime import timedelta, datetime
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Final
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -21,29 +22,31 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN,
+    CONF_ENABLE_DEBUG_LOGGING,
+    MIN_SCAN_INTERVAL as CONFIG_FLOW_MIN_SCAN_INTERVAL,
+    DEFAULT_ENABLE_DEBUG_LOGGING,
+)
+from .polling_groups import (
     HDG_NODE_PAYLOADS,
     POLLING_GROUP_ORDER,
     NodeGroupPayload,
-    CONF_ENABLE_DEBUG_LOGGING,
-    DEFAULT_ENABLE_DEBUG_LOGGING,
 )
 from .api import HdgApiClient, HdgApiConnectionError, HdgApiResponseError
+from .utils import strip_hdg_node_suffix
 
 _LOGGER = logging.getLogger(DOMAIN)
 
-# Delay (in seconds) between fetching data groups sequentially.
-# Used during initial setup and for due groups in regular updates
-# to prevent overwhelming the boiler's API.
-INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S: float = 2.0
+# Delay in seconds between fetching different polling groups sequentially during initial setup.
+INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S: Final[float] = 2.0
 
 
 class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
     """
-    Manages fetching HDG boiler data, stores it, and provides updates to entities.
+    Manages data fetching and updates for the HDG Bavaria Boiler integration.
 
-    Employs a two-phase data fetching:
-    1.  Initial Fetch: Sequentially fetches all groups on startup with delays.
-    2.  Periodic Updates: Checks due groups; fetches sequentially if multiple are due.
+    This coordinator employs a two-phase data fetching strategy:
+    1. Initial full fetch: Sequentially retrieves data for all defined polling groups upon setup.
+    2. Periodic updates: Fetches data only for polling groups that are due based on their configured scan intervals.
     """
 
     def __init__(
@@ -53,7 +56,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         entry: ConfigEntry,
     ):
         """
-        Initialize the data update coordinator.
+        Initialize the HdgDataUpdateCoordinator.
 
         Args:
             hass: The Home Assistant instance.
@@ -64,31 +67,61 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         self.api_client = api_client
         self.entry = entry
 
-        # Use options if available (user-configured), otherwise initial config data.
         current_config = self.entry.options or self.entry.data
 
-        # Store scan interval (timedelta) for each polling group.
         self.scan_intervals: Dict[str, timedelta] = {}
-        # Populate scan intervals from configuration, applying defaults.
+        # Validate that POLLING_GROUP_ORDER and HDG_NODE_PAYLOADS have matching keys.
+        polling_group_set = set(POLLING_GROUP_ORDER)
+        payloads_key_set = set(HDG_NODE_PAYLOADS.keys())
+        if polling_group_set != payloads_key_set:
+            missing_in_payloads = polling_group_set - payloads_key_set
+            missing_in_polling = payloads_key_set - polling_group_set
+            _LOGGER.error(
+                "CRITICAL CONFIGURATION MISMATCH: POLLING_GROUP_ORDER and HDG_NODE_PAYLOADS keys do not match. "
+                "This can lead to incorrect polling behavior or missing data. "
+                "Missing in HDG_NODE_PAYLOADS (defined in POLLING_GROUP_ORDER but not HDG_NODE_PAYLOADS): %s; "
+                "Missing in POLLING_GROUP_ORDER (defined in HDG_NODE_PAYLOADS but not POLLING_GROUP_ORDER): %s. "
+                "Please check polling_groups.py.",
+                missing_in_payloads or "None",
+                missing_in_polling or "None",
+            )
+            # Specifically raise an error if groups intended for polling are not defined in payloads.
+            if missing_in_payloads:
+                raise ValueError(
+                    f"CRITICAL CONFIG ERROR: The following groups are in POLLING_GROUP_ORDER but missing from HDG_NODE_PAYLOADS: {sorted(list(missing_in_payloads))}. "
+                    "This prevents them from being polled. Please check polling_groups.py."
+                )
+            # Raise a hard error if there are groups in HDG_NODE_PAYLOADS missing from POLLING_GROUP_ORDER.
+            if missing_in_polling:
+                raise ValueError(
+                    f"CRITICAL CONFIG ERROR: The following groups are in HDG_NODE_PAYLOADS but missing from POLLING_GROUP_ORDER: {sorted(list(missing_in_polling))}. "
+                    "This prevents them from being polled. Please check polling_groups.py."
+                )
+
+        # Set up scan intervals, ensuring they meet the minimum defined in config_flow.
         for group_key, payload_details in HDG_NODE_PAYLOADS.items():
             config_key_for_scan = payload_details["config_key_scan_interval"]
             default_scan_val = payload_details["default_scan_interval"]
-            self.scan_intervals[group_key] = timedelta(
-                seconds=current_config.get(config_key_for_scan, default_scan_val)
-            )
+            raw_scan_val = current_config.get(config_key_for_scan, default_scan_val)
 
-        # Timestamp (`hass.loop.time()`) of last successful update per group; determines next poll.
+            try:
+                scan_val_seconds_float = float(raw_scan_val)
+                if scan_val_seconds_float < CONFIG_FLOW_MIN_SCAN_INTERVAL:
+                    _LOGGER.warning(
+                        f"Scan interval {scan_val_seconds_float}s for group '{group_key}' is below minimum {CONFIG_FLOW_MIN_SCAN_INTERVAL}s. "
+                        f"Using default: {default_scan_val}s."
+                    )
+                    scan_val_seconds_float = float(default_scan_val)
+            except (ValueError, TypeError):
+                _LOGGER.warning(
+                    f"Invalid scan interval '{raw_scan_val}' (type: {type(raw_scan_val).__name__}) for group '{group_key}'. "
+                    f"Must be a number. Using default: {default_scan_val}s."
+                )
+                scan_val_seconds_float = float(default_scan_val)
+
+            self.scan_intervals[group_key] = timedelta(seconds=scan_val_seconds_float)
         self._last_update_times: Dict[str, float] = {}
-        # Flag for detailed debug logging of polling cycles.
-        self._enable_debug_logging = current_config.get(
-            CONF_ENABLE_DEBUG_LOGGING, DEFAULT_ENABLE_DEBUG_LOGGING
-        )
-
-        # Ensure all groups are polled on first refresh by setting last update times to 0.0.
-        self._initialize_last_update_times()
-
-        # Coordinator's main update interval is the shortest group scan interval.
-        # Ensures `_async_update_data` is called frequently enough.
+        self._initialize_last_update_times_monotonic()
         shortest_interval = (
             min(self.scan_intervals.values()) if self.scan_intervals else timedelta(seconds=60)
         )
@@ -96,131 +129,235 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         super().__init__(
             hass,
             _LOGGER,
-            name=f"{DOMAIN} ({self.entry.title})",  # Descriptive name for logging.
+            name=f"{DOMAIN} ({self.entry.title})",
             update_interval=shortest_interval,
         )
-        # Data store for fetched node values, keyed by base HDG node ID.
         self.data: Dict[str, Any] = {}
         _LOGGER.debug(
             f"HdgDataUpdateCoordinator for '{self.entry.title}' initialized. "
             f"Shortest interval: {shortest_interval}."
         )
 
-    def _initialize_last_update_times(self) -> None:
-        """
-        Initialize _last_update_times for all polling groups to 0.0.
+    @property
+    def enable_debug_logging(self) -> bool:
+        """Return True if detailed debug logging for polling cycles is enabled."""
+        if hasattr(self, "entry") and self.entry is not None:
+            return (self.entry.options or {}).get(
+                CONF_ENABLE_DEBUG_LOGGING, DEFAULT_ENABLE_DEBUG_LOGGING
+            )
+        return DEFAULT_ENABLE_DEBUG_LOGGING
 
-        Ensures all groups are polled during the first refresh cycle, as 0.0
-        (epoch for `hass.loop.time()`) will make them immediately due.
+    @property
+    def last_update_times(self) -> Dict[str, float]:
+        """Return the dictionary of last update times for polling groups."""
+        return self._last_update_times
+
+    def _initialize_last_update_times_monotonic(self) -> None:
+        """
+        Set initial 'last update time' for all polling groups to 0.0.
+
+        This ensures they are fetched during the first refresh cycle.
+        Uses `time.monotonic()` for consistent time tracking.
         """
         for group_key in POLLING_GROUP_ORDER:
             if group_key in self.scan_intervals:
                 self._last_update_times[group_key] = 0.0
             else:
+                # This case should ideally not happen if POLLING_GROUP_ORDER and HDG_NODE_PAYLOADS are consistent.
                 _LOGGER.warning(
-                    f"Polling group key '{group_key}' from POLLING_GROUP_ORDER not found in scan_intervals. "  # pragma: no cover
-                    f"Initialization of last update time will skip this group."  # pragma: no cover
+                    f"Polling group key '{group_key}' from POLLING_GROUP_ORDER not found in scan_intervals. "
+                    f"Initialization of last update time will skip this group."
                 )
 
-    async def _fetch_group_data(self, group_key: str, payload_config: NodeGroupPayload) -> bool:
+    def _log_fetch_error_duration(
+        self, group_key: str, error_type: str, start_time: float, error: Exception
+    ) -> None:
         """
-        Fetch data for a single polling group and update the internal `self.data` store.
+        Log error details along with the duration of the failed fetch attempt.
+
+        This helper is invoked when `enable_debug_logging` is true to provide
+        more context on fetch errors, including how long the attempt took before failing.
+        """
+        if self.enable_debug_logging:
+            end_time_err = time.monotonic()
+            duration = end_time_err - start_time
+            _LOGGER.warning(
+                f"{error_type.upper()} during fetch for group: {group_key} at {dt_util.as_local(dt_util.utcnow())}. "
+                f"Duration: {duration:.2f}s. Error: {error}"
+            )
+
+    def _parse_and_store_api_items(
+        self,
+        group_key: str,
+        api_items: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """
+        Parse API items, validate, and store them in `self.data`.
+
+        Strips suffixes from node IDs for consistent keys. Handles duplicates within
+        a single group's response by keeping the first occurrence. `self.data` reflects
+        the latest value for any node ID across all groups.
+
+        Note: `self.data` is a central store. If the same base node ID is part of
+        different polling groups (defined in HDG_NODE_PAYLOADS), the value in `self.data`
+        for that base node ID will reflect the value from the most recent successful fetch
+        of any group containing that base node ID.
+
+        """
+        successfully_processed_and_stored_items: List[Dict[str, Any]] = []
+        # Tracks raw node IDs seen in this specific API call for this group to detect exact duplicates.
+        raw_ids_seen_in_this_call: set[str] = set()
+        # Tracks cleaned (base) node IDs processed in this call to detect functional duplicates.
+        cleaned_node_ids_processed_this_call: set[str] = set()
+
+        for item in api_items:
+            api_id_value = item.get("id")
+            node_id_with_suffix: str  # Processed ID, guaranteed to be string if valid
+
+            if isinstance(api_id_value, str):
+                node_id_with_suffix = api_id_value.strip()
+                if not node_id_with_suffix:  # Check if empty after stripping
+                    _LOGGER.warning(
+                        f"API response for group '{group_key}' contains an item with an empty string 'id'. "
+                        f"Item: {item}. Skipping this item."
+                    )
+                    continue
+            elif isinstance(api_id_value, int):
+                # Convert integer ID to string. Assumes integer IDs don't have suffixes like 'T'
+                # and str(int) doesn't produce leading/trailing spaces.
+                node_id_with_suffix = str(api_id_value)
+            else:
+                # Handles None or other unexpected types for 'id'
+                _LOGGER.warning(
+                    f"API response for group '{group_key}' contains an item with missing or invalid type for 'id' (expected int or str). "
+                    f"Item: {item}. Skipping this item."
+                )
+                continue
+
+            # At this point, node_id_with_suffix is a non-empty string.
+
+            # First, check for exact raw ID duplicates from the API.
+            if node_id_with_suffix in raw_ids_seen_in_this_call:
+                _LOGGER.error(
+                    f"Exact duplicate raw node ID '{node_id_with_suffix}' received in API response for group '{group_key}'. "
+                    f"Item: {item}. This indicates a potential upstream API issue. This occurrence will be skipped."
+                )
+                continue
+            raw_ids_seen_in_this_call.add(node_id_with_suffix)
+
+            item_text_value = item.get("text")
+
+            if item_text_value is None:
+                _LOGGER.warning(
+                    f"API response for group '{group_key}', node ID with suffix '{node_id_with_suffix}', "
+                    f"is missing the 'text' key. Item: {item}. Skipping update for this node."
+                )
+                continue
+
+            node_id_clean = strip_hdg_node_suffix(node_id_with_suffix)
+
+            if node_id_clean in cleaned_node_ids_processed_this_call:
+                existing_value = self.data.get(node_id_clean)
+                if existing_value != item_text_value:
+                    _LOGGER.error(
+                        f"Duplicate base node ID '{node_id_clean}' (from API ID '{node_id_with_suffix}') "
+                        f"received in API response for group '{group_key}' WITH CONFLICTING VALUES. "
+                        f"Existing (first occurrence): '{existing_value}', New (skipped): '{item_text_value}'. "
+                        "The first occurrence's value is kept."
+                    )
+                else:  # Values are identical
+                    _LOGGER.debug(
+                        f"Duplicate base node ID '{node_id_clean}' (from API ID '{node_id_with_suffix}') received in API response for group '{group_key}' with identical value '{item_text_value}'. Skipping."
+                    )
+                continue
+
+            self.data[node_id_clean] = item_text_value
+            cleaned_node_ids_processed_this_call.add(node_id_clean)
+            successfully_processed_and_stored_items.append(item)
+        return successfully_processed_and_stored_items
+
+    async def _fetch_group_data(
+        self, group_key: str, payload_config: NodeGroupPayload
+    ) -> Optional[List[Dict[str, Any]]]:
+        """
+        Fetch data for a single polling group from the HDG API.
 
         Args:
-            group_key: Identifier for the polling group.
-            payload_config: Configuration for the group, including API payload.
+            group_key: The key identifying the polling group.
+            payload_config: The configuration for the polling group, including the API payload string.
 
         Returns:
-            True if data fetched and processed successfully.
-            False on API response error (non-connection error).
+            A list of successfully processed API items if the fetch was successful,
+            or None if there was an API response error (but not a connection error).
 
         Raises:
-            HdgApiConnectionError: On connection issues; propagated to caller.
+            HdgApiConnectionError: If a connection error occurs during the API call.
         """
-        payload_str = payload_config["payload_str"]
-        start_time_group_fetch = self.hass.loop.time()
-        if self._enable_debug_logging:
-            # Log with local time for easier human correlation.
-            # `hass.loop.time()` for duration, `dt_util` for display.
+        payload_str = payload_config.get("payload_str")
+        if payload_str is None:
+            _LOGGER.error(
+                f"Configuration error: 'payload_str' is missing in HDG_NODE_PAYLOADS for group_key '{group_key}'. "
+                "This group cannot be fetched."
+            )
+            return None
+
+        start_time_group_fetch = time.monotonic()
+        if self.enable_debug_logging:
             _LOGGER.info(
                 f"INITIATING FETCH for group: {group_key} at {dt_util.as_local(dt_util.utcnow())}"
             )
         try:
             fetched_data_list = await self.api_client.async_get_nodes_data(payload_str)
 
-            if fetched_data_list is not None:
-                # Store fetched data, using base node ID (suffix stripped) as key.
-                # API returns list of dicts: {"id": "nodeID_suffix", "text": "value"}.
-                for item in fetched_data_list:  # item is Dict[str, Any] with "id" and "text"
-                    node_id_with_suffix = str(item["id"])
-                    node_id_clean = node_id_with_suffix.rstrip("TUVWXY")
-                    self.data[node_id_clean] = item["text"]
-                _LOGGER.debug(
-                    f"Successfully processed data for HDG group: {group_key}. {len(fetched_data_list)} items."
+            if fetched_data_list is not None:  # API client returned data (could be an empty list)
+                # Parse and store the fetched items.
+                successfully_processed_items = self._parse_and_store_api_items(
+                    group_key, fetched_data_list
                 )
-                end_time_group_fetch = self.hass.loop.time()
-                if self._enable_debug_logging:
+                _LOGGER.debug(
+                    f"Successfully processed data for HDG group: {group_key}. {len(successfully_processed_items)} valid items processed."
+                )
+                end_time_group_fetch = time.monotonic()
+                if self.enable_debug_logging:
                     _LOGGER.info(
                         f"COMPLETED FETCH for group: {group_key} at {dt_util.as_local(dt_util.utcnow())}. "
                         f"Duration: {end_time_group_fetch - start_time_group_fetch:.2f}s"
                     )
-                return True
+                return successfully_processed_items
             else:
-                # Should not be reached if api_client raises error or returns list.
-                # Logged to identify unexpected api_client behavior.
                 _LOGGER.warning(
-                    f"Polling for group {group_key} returned None from api_client without raising an error."
+                    f"Polling for group {group_key} returned None from api_client without raising an error. This indicates an unexpected issue."
                 )  # pragma: no cover
-                return False
+                return None
 
         except HdgApiConnectionError as conn_err:
-            # Critical connection errors (timeout, host unreachable) are propagated.
-            # Caller (e.g., _async_update_data) will handle by raising UpdateFailed.
-            end_time_group_fetch_err = self.hass.loop.time()
-            if self._enable_debug_logging:  # pragma: no cover
-                _LOGGER.warning(
-                    f"CONNECTION ERROR during fetch for group: {group_key} at {dt_util.as_local(dt_util.utcnow())}. Duration: {end_time_group_fetch_err - start_time_group_fetch:.2f}s. Error: {conn_err}"
-                )
+            self._log_fetch_error_duration(
+                group_key, "Connection error", start_time_group_fetch, conn_err
+            )
             raise
         except HdgApiResponseError as err:
-            # API response errors (bad status, malformed JSON) for this group are logged.
-            # Return False, allowing coordinator to attempt updates for other groups.
-            _LOGGER.warning(  # Changed from error to warning, as it's a per-group issue
+            _LOGGER.warning(
                 f"API response error polling group {group_key}: {err}. Data for this group may be stale."
             )  # pragma: no cover
-            end_time_group_fetch_err = self.hass.loop.time()
-            if self._enable_debug_logging:  # pragma: no cover
-                _LOGGER.warning(
-                    f"API RESPONSE ERROR during fetch for group: {group_key} at {dt_util.as_local(dt_util.utcnow())}. Duration: {end_time_group_fetch_err - start_time_group_fetch:.2f}s. Error: {err}"
-                )
-            return False
+            self._log_fetch_error_duration(
+                group_key, "API response error", start_time_group_fetch, err
+            )
+            return None
         except Exception as err:
-            # Catch-all for other unexpected errors during this group's fetch.
             _LOGGER.exception(
-                f"Unexpected error polling group {group_key}: {err}"
-            )  # pragma: no cover
-            end_time_group_fetch_err = self.hass.loop.time()
-            if self._enable_debug_logging:  # pragma: no cover
-                _LOGGER.error(
-                    f"UNEXPECTED ERROR during fetch for group: {group_key} at {dt_util.as_local(dt_util.utcnow())}. Duration: {end_time_group_fetch_err - start_time_group_fetch:.2f}s. Error: {err}"
-                )
-            return False  # pragma: no cover
+                f"Unexpected error polling group '{group_key}'. This error will be re-raised. Error: {err}"
+            )
+            raise
 
     async def async_config_entry_first_refresh(self) -> None:
         """
-        Perform the first data refresh sequentially for all groups on HA setup.
-
-        Fetches data for all defined polling groups one by one, with a delay,
-        to populate initial state and avoid overwhelming the boiler's API.
+        Performs the initial sequential data refresh for all polling groups upon Home Assistant setup.
         """
-        # Record start time for performance monitoring if debug logging is enabled.
-        start_time_first_refresh = self.hass.loop.time()
-        if self._enable_debug_logging:
+        start_time_first_refresh = time.monotonic()
+        if self.enable_debug_logging:
             _LOGGER.info(
                 f"INITIATING async_config_entry_first_refresh for {self.name} at {dt_util.as_local(dt_util.utcnow())} with {INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S}s inter-group delay..."
             )
-        # Flags to track overall success and connection issues during initial fetch.
-        # `initial_data_items_fetched_count` for logging.
         any_group_failed_connection = False
         initial_data_items_fetched_count = 0
 
@@ -234,19 +371,19 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
 
             _LOGGER.debug(f"Initial sequential poll for group: {group_key}")
             try:
-                success = await self._fetch_group_data(group_key, payload_config)
-                if success:
-                    self._last_update_times[group_key] = self.hass.loop.time()
-                    initial_data_items_fetched_count += len(payload_config.get("nodes", []))
-                    _LOGGER.debug(f"Initial poll for group {group_key} successful.")
+                processed_items = await self._fetch_group_data(group_key, payload_config)
+                if processed_items is not None:  # Data fetched (could be empty list)
+                    self._last_update_times[group_key] = time.monotonic()
+                    initial_data_items_fetched_count += len(processed_items)
+                    _LOGGER.debug(
+                        f"Initial poll for group {group_key} successful, {len(processed_items)} items processed."
+                    )
                 else:
-                    # Group fetch failed without a connection error (e.g., HdgApiResponseError).
                     _LOGGER.warning(
                         f"Initial poll for group {group_key} reported failure (e.g., API response error)."
                     )  # pragma: no cover
             except HdgApiConnectionError as err:
-                # Mark connection failure; overall failure assessed after all groups.
-                _LOGGER.warning(  # Changed from error to warning, as UpdateFailed will be raised later if needed
+                _LOGGER.warning(
                     f"Initial poll for group {group_key} failed with connection error: {err}"
                 )
                 any_group_failed_connection = True
@@ -254,19 +391,12 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                 _LOGGER.exception(
                     f"Unexpected error during initial poll of group {group_key}: {err}"
                 )
-                any_group_failed_connection = (  # pragma: no cover
-                    True  # Treat unexpected errors as connection issues for setup.
-                )
-
-            if i < len(POLLING_GROUP_ORDER) - 1:
-                # Delay before polling next group to avoid overwhelming the API.
+                any_group_failed_connection = True  # pragma: no cover
+            if payload_config and i < len(POLLING_GROUP_ORDER) - 1:
                 _LOGGER.debug(
                     f"Waiting {INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S}s before polling next group."
                 )
                 await asyncio.sleep(INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S)
-
-        # If no data fetched AND a connection failed, raise UpdateFailed.
-        # Indicates fundamental problem (e.g., boiler offline, wrong IP).
         if not self.data and any_group_failed_connection:
             _LOGGER.error(
                 f"Initial data refresh for {self.name} failed to retrieve any data due to connection issues. "
@@ -275,224 +405,256 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             raise UpdateFailed(
                 "Failed to connect to HDG boiler during initial setup and retrieve any data."
             )
-
-        # If no data fetched, but no connection errors (e.g., API returned empty lists
-        # or all groups had HdgApiResponseErrors), log a warning.
-        if not self.data and not any_group_failed_connection:
+        if not self.data:
             _LOGGER.warning(
                 f"Initial data refresh for {self.name} completed, but no data was fetched from any group. "
                 "This might be normal if the boiler is offline or payloads are empty."  # pragma: no cover
             )
 
-        end_time_first_refresh = self.hass.loop.time()
-        if self._enable_debug_logging:
+        end_time_first_refresh = time.monotonic()
+        if self.enable_debug_logging:
             _LOGGER.info(
                 f"COMPLETED async_config_entry_first_refresh for {self.name} at {dt_util.as_local(dt_util.utcnow())}. "
                 f"Duration: {end_time_first_refresh - start_time_first_refresh:.2f}s. "
-                f"Approx {initial_data_items_fetched_count} node values potentially updated. Total items in coordinator.data: {len(self.data if self.data else [])}"
+                f"Approx {initial_data_items_fetched_count} node values potentially updated. Total items in coordinator.data: {len(self.data or [])}"
             )
         self.async_set_updated_data(self.data)
 
-    async def _async_update_data(self) -> Dict[str, Any]:
+    def _get_due_polling_groups(
+        self, current_time_monotonic: float
+    ) -> list[tuple[str, NodeGroupPayload]]:
         """
-        Fetch data for due polling groups. Called periodically by base class.
+        Identify polling groups that are due for an update.
 
-        Checks each group's due status based on its scan interval and last update.
-        If multiple groups are due, they are fetched sequentially with a delay
-        to reduce peak load on the boiler's API.
+        Compares the current monotonic time against the last update time and scan
+        interval for each polling group.
+
+        Args:
+            current_time_monotonic: The current time from `time.monotonic()`.
+
+        Returns:
+            A list of tuples, where each tuple contains the group key and its
+            payload configuration for groups that are due for an update.
         """
-        # Refresh debug logging setting from options in case of user changes.
-        self._enable_debug_logging = self.entry.options.get(
-            CONF_ENABLE_DEBUG_LOGGING, DEFAULT_ENABLE_DEBUG_LOGGING
-        )
-        # Record start time for performance monitoring of the update cycle.
-        start_time_update_cycle = self.hass.loop.time()
-        if self._enable_debug_logging:
-            _LOGGER.info(
-                f"INITIATING _async_update_data cycle at {dt_util.as_local(dt_util.utcnow())}"
-            )
-
-        current_time_for_due_check = self.hass.loop.time()
-        # Log cycle start with a human-readable local timestamp.
-        _LOGGER.debug(
-            f"Coordinator _async_update_data cycle started at {datetime.fromtimestamp(current_time_for_due_check, tz=dt_util.get_default_time_zone())}"
-        )
-
-        # List to hold (group_key, payload_config) for groups due for update.
-        due_groups_to_fetch_sequentially: list[tuple[str, NodeGroupPayload]] = []
-
-        # --- Determine which polling groups are due ---
+        due_groups: list[tuple[str, NodeGroupPayload]] = []
         for group_key in POLLING_GROUP_ORDER:
             payload_config = HDG_NODE_PAYLOADS.get(group_key)
 
             if not payload_config or group_key not in self.scan_intervals:
-                # Should not happen if POLLING_GROUP_ORDER and HDG_NODE_PAYLOADS are consistent.
                 _LOGGER.debug(
-                    f"Skipping group '{group_key}': not defined in HDG_NODE_PAYLOADS or scan_intervals."
+                    f"Skipping group '{group_key}' in due check: not defined in HDG_NODE_PAYLOADS or scan_intervals."
                 )  # pragma: no cover
                 continue
 
             group_scan_interval_seconds = self.scan_intervals[group_key].total_seconds()
-            last_update_time_for_group = self._last_update_times.get(group_key, 0)
+            last_update_time_for_group = self._last_update_times.get(group_key, 0.0)
 
-            # A group is due if elapsed time since last successful update
-            # meets or exceeds its scan interval.
-            if (
-                current_time_for_due_check - last_update_time_for_group
-            ) >= group_scan_interval_seconds:
-                due_groups_to_fetch_sequentially.append((group_key, payload_config))
+            if (current_time_monotonic - last_update_time_for_group) >= group_scan_interval_seconds:
+                due_groups.append((group_key, payload_config))
             else:
-                # Log skipped groups and approx. time until next poll.
                 _LOGGER.debug(
-                    f"Skipping poll for HDG group: {group_key} (Next in approx. {max(0, group_scan_interval_seconds - (current_time_for_due_check - last_update_time_for_group)):.0f}s)"
+                    f"Skipping poll for HDG group: {group_key} (Next in approx. {max(0, group_scan_interval_seconds - (current_time_monotonic - last_update_time_for_group)):.0f}s)"
                 )
+        return due_groups
 
-        # --- Process due groups or return if none are due ---
-        if not due_groups_to_fetch_sequentially:
-            # No groups due; log and return existing data.
-            _LOGGER.debug("No polling groups were due for an update in this coordinator cycle.")
-            end_time_update_cycle_no_tasks = self.hass.loop.time()
-            if self._enable_debug_logging:
-                _LOGGER.info(
-                    f"COMPLETED _async_update_data cycle (no groups due) at {dt_util.as_local(dt_util.utcnow())}. "
-                    f"Duration: {end_time_update_cycle_no_tasks - start_time_update_cycle:.2f}s"
-                )
-            return self.data
+    async def _sequentially_fetch_due_groups_data(
+        self, due_groups: list[tuple[str, NodeGroupPayload]]
+    ) -> tuple[bool, bool]:
+        """
+        Sequentially fetch data for a list of due polling groups.
 
-        # --- Sequentially fetch data for due groups ---
-        _LOGGER.debug(
-            f"Due groups to fetch sequentially: {[g[0] for g in due_groups_to_fetch_sequentially]}"
-        )
-        any_group_fetched_successfully_this_cycle = False
+        Iterates through the provided list of due groups, fetching data for each one
+        sequentially with a small delay between fetches. Handles API errors gracefully
+        for individual groups, allowing other groups to still be attempted.
 
-        # Iterate through due groups and fetch data one by one.
-        for i, (group_key, payload_config) in enumerate(due_groups_to_fetch_sequentially):
+        Args:
+            due_groups: A list of (group_key, payload_config) tuples for groups due for an update.
+
+        Returns:
+            A tuple (any_group_fetched_successfully, any_connection_error_encountered).
+            Indicates if at least one group was fetched and if any connection errors occurred.
+        """
+        any_group_fetched_successfully = False
+        any_connection_error_encountered = False
+
+        for i, (group_key, payload_config) in enumerate(due_groups):
             _LOGGER.debug(
-                f"Fetching data for due group: {group_key} (Index {i} of {len(due_groups_to_fetch_sequentially)} due groups)"
+                f"Fetching data for due group: {group_key} (Index {i} of {len(due_groups)} due groups)"
             )
             try:
-                success = await self._fetch_group_data(group_key, payload_config)
-                if success:
-                    # On successful fetch, update last poll time for this group
-                    # and flag that at least one group succeeded this cycle.
-                    self._last_update_times[group_key] = self.hass.loop.time()
-                    any_group_fetched_successfully_this_cycle = True
+                processed_items = await self._fetch_group_data(group_key, payload_config)
+                if processed_items is not None:  # Data fetched (could be empty list)
+                    self._last_update_times[group_key] = time.monotonic()
+                    any_group_fetched_successfully = True
             except HdgApiConnectionError as err:
-                # If a connection error occurs for any group, log it and raise UpdateFailed.
-                # This signals HA that the entire update cycle failed, likely retrying later.
+                # Log connection error and continue with other groups
                 _LOGGER.warning(
-                    f"Connection error for group {group_key} during sequential fetch: {err}"
+                    f"Connection error for group {group_key} during sequential fetch: {err}. "
+                    "This group will be skipped in this cycle. Other due groups will still be attempted."
                 )
-                raise UpdateFailed(f"Connection error for group {group_key}: {err}") from err
-            # Note: HdgApiResponseError (and other non-connection errors) are handled
-            # within _fetch_group_data, which returns False. The loop continues.
+                any_connection_error_encountered = True
+            except Exception as err:
+                _LOGGER.exception(
+                    f"Unexpected error processing group {group_key} in _async_update_data. "
+                    f"This group will be skipped in this cycle. Error: {err}"
+                )
 
-            # Delay if not the last group in this cycle's list of due groups.
-            # This spreads API calls even within a single coordinator update run.
-            if i < len(due_groups_to_fetch_sequentially) - 1:
+            if i < len(due_groups) - 1:  # If not the last group in the list
                 _LOGGER.debug(
                     f"Waiting {INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S}s before polling next due group."
                 )
                 await asyncio.sleep(INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S)
 
-        if not any_group_fetched_successfully_this_cycle and due_groups_to_fetch_sequentially:
-            # This occurs if groups were due, but none fetched successfully
-            # (e.g., all had HdgApiResponseError or other non-connection errors).
-            # Different from HdgApiConnectionError, which would have raised UpdateFailed earlier.
-            _LOGGER.warning(
-                "Attempted to poll due groups, but no group updated successfully in this cycle."  # pragma: no cover
-            )
+        return any_group_fetched_successfully, any_connection_error_encountered
 
-        # Log completion of the update cycle, including duration.
-        end_time_update_cycle_with_tasks = self.hass.loop.time()
-        if self._enable_debug_logging:
+    async def _async_update_data(self) -> Dict[str, Any]:
+        """
+        Periodically called by DataUpdateCoordinator to fetch data for due polling groups.
+        """
+        start_time_update_cycle = time.monotonic()
+        if self.enable_debug_logging:
             _LOGGER.info(
-                f"COMPLETED _async_update_data cycle (sequentially processed {len(due_groups_to_fetch_sequentially)} due groups) at {dt_util.as_local(dt_util.utcnow())}. "
-                f"Duration: {end_time_update_cycle_with_tasks - start_time_update_cycle:.2f}s"
+                f"INITIATING _async_update_data cycle at {dt_util.as_local(dt_util.utcnow())}"
+            )
+        current_time_for_due_check = time.monotonic()
+        _LOGGER.debug(
+            f"Coordinator _async_update_data cycle started at {datetime.fromtimestamp(current_time_for_due_check, tz=dt_util.get_default_time_zone())}"
+        )
+
+        # Identify which polling groups are due.
+        due_groups_to_fetch = self._get_due_polling_groups(current_time_for_due_check)
+
+        if not due_groups_to_fetch:
+            _LOGGER.debug("No polling groups were due for an update in this coordinator cycle.")
+            end_time_update_cycle_no_tasks = time.monotonic()
+            if self.enable_debug_logging:
+                _LOGGER.info(
+                    f"COMPLETED _async_update_data cycle (no groups due) at {dt_util.as_local(dt_util.utcnow())}. "
+                    f"Duration: {end_time_update_cycle_no_tasks - start_time_update_cycle:.3f}s"
+                )
+            return self.data
+
+        _LOGGER.debug(f"Due groups to fetch: {[g[0] for g in due_groups_to_fetch]}")
+
+        # Fetch data for due groups.
+        (
+            any_group_fetched_successfully,
+            any_connection_error_encountered,
+        ) = await self._sequentially_fetch_due_groups_data(due_groups_to_fetch)
+
+        # Handle cases where no group was successfully fetched.
+        if not any_group_fetched_successfully and due_groups_to_fetch:  # pragma: no cover
+            if any_connection_error_encountered:
+                _LOGGER.error(
+                    "Failed to fetch data from HDG boiler for all due groups due to connection errors with one or more groups."
+                )
+                raise UpdateFailed(
+                    "Failed to fetch data from HDG boiler due to connection errors with one or more groups."
+                )
+            else:
+                _LOGGER.warning(
+                    "Attempted to poll due groups, but no group updated successfully in this cycle (e.g., API errors for all groups). Data may be stale."
+                )
+
+        end_time_update_cycle_with_tasks = time.monotonic()
+        if self.enable_debug_logging:
+            _LOGGER.info(
+                f"COMPLETED _async_update_data cycle (sequentially processed {len(due_groups_to_fetch)} due groups) at {dt_util.as_local(dt_util.utcnow())}. "
+                f"Duration: {end_time_update_cycle_with_tasks - start_time_update_cycle:.3f}s"
             )
         return self.data
 
     async def async_update_internal_node_state(self, node_id: str, new_value: Any) -> None:
         """
-        Update a single node's value in internal data store and notify listeners.
+        Update a node's value in the internal data store and notify listeners.
+        Called after a successful API set operation to reflect changes immediately.
 
-        Typically called by `async_set_node_value_if_changed` after a successful
-        API set operation to reflect the change immediately, avoiding wait for
-        the next polling cycle.
         Args:
             node_id: Base HDG node ID (no suffix).
-            new_value: New value for the node.
+            new_value: New value for the node. Expected to be a string.
         """
-        node_id_str = str(node_id).strip()
-        # Ensure comparison is string-based, as API values are strings.
-        current_value_str = str(new_value)
-
-        # Only update and notify if the new value differs from the current stored value
-        # to prevent unnecessary updates and event notifications.
-        if self.data.get(node_id_str) != current_value_str:
-            self.data[node_id_str] = current_value_str
+        if self.data.get(node_id) != new_value:
+            self.data[node_id] = new_value  # new_value is already a string
             _LOGGER.debug(
-                f"Internal state for node '{node_id_str}' updated to '{current_value_str}'. Notifying listeners."
+                f"Internal state for node '{node_id}' updated to '{new_value}'. Notifying listeners."
             )
             self.async_set_updated_data(self.data)
         else:
             _LOGGER.debug(
-                f"Internal state for node '{node_id_str}' already '{current_value_str}'. No update notification."
+                f"Internal state for node '{node_id}' already '{new_value}'. No update notification."
             )
 
     async def async_set_node_value_if_changed(
         self, node_id: str, new_value_to_set: Any, entity_name_for_log: str = "Unknown Entity"
     ) -> bool:
         """
-        Set node value via API if different from current; updates internal state.
-
-        Centralizes logic for setting values, including "if_changed" check.
-        Used by number entities and services.
-        Args:
-            node_id: Base HDG node ID (no TUVWXY suffix).
-            new_value_to_set: New value; converted to string for API.
-            entity_name_for_log: Name of initiating entity/service for logging.
-
-        Returns:
-            True if value set via API or already matched.
-            False if API call reported failure (non-critical).
-
-        Raises:
-            HdgApiError: On unrecoverable API client error during set operation.
+        Set a node value via the API if it's different from the current known value.
+        Updates internal state on success. Used by number entities and services.
+        Validates type and compares normalized values before calling the API.
         """
-        node_id_str = str(node_id).strip()
-        # Ensure value sent to API and for comparison is string.
-        # HDG API expects string for set; stored data is also string.
+        if not isinstance(new_value_to_set, (numbers.Number, bool, str)):
+            _LOGGER.error(
+                f"Unsupported type for new_value_to_set: {type(new_value_to_set).__name__} for node '{entity_name_for_log}' (ID: {node_id})."
+            )
+            raise TypeError(
+                f"Unsupported type for new_value_to_set: {type(new_value_to_set).__name__}. Only int, float, bool, and str are allowed."
+            )
         api_value_to_send_str = str(new_value_to_set)
 
-        # Retrieve current known raw value from coordinator's data store.
-        current_known_raw_value = self.data.get(node_id_str)
+        def _normalize_for_comparison(val: Any) -> Any:
+            """
+            Normalize a value for robust comparison.
+            Converts various input types to a consistent type (Python bool, int, float,
+            or original string if not convertible) to avoid false negatives during
+            "if_changed" checks due to type or formatting differences.
 
-        # If current known value matches desired, no API call needed.
-        if (
-            current_known_raw_value is not None
-            and str(current_known_raw_value) == api_value_to_send_str
-        ):
+            Handles:
+            - Actual Python booleans, integers, and floats directly.
+            - String representations:
+                - "true"/"false" (case-insensitive) become Python booleans.
+                - Numeric strings (e.g., "0", "1", "10.0", "-5.5") are converted to `int` or `float`.
+                  If a float string represents a whole number (e.g., "10.0"), it's converted to `int`.
+            - Other types (e.g., None) or unconvertible strings are returned as is (after stripping for strings).
+            Localized boolean/numeric strings (e.g., "wahr", "1,0") are NOT explicitly handled.
+            """
+            if isinstance(val, bool):
+                return val
+            elif isinstance(val, (int, float)):
+                return val
+            elif isinstance(val, str):
+                val_stripped = val.strip()
+                if val_stripped.lower() == "true":
+                    return True
+                elif val_stripped.lower() == "false":
+                    return False
+                else:
+                    try:
+                        float_val = float(val_stripped)
+                        return int(float_val) if float_val == int(float_val) else float_val
+                    except ValueError:
+                        return val_stripped
+            else:
+                return val
+
+        current_known_raw_value = self.data.get(node_id)
+        normalized_current_value = _normalize_for_comparison(current_known_raw_value)
+        normalized_new_value = _normalize_for_comparison(new_value_to_set)
+
+        if current_known_raw_value is not None and normalized_current_value == normalized_new_value:
             _LOGGER.info(
-                f"Coordinator: Value for node '{entity_name_for_log}' (ID: {node_id_str}) is already '{api_value_to_send_str}'. Skipping API call."
+                f"Coordinator: Value for node '{entity_name_for_log}' (ID: {node_id}) is already '{api_value_to_send_str}'. Skipping API call."
             )
             return True
 
-        # If value is different or not known, attempt to set it via API client.
-        # `api_client.async_set_node_value` handles the HTTP request.
-        success = await self.api_client.async_set_node_value(node_id_str, api_value_to_send_str)
+        success = await self.api_client.async_set_node_value(node_id, api_value_to_send_str)
         if success:
             _LOGGER.info(
-                f"Coordinator: Successfully set node '{entity_name_for_log}' (ID: {node_id_str}) to '{api_value_to_send_str}' via API."
+                f"Coordinator: Successfully set node '{entity_name_for_log}' (ID: {node_id}) to '{api_value_to_send_str}' via API."
             )
-            # Update internal state immediately to reflect the change.
-            await self.async_update_internal_node_state(node_id_str, api_value_to_send_str)
+            await self.async_update_internal_node_state(node_id, api_value_to_send_str)
             return True
         else:
-            # `api_client.async_set_node_value` returned False. Typically means
-            # API call made but failed (e.g., HTTP 200 not received),
-            # but not a connection error (which would raise HdgApiConnectionError).
             _LOGGER.error(
-                f"Coordinator: API call to set node '{entity_name_for_log}' (ID: {node_id_str}) to '{api_value_to_send_str}' reported failure."
+                f"Coordinator: API call to set node '{entity_name_for_log}' (ID: {node_id}) to '{api_value_to_send_str}' reported failure."
             )
             return False
