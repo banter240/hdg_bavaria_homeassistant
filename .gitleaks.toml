@@ -1,0 +1,42 @@
+[[rules]]
+  id = "generic-api-key"
+  description = "Detected a Generic API Key, potentially exposing access to various services and sensitive operations."
+  regex = '''(?i)(?P<key>[a-z0-9-_\.]{8,64})(?:['|"]?:\s?['|"]?)(?P<secret>[a-z0-9-_\.]{8,128})['|"]?'''
+  entropy = 3.5
+
+    [[rules.allowlists]]
+      description = "Allow HDG Boiler node IDs in the definitions.py file"
+      paths = ['''custom_component/hdg_boiler/definitions\.py''']
+      regexes = [
+          '''[0-9]+T''',
+      ]
+
+    [[rules.allowlists]]
+      description = "Allow specific config keys in const.py for polling group definitions"
+      paths = ['''custom_components/hdg_boiler/const\.py''']
+      # This targets the values of "config_key" in POLLING_GROUP_DEFINITIONS
+      regexes = [
+          '''^scan_interval_group_\d+_[a-z_]+$'''
+      ]
+
+    [[rules.allowlists]]
+      description = "Allow translation_key assignments in const.py"
+      paths = ['''custom_components/hdg_boiler/const\.py''']
+      # This targets the values of "translation_key" if they were in const.py (which they are not based on current structure)
+      # Keeping it general for now, but might be too broad or unnecessary if translation_keys are only in definitions.py
+      regexes = [
+          '''^[a-z0-9_]+$''' # Matches generic key-like strings
+      ]
+
+    [[rules.allowlists]]
+      description = "Allow scan interval translation keys in de.json"
+      paths = ['''custom_components/hdg_boiler/translations/de\.json''']
+      regexes = [
+          '''^scan_interval_group_\d+_[a-z_]+$''' # Matches the keys themselves
+      ]
+
+    [[rules.allowlists]]
+      description = "Allow specific translation_key values in definitions.py"
+      paths = ['''custom_components/hdg_boiler/definitions\.py''']
+      # This regex targets the values of "translation_key"
+      regexes = ['''^[a-z0-9_]+$''']

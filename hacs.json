@@ -1,0 +1,7 @@
+{
+  "name": "HDG Bavaria Boiler",
+  "render_readme": true,
+  "zip_release": true,
+  "filename": "hdg_boiler.zip",
+  "content_in_root": false
+}
