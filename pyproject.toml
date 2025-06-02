@@ -1,0 +1,76 @@
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # Pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+docstring-code-format = true
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+# exclude = ["tests/"]
+
+# --- Configuration for python-semantic-release ---
+[tool.semantic_release]
+version_source = "toml"
+version_toml = "pyproject.toml:tool.poetry.version"
+
+version_variables = [
+    "custom_components/hdg_boiler/manifest.json:version:nf"
+]
+
+branch = "release-test"
+changelog_file = "CHANGELOG.md"
+
+build_command = "bash scripts/build_hacs_zip.sh"
+assets = ["dist/hdg_boiler.zip"]
+
+upload_to_pypi = false
+upload_to_release = true
+
+commit_analyzer = "semantic_release.commit_analyzer.tag_analyzer"
+parser_options = { allowed_tags = ["conventional_commits"] }
+tag_format = "v{version}"
+
+# --- Poetry Configuration ---
+[tool.poetry]
+name = "hdg_boiler"
+version = "0.10.3"
+description = "Home Assistant Custom Component for HDG Bavaria Boilers"
+authors = ["@banter240"]
+license = "GPL-3.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+homeassistant = ">=2024.6.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0"
+pytest-cov = "^4.0"
+pytest-homeassistant-custom-component = "^0.13"
+
+# Recommended development tools:
+ruff = "^0.4.0"
+mypy = "^1.9.0"
+pre-commit = "^3.7.0"
+python-semantic-release = "^9.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
