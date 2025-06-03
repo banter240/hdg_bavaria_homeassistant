@@ -9,7 +9,7 @@ and entity states.
 
 from __future__ import annotations
 
-__version__ = "0.9.29"
+__version__ = "0.9.30"
 
 import logging
 from typing import Any, Dict
@@ -22,22 +22,18 @@ import re
 import ipaddress
 from urllib.parse import urlparse, urlunparse
 from homeassistant.helpers import entity_registry as er
-from .utils import normalize_unique_id_component  # For unique_id redaction
-from .const import DOMAIN, CONF_HOST_IP
+from .utils import normalize_unique_id_component
+from .const import (
+    DOMAIN,
+    CONF_HOST_IP,
+    DIAGNOSTICS_TO_REDACT_CONFIG_KEYS,
+    DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS,
+    DIAGNOSTICS_REDACTED_PLACEHOLDER,
+)
 from .coordinator import HdgDataUpdateCoordinator
 from .api import HdgApiClient
 
 _LOGGER = logging.getLogger(DOMAIN)
-
-TO_REDACT = {
-    CONF_HOST_IP,
-}
-SENSITIVE_COORDINATOR_DATA_NODE_IDS = {
-    "20026",  # anlagenbezeichnung_sn (Boiler Serial Number)
-    "20031",  # mac_adresse (MAC Address)
-    "20039",  # hydraulikschema_nummer (Hydraulic Scheme Number)
-}
-REDACTED_PLACEHOLDER = "REDACTED"
 
 
 async def async_get_config_entry_diagnostics(
@@ -112,13 +108,14 @@ def _get_redacted_config_entry_info(entry: ConfigEntry) -> Dict[str, Any]:
         # Example unique_id: "hdg_boiler::device_alias::entity_suffix" (where device_alias might contain host_ip)
         # If entry.unique_id itself is the host_ip (common case for config entry unique_id):
         if normalize_unique_id_component(entry.unique_id) == normalized_sensitive_host_for_id:
-            unique_id_display = REDACTED_PLACEHOLDER
+            unique_id_display = DIAGNOSTICS_REDACTED_PLACEHOLDER
             _LOGGER.debug(
                 f"Redacted unique_id as it matches sensitive host IP for entry {entry.entry_id}."
             )
         elif f"::{normalized_sensitive_host_for_id}::" in unique_id_display:
             unique_id_display = unique_id_display.replace(
-                f"::{normalized_sensitive_host_for_id}::", f"::{REDACTED_PLACEHOLDER}::"
+                f"::{normalized_sensitive_host_for_id}::",
+                f"::{DIAGNOSTICS_REDACTED_PLACEHOLDER}::",
             )
             _LOGGER.debug(
                 f"Redacted sensitive host IP component in unique_id for entry {entry.entry_id}."
@@ -127,8 +124,8 @@ def _get_redacted_config_entry_info(entry: ConfigEntry) -> Dict[str, Any]:
     return {
         "title": entry.title,
         "entry_id": entry.entry_id,
-        "data": async_redact_data(entry.data, TO_REDACT),
-        "options": async_redact_data(entry.options, TO_REDACT),
+        "data": async_redact_data(entry.data, DIAGNOSTICS_TO_REDACT_CONFIG_KEYS),
+        "options": async_redact_data(entry.options, DIAGNOSTICS_TO_REDACT_CONFIG_KEYS),
         "unique_id": unique_id_display,
     }
 
@@ -167,7 +164,7 @@ def _get_coordinator_diagnostics(
         }
         if coordinator.data:
             redacted_coordinator_data = async_redact_data(
-                coordinator.data, SENSITIVE_COORDINATOR_DATA_NODE_IDS
+                coordinator.data, DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS
             )
             coordinator_diag["data_sample_keys"] = list(redacted_coordinator_data.keys())[:20]
             coordinator_diag["data_item_count"] = len(redacted_coordinator_data)
@@ -199,7 +196,7 @@ def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str
     # Validate base_url before parsing
     if not isinstance(temp_base_url, str) or not temp_base_url.strip():
         _LOGGER.warning(f"API client base_url is not a valid string: {temp_base_url!r}")
-        return REDACTED_PLACEHOLDER
+        return DIAGNOSTICS_REDACTED_PLACEHOLDER
 
     temp_base_url_with_scheme = (
         temp_base_url if "://" in temp_base_url else f"http://{temp_base_url}"
@@ -213,12 +210,12 @@ def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str
         _LOGGER.warning(
             f"Exception occurred while parsing API client base_url '{temp_base_url}': {exc}"
         )
-        return REDACTED_PLACEHOLDER
+        return DIAGNOSTICS_REDACTED_PLACEHOLDER
 
     # Should not happen if base_url is valid and scheme is prepended.
     if host_part is None:
         _LOGGER.warning(f"Could not parse hostname from API client base_url: {temp_base_url}")
-        return REDACTED_PLACEHOLDER
+        return DIAGNOSTICS_REDACTED_PLACEHOLDER
 
     redacted_host_part = host_part
     successfully_redacted_sensitive_host = False
@@ -228,7 +225,7 @@ def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str
         # The pattern ensures that if sensitive_host_ip is "1.2.3.4", it matches "1.2.3.4" but not "11.2.3.4".
         sensitive_pattern = r"(\[?" + re.escape(sensitive_host_ip) + r"\]?)"
         new_host_part_after_sensitive_redaction, num_subs_sensitive = re.subn(
-            sensitive_pattern, REDACTED_PLACEHOLDER, host_part, flags=re.IGNORECASE
+            sensitive_pattern, DIAGNOSTICS_REDACTED_PLACEHOLDER, host_part, flags=re.IGNORECASE
         )
         if num_subs_sensitive > 0:
             redacted_host_part = new_host_part_after_sensitive_redaction
@@ -239,7 +236,7 @@ def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str
         # If not specifically redacted, check if host_part is any other IP address.
         try:
             ipaddress.ip_address(host_part)  # Raises ValueError if not a valid IP.
-            redacted_host_part = REDACTED_PLACEHOLDER
+            redacted_host_part = DIAGNOSTICS_REDACTED_PLACEHOLDER
             _LOGGER.debug(f"Redacted generic IP address '{host_part}' in API base URL.")
         except ValueError:
             # Not a generic IP (e.g., a hostname not caught by sensitive_host_ip).
@@ -257,9 +254,9 @@ def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str
 
     userinfo_part = ""
     if parsed_url.username:
-        userinfo_part = REDACTED_PLACEHOLDER
+        userinfo_part = DIAGNOSTICS_REDACTED_PLACEHOLDER
         if parsed_url.password:
-            userinfo_part += f":{REDACTED_PLACEHOLDER}"
+            userinfo_part += f":{DIAGNOSTICS_REDACTED_PLACEHOLDER}"
         userinfo_part += "@"
     redacted_netloc = (
         f"{userinfo_part}{redacted_host_part}{f':{port_part}' if port_part is not None else ''}"

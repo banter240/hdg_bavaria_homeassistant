@@ -7,7 +7,7 @@ read from the HDG Bavaria boiler system.
 
 from __future__ import annotations
 
-__version__ = "0.8.15"
+__version__ = "0.8.16"
 
 import logging
 import re
@@ -278,8 +278,7 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
 
         # Determine how to clean whitespace based on entity definition.
         # Default is to only strip leading/trailing. Internal normalization is optional.
-        normalize_internal_ws = self._entity_definition.get("normalize_internal_whitespace", False)
-        if normalize_internal_ws:
+        if self._entity_definition.get("normalize_internal_whitespace", False):
             cleaned_value = re.sub(r"\s+", " ", raw_value_text).strip()
         else:
             cleaned_value = raw_value_text.strip()

@@ -4,7 +4,7 @@ Service handlers for the HDG Bavaria Boiler integration.
 Defines logic for custom services like setting/getting HDG node values.
 """
 
-__version__ = "0.7.6"
+__version__ = "0.7.8"
 
 from decimal import Decimal, InvalidOperation
 import logging
@@ -39,6 +39,7 @@ _LOGGER = logging.getLogger(DOMAIN)
 def _build_sensor_definitions_by_base_node_id() -> Dict[str, list[SensorDefinition]]:
     """Build an index of sensor definitions keyed by their base HDG node ID."""
     index: dict[str, list[SensorDefinition]] = {}
+
     for definition_dict in SENSOR_DEFINITIONS.values():
         definition = cast(SensorDefinition, definition_dict)
         # Ensure hdg_node_id exists and is a string before processing
@@ -50,6 +51,12 @@ def _build_sensor_definitions_by_base_node_id() -> Dict[str, list[SensorDefiniti
                 if base_hdg_node_id_from_def not in index:
                     index[base_hdg_node_id_from_def] = []
                 index[base_hdg_node_id_from_def].append(definition)
+                if len(index[base_hdg_node_id_from_def]) > 1:
+                    _LOGGER.debug(
+                        f"Multiple definitions found for base_node_id '{base_hdg_node_id_from_def}'. "
+                        f"Current list size: {len(index[base_hdg_node_id_from_def])}. "
+                        f"Added definition with translation_key: {definition.get('translation_key')}"
+                    )
         else:
             _LOGGER.warning(
                 f"Skipping definition in _build_sensor_definitions_by_base_node_id due to missing or invalid 'hdg_node_id': {definition_dict.get('translation_key', 'Unknown Key')}"
@@ -76,7 +83,19 @@ def _validate_service_call_input(call: ServiceCall) -> tuple[str, Any]:
 
 
 def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
-    """Find and return the SensorDefinition for a settable node."""
+    """
+    Find and return the SensorDefinition for a settable 'number' node.
+
+    This function queries the cached `SENSOR_DEFINITIONS_BY_BASE_NODE_ID` index.
+    It iterates through the list of definitions associated with the given `node_id_str`
+    (base node ID) and returns the *first* definition that meets the criteria:
+    `ha_platform` is "number" AND `setter_type` is defined.
+
+    If multiple definitions for the same base node ID meet these criteria (which
+    should ideally be avoided in SENSOR_DEFINITIONS to prevent ambiguity), the one
+    that appears earliest in the original SENSOR_DEFINITIONS list (and thus in the
+    cached list for that base node ID) will be selected.
+    """
     sensor_def_for_node: SensorDefinition | None = None
     definitions_for_base = SENSOR_DEFINITIONS_BY_BASE_NODE_ID.get(node_id_str, [])
 
@@ -272,8 +291,6 @@ async def async_handle_set_node_value(
     pass, it delegates the set operation to the HdgDataUpdateCoordinator.
     """
     node_id_input = call.data.get(ATTR_NODE_ID)
-    value_to_set_raw = call.data.get(ATTR_VALUE)
-
     node_id_str, value_to_set = _validate_service_call_input(call)
     _LOGGER.debug(
         f"Service '{SERVICE_SET_NODE_VALUE}': node_id='{node_id_input}' (base='{node_id_str}'), value='{value_to_set}'"

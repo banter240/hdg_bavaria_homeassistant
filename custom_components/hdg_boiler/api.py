@@ -7,7 +7,7 @@ response parsing, error management, and offers methods for fetching
 data and setting values.
 """
 
-__version__ = "0.8.18"
+__version__ = "0.8.19"
 
 import asyncio
 import logging
@@ -17,11 +17,9 @@ from urllib.parse import urlparse, urlunparse, urlencode, parse_qsl
 import aiohttp
 import async_timeout
 
-from .const import API_ENDPOINT_DATA_REFRESH, API_ENDPOINT_SET_VALUE, DOMAIN
+from .const import API_ENDPOINT_DATA_REFRESH, API_ENDPOINT_SET_VALUE, DOMAIN, API_TIMEOUT
 
 _LOGGER = logging.getLogger(DOMAIN)
-
-DEFAULT_TIMEOUT = 15  # Seconds for API requests
 
 
 class HdgApiError(Exception):
@@ -233,7 +231,7 @@ class HdgApiClient:
 
         headers = {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"}
         try:
-            async with async_timeout.timeout(DEFAULT_TIMEOUT):
+            async with async_timeout.timeout(API_TIMEOUT):
                 async with self._session.post(
                     self._url_data_refresh, data=node_payload_str, headers=headers
                 ) as response:
@@ -290,7 +288,7 @@ class HdgApiClient:
         url_with_params = urlunparse(base_url_parts._replace(query=new_query_string))
         _LOGGER.debug(f"Setting node '{node_id}' to '{value}' via GET: {url_with_params}")
         try:
-            async with async_timeout.timeout(DEFAULT_TIMEOUT):
+            async with async_timeout.timeout(API_TIMEOUT):
                 async with self._session.get(url_with_params) as response:
                     response_text = await response.text()
                     if response.status == 200:

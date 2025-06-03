@@ -7,7 +7,7 @@ such as node ID manipulation and URL normalization.
 
 from __future__ import annotations
 
-__version__ = "0.6.10"
+__version__ = "0.6.12"
 
 import logging
 import re
@@ -15,12 +15,9 @@ import unicodedata
 import ipaddress
 from urllib.parse import urlparse, urlunparse, quote, splitport
 from typing import Final, Optional, Tuple, Any, Dict
-from .const import DOMAIN
-
+from .const import DOMAIN, KNOWN_HDG_API_SETTER_SUFFIXES
 
 _LOGGER = logging.getLogger(DOMAIN)
-# Known HDG API setter suffixes (TUVWXY), case-insensitive.
-KNOWN_HDG_API_SETTER_SUFFIXES: Final = "TUVWXY"
 
 # Pre-compiled regex for efficiently extracting numeric parts from strings.
 NUMERIC_PART_REGEX: Final = re.compile(r"([-+]?\d*\.?\d+)")
@@ -184,9 +181,7 @@ def _normalize_string_by_locale(
     """
     normalized_value = value_str
 
-    separators = _get_locale_separators_from_known_list(locale_str)
-
-    if separators:
+    if separators := _get_locale_separators_from_known_list(locale_str):
         decimal_sep, thousands_sep = separators
         if thousands_sep:  # Only replace if a thousands separator is defined for the locale
             normalized_value = normalized_value.replace(thousands_sep, "")

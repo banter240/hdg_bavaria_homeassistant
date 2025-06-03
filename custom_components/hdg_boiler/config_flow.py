@@ -7,11 +7,14 @@ initial setup (host IP, device alias) and subsequent configuration options
 (scan intervals, debug logging, source timezone).
 """
 
-__version__ = "0.9.14"
+from __future__ import annotations
+
+__version__ = "0.9.15"
 
 import time
 import logging
 from typing import Any, Dict, Optional
+import asyncio
 
 import voluptuous as vol
 from homeassistant import config_entries, core
@@ -19,6 +22,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 
+import async_timeout
 from .const import (
     DOMAIN,
     DEFAULT_NAME,
@@ -40,6 +44,7 @@ from .const import (
     MAX_SCAN_INTERVAL,
     CONF_SOURCE_TIMEZONE,
     DEFAULT_SOURCE_TIMEZONE,
+    CONFIG_FLOW_API_TIMEOUT,
 )
 from .polling_groups import HDG_NODE_PAYLOADS
 from .utils import normalize_alias_for_comparison
@@ -145,7 +150,7 @@ async def validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) -> 
     from .api import (
         HdgApiClient,
         HdgApiError,
-        HdgApiConnectionError,  # For more specific error handling
+        HdgApiConnectionError,
     )
 
     _LOGGER.debug(f"validate_host_connectivity: Starting validation for host_ip: {host_ip}")
@@ -155,10 +160,11 @@ async def validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) -> 
 
     try:
         _LOGGER.debug(
-            f"validate_host_connectivity: Attempting HdgApiClient.async_check_connectivity() to {host_ip}"
+            f"validate_host_connectivity: Attempting HdgApiClient.async_check_connectivity() to {host_ip} with timeout {CONFIG_FLOW_API_TIMEOUT}s"
         )
         start_time_check_connectivity = time.monotonic()
-        is_connected = await temp_api_client.async_check_connectivity()
+        async with async_timeout.timeout(CONFIG_FLOW_API_TIMEOUT):
+            is_connected = await temp_api_client.async_check_connectivity()
         end_time_check_connectivity = time.monotonic()
         duration_check_connectivity = end_time_check_connectivity - start_time_check_connectivity
         _LOGGER.debug(
@@ -172,6 +178,12 @@ async def validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) -> 
         # `async_check_connectivity` returned False: host reached, but not an HDG boiler.
         _LOGGER.warning(
             f"validate_host_connectivity: Connectivity test to {host_ip} failed (HdgApiClient reported not connected)."
+        )
+        return False
+    except asyncio.TimeoutError:
+        # This catches the timeout from the new outer `async_timeout.timeout(CONFIG_FLOW_API_TIMEOUT)`
+        _LOGGER.warning(
+            f"validate_host_connectivity: Timeout after {CONFIG_FLOW_API_TIMEOUT}s connecting to host_ip {host_ip}."
         )
         return False
     except HdgApiConnectionError as e:

@@ -7,7 +7,7 @@ standardized unique ID generation. `HdgNodeEntity` extends this for entities
 directly corresponding to specific data nodes on the boiler.
 """
 
-__version__ = "0.8.2"
+__version__ = "0.8.3"
 
 import logging
 from typing import Any, Dict
@@ -87,7 +87,7 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
                 f"HdgBaseEntity: Determined configuration_url '{config_url}' for DeviceInfo for '{unique_id_suffix}'"
             )
         else:
-            _LOGGER.warning(
+            _LOGGER.info(
                 f"HdgBaseEntity: config_url could not be determined for unique_id_suffix '{unique_id_suffix}'. "
                 "This may indicate a misconfiguration or the API client is not fully initialized."
             )
