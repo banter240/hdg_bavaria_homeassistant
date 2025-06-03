@@ -7,7 +7,7 @@ to entities. Manages initial data population and error handling.
 
 import time
 
-__version__ = "0.9.1"
+__version__ = "0.9.3"
 
 import asyncio
 import logging
@@ -259,11 +259,15 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             if node_id_clean in cleaned_node_ids_processed_this_call:
                 existing_value = self.data.get(node_id_clean)
                 if existing_value != item_text_value:
-                    _LOGGER.error(
+                    _LOGGER.critical(
                         f"Duplicate base node ID '{node_id_clean}' (from API ID '{node_id_with_suffix}') "
                         f"received in API response for group '{group_key}' WITH CONFLICTING VALUES. "
                         f"Existing (first occurrence): '{existing_value}', New (skipped): '{item_text_value}'. "
-                        "The first occurrence's value is kept."
+                        "This indicates a severe API data inconsistency. The first occurrence's value is kept, but data integrity is compromised."
+                    )
+                    raise UpdateFailed(
+                        f"Critical API data inconsistency: Duplicate base node ID '{node_id_clean}' with conflicting values in group '{group_key}'. "
+                        f"Existing: '{existing_value}', New: '{item_text_value}'."
                     )
                 else:  # Values are identical
                     _LOGGER.debug(
@@ -632,6 +636,9 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                         float_val = float(val_stripped)
                         return int(float_val) if float_val == int(float_val) else float_val
                     except ValueError:
+                        _LOGGER.debug(
+                            f"Value '{val_stripped}' could not be normalized to a number in _normalize_for_comparison for node '{node_id}'."
+                        )
                         return val_stripped
             else:
                 return val

@@ -9,7 +9,7 @@ initial setup (host IP, device alias) and subsequent configuration options
 
 from __future__ import annotations
 
-__version__ = "0.9.15"
+__version__ = "0.9.16"
 
 import time
 import logging
@@ -246,7 +246,9 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if raw_device_alias and not device_alias:  # Alias was given but is only whitespace.
             errors[CONF_DEVICE_ALIAS] = "alias_is_whitespace"
-            _LOGGER.warning("Device alias provided consisted only of whitespace.")
+            _LOGGER.warning(
+                "Device alias provided consisted only of whitespace or invisible characters after normalization."
+            )
         elif device_alias:  # Alias is non-empty; check for duplicates.
             existing_entries = self.hass.config_entries.async_entries(DOMAIN)
             for entry in existing_entries:
@@ -373,8 +375,13 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
                     f"Invalid timezone string provided in options: {source_timezone_input}"
                 )
             except Exception as e:  # Catch other potential errors during ZoneInfo creation
-                current_errors[CONF_SOURCE_TIMEZONE] = "invalid_timezone_generic"
-                _LOGGER.error(f"Error validating timezone string '{source_timezone_input}': {e}")
+                current_errors[CONF_SOURCE_TIMEZONE] = (
+                    "invalid_timezone_generic"  # Keep generic error key for translation
+                )
+                _LOGGER.error(
+                    f"Unexpected error validating timezone string '{source_timezone_input}': {e}",
+                    exc_info=True,
+                )
 
             # If user_input is provided, HA has already validated it against the schema
             # from the previous async_show_form call. If there were schema errors,

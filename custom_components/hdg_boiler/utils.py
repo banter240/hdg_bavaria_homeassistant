@@ -7,7 +7,7 @@ such as node ID manipulation and URL normalization.
 
 from __future__ import annotations
 
-__version__ = "0.6.12"
+__version__ = "0.6.14"
 
 import logging
 import re
@@ -431,16 +431,17 @@ def safe_float_convert(
 
 def normalize_alias_for_comparison(alias: str) -> str:
     """
-    Normalize an alias string for case-insensitive and Unicode-aware comparison.
-
-    Converts to lowercase and applies NFC Unicode normalization.
+    Normalize an alias string for case-insensitive comparison.
+    Converts to lowercase and strips leading/trailing standard whitespace.
 
     Args:
         alias: The alias string to normalize.
     Returns:
         The normalized alias string.
     """
-    return unicodedata.normalize("NFC", alias).lower()
+    if not isinstance(alias, str):
+        return ""
+    return alias.strip().lower()
 
 
 def normalize_unique_id_component(component: str) -> str:
@@ -501,12 +502,12 @@ def parse_float_from_string(
         return float(numeric_part_str)
     except ValueError:
         log_prefix = ""
-        if node_id_for_log and entity_id_for_log:  # pragma: no cover
-            log_prefix = f"Node {node_id_for_log} ({entity_id_for_log}): "  # pragma: no cover
-        elif node_id_for_log:  # pragma: no cover
-            log_prefix = f"Node {node_id_for_log}: "  # pragma: no cover
-        elif entity_id_for_log:  # pragma: no cover
-            log_prefix = f"Entity {entity_id_for_log}: "  # pragma: no cover
+        if node_id_for_log and entity_id_for_log:
+            log_prefix = f"Node {node_id_for_log} ({entity_id_for_log}): "
+        elif node_id_for_log:
+            log_prefix = f"Node {node_id_for_log}: "
+        elif entity_id_for_log:
+            log_prefix = f"Entity {entity_id_for_log}: "
         _LOGGER.warning(
             f"{log_prefix}Could not parse float value from '{numeric_part_str}' (original: '{raw_value}')."
         )

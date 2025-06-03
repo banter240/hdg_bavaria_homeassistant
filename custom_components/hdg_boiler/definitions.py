@@ -8,7 +8,7 @@ This data structure was moved from const.py to improve modularity.
 
 from __future__ import annotations
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 from typing import Final, TypedDict, Optional, Dict
 
@@ -69,7 +69,7 @@ class SensorDefinition(TypedDict, total=False):
 
 # Master dictionary defining all sensors and entities for the integration.
 # Each key is a unique identifier (often matching the translation_key) for the entity.
-SENSOR_DEFINITIONS: Final[Dict[str, SensorDefinition]] = {
+SENSOR_DEFINITIONS: Final[Dict[str, SensorDefinition]] = {  # sourcery: skip: generic-api-key
     "sprache": {
         "hdg_node_id": "1T",
         "translation_key": "sprache",

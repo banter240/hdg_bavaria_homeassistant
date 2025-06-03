@@ -7,7 +7,7 @@ service definitions, and other shared values. Entity-specific definitions
 (SENSOR_DEFINITIONS) are maintained in `definitions.py`.
 """
 
-__version__ = "0.9.21"
+__version__ = "0.9.22"
 
 from typing import Final
 
@@ -26,7 +26,7 @@ HDG_UNAVAILABLE_STRINGS: Final[set[str]] = {"---", "unavailable", "none", "n/a"}
 # Special text from HDG API for datetimes representing "more than 7 days ago".
 HDG_DATETIME_SPECIAL_TEXT: Final = "größer 7 tage"
 # Known suffixes for HDG API nodes that are settable.
-KNOWN_HDG_API_SETTER_SUFFIXES: Final = "TUVWXY"
+KNOWN_HDG_API_SETTER_SUFFIXES: Final[set[str]] = {"T", "U", "V", "W", "X", "Y"}
 
 # --- API Communication Parameters ---
 API_ENDPOINT_DATA_REFRESH: Final = "/ApiManager.php?action=dataRefresh"
@@ -43,7 +43,6 @@ CONF_SCAN_INTERVAL_GROUP2: Final = "scan_interval_status_general"
 CONF_SCAN_INTERVAL_GROUP3: Final = "scan_interval_config_counters_1"
 CONF_SCAN_INTERVAL_GROUP4: Final = "scan_interval_config_counters_2"
 CONF_SCAN_INTERVAL_GROUP5: Final = "scan_interval_config_counters_3"
-CONF_ENABLE_DEBUG_LOGGING: Final = "enable_debug_logging"
 CONF_SOURCE_TIMEZONE: Final = "source_timezone"  # Added for timezone configuration
 DEFAULT_HOST_IP: Final = ""  # Default value for host IP if not provided.
 

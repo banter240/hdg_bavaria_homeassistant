@@ -9,7 +9,7 @@ and entity states.
 
 from __future__ import annotations
 
-__version__ = "0.9.30"
+__version__ = "0.9.32"
 
 import logging
 from typing import Any, Dict
@@ -18,7 +18,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.util import dt as dt_util
-import re
+
 import ipaddress
 from urllib.parse import urlparse, urlunparse
 from homeassistant.helpers import entity_registry as er
@@ -172,6 +172,51 @@ def _get_coordinator_diagnostics(
     return "Coordinator not found or not initialized."
 
 
+def _is_ip_address_for_redaction(host_to_check: str) -> bool:
+    """Helper to check if a host string is an IP address."""
+    try:
+        ipaddress.ip_address(host_to_check)
+        return True
+    except ValueError:
+        return False
+
+
+def _build_redacted_netloc(parsed_url: urlparse.ParseResult, sensitive_host_ip: str | None) -> str:
+    """
+    Build the redacted network location (netloc) string.
+
+    Handles redaction of userinfo (username:password), host/IP, and port.
+
+    Args:
+        parsed_url: The ParseResult object from urlparse.
+        sensitive_host_ip: The specific host IP or hostname to redact.
+
+    Returns:
+        The redacted netloc string.
+    """
+    netloc_parts = []
+    # Redact userinfo (username:password@)
+    if parsed_url.username:
+        netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)
+        if parsed_url.password:
+            netloc_parts.append(f":{DIAGNOSTICS_REDACTED_PLACEHOLDER}")
+        netloc_parts.append("@")
+
+    # Redact host/IP
+    if host_to_check := parsed_url.hostname:
+        if (
+            sensitive_host_ip and host_to_check.lower() == sensitive_host_ip.lower()
+        ) or _is_ip_address_for_redaction(host_to_check):
+            netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)
+        else:
+            netloc_parts.append(host_to_check)
+    else:
+        netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)
+    if parsed_url.port:
+        netloc_parts.append(f":{parsed_url.port}")
+    return "".join(netloc_parts)
+
+
 def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str | None) -> str:
     """
     Redact sensitive parts (host IP or general IP addresses) from the API client's base URL.
@@ -187,84 +232,30 @@ def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str
         This function assumes that `api_client` has a `base_url` attribute,
         which may be an empty string if the base URL is not set or invalid.
     """
-    base_url_value = getattr(api_client, "base_url", None)
-    if not base_url_value:  # Handles None from getattr or if base_url_value is an empty string
+    if not (base_url := getattr(api_client, "base_url", None)):
         return "Unknown"
 
-    temp_base_url = base_url_value
-
-    # Validate base_url before parsing
-    if not isinstance(temp_base_url, str) or not temp_base_url.strip():
-        _LOGGER.warning(f"API client base_url is not a valid string: {temp_base_url!r}")
-        return DIAGNOSTICS_REDACTED_PLACEHOLDER
-
-    temp_base_url_with_scheme = (
-        temp_base_url if "://" in temp_base_url else f"http://{temp_base_url}"
-    )
-
     try:
-        parsed_url = urlparse(temp_base_url_with_scheme)
-        host_part = parsed_url.hostname
-        port_part = parsed_url.port
-    except Exception as exc:
-        _LOGGER.warning(
-            f"Exception occurred while parsing API client base_url '{temp_base_url}': {exc}"
+        parsed = urlparse(base_url)
+        redacted_netloc = _build_redacted_netloc(parsed, sensitive_host_ip)
+
+        redacted_path = (
+            DIAGNOSTICS_REDACTED_PLACEHOLDER if parsed.path and parsed.path != "/" else parsed.path
         )
-        return DIAGNOSTICS_REDACTED_PLACEHOLDER
+        redacted_query = DIAGNOSTICS_REDACTED_PLACEHOLDER if parsed.query else ""
 
-    # Should not happen if base_url is valid and scheme is prepended.
-    if host_part is None:
-        _LOGGER.warning(f"Could not parse hostname from API client base_url: {temp_base_url}")
-        return DIAGNOSTICS_REDACTED_PLACEHOLDER
-
-    redacted_host_part = host_part
-    successfully_redacted_sensitive_host = False
-
-    if sensitive_host_ip:
-        # Redact specific sensitive host (IP/hostname), handling IPv6 brackets.
-        # The pattern ensures that if sensitive_host_ip is "1.2.3.4", it matches "1.2.3.4" but not "11.2.3.4".
-        sensitive_pattern = r"(\[?" + re.escape(sensitive_host_ip) + r"\]?)"
-        new_host_part_after_sensitive_redaction, num_subs_sensitive = re.subn(
-            sensitive_pattern, DIAGNOSTICS_REDACTED_PLACEHOLDER, host_part, flags=re.IGNORECASE
-        )
-        if num_subs_sensitive > 0:
-            redacted_host_part = new_host_part_after_sensitive_redaction
-            successfully_redacted_sensitive_host = True
-            _LOGGER.debug(f"Redacted sensitive host '{sensitive_host_ip}' in API base URL.")
-
-    if not successfully_redacted_sensitive_host:
-        # If not specifically redacted, check if host_part is any other IP address.
-        try:
-            ipaddress.ip_address(host_part)  # Raises ValueError if not a valid IP.
-            redacted_host_part = DIAGNOSTICS_REDACTED_PLACEHOLDER
-            _LOGGER.debug(f"Redacted generic IP address '{host_part}' in API base URL.")
-        except ValueError:
-            # Not a generic IP (e.g., a hostname not caught by sensitive_host_ip).
-            _LOGGER.debug(
-                f"Host part '{host_part}' is not a generic IP address and was not redacted as such."
+        return urlunparse(
+            parsed._replace(
+                netloc=redacted_netloc,
+                path=redacted_path,
+                query=redacted_query,
+                params="",
+                fragment="",
             )
-    REDACTED_PATH_PLACEHOLDER = "/REDACTED_PATH"
-    REDACTED_QUERY_PLACEHOLDER = "REDACTED_QUERY"
-
-    # Redact path if non-empty and not root; empty path (e.g. http://host) is valid.
-    redacted_path = (
-        REDACTED_PATH_PLACEHOLDER if parsed_url.path and parsed_url.path != "/" else parsed_url.path
-    )
-    redacted_query = REDACTED_QUERY_PLACEHOLDER if parsed_url.query else parsed_url.query
-
-    userinfo_part = ""
-    if parsed_url.username:
-        userinfo_part = DIAGNOSTICS_REDACTED_PLACEHOLDER
-        if parsed_url.password:
-            userinfo_part += f":{DIAGNOSTICS_REDACTED_PLACEHOLDER}"
-        userinfo_part += "@"
-    redacted_netloc = (
-        f"{userinfo_part}{redacted_host_part}{f':{port_part}' if port_part is not None else ''}"
-    )
-
-    return urlunparse(
-        parsed_url._replace(netloc=redacted_netloc, path=redacted_path, query=redacted_query)
-    )  # params and fragment are usually not sensitive but are kept by _replace if not specified
+        )
+    except Exception as e:
+        _LOGGER.warning(f"Error redacting API client base_url '{base_url}': {e}")
+        return DIAGNOSTICS_REDACTED_PLACEHOLDER
 
 
 def _get_api_client_diagnostics(
@@ -300,12 +291,34 @@ async def _get_entity_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> li
     """
     entity_registry = er.async_get(hass)
     entities = await er.async_entries_for_config_entry(entity_registry, entry.entry_id)
-    return [
-        {
-            "entity_id": entity.entity_id,
-            "unique_id": entity.unique_id,
-            "platform": entity.platform,
-            "disabled_by": entity.disabled_by,
-        }
-        for entity in entities
-    ]
+
+    diagnostics_entities = []
+    sensitive_host_ip_for_redaction = entry.data.get(CONF_HOST_IP)
+    normalized_sensitive_host_for_id = (
+        normalize_unique_id_component(sensitive_host_ip_for_redaction)
+        if sensitive_host_ip_for_redaction
+        else None
+    )
+
+    for entity in entities:
+        unique_id_display = entity.unique_id
+        if (
+            normalized_sensitive_host_for_id
+            and unique_id_display
+            and normalized_sensitive_host_for_id in unique_id_display
+        ):
+            # Basic redaction: if the normalized host IP is part of the unique_id, replace it.
+            # This is a simplified approach; more complex patterns might be needed for perfect redaction.
+            unique_id_display = unique_id_display.replace(
+                normalized_sensitive_host_for_id, DIAGNOSTICS_REDACTED_PLACEHOLDER
+            )
+
+        diagnostics_entities.append(
+            {
+                "entity_id": entity.entity_id,
+                "unique_id": unique_id_display,
+                "platform": entity.platform,
+                "disabled_by": entity.disabled_by,
+            }
+        )
+    return diagnostics_entities

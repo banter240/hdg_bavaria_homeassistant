@@ -4,7 +4,7 @@ Service handlers for the HDG Bavaria Boiler integration.
 Defines logic for custom services like setting/getting HDG node values.
 """
 
-__version__ = "0.7.8"
+__version__ = "0.7.9"
 
 from decimal import Decimal, InvalidOperation
 import logging
@@ -91,28 +91,22 @@ def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
     (base node ID) and returns the *first* definition that meets the criteria:
     `ha_platform` is "number" AND `setter_type` is defined.
 
-    If multiple definitions for the same base node ID meet these criteria (which
-    should ideally be avoided in SENSOR_DEFINITIONS to prevent ambiguity), the one
-    that appears earliest in the original SENSOR_DEFINITIONS list (and thus in the
-    cached list for that base node ID) will be selected.
+    Raises:
+        ServiceValidationError: If zero or multiple settable 'number' definitions are found for the node.
     """
-    sensor_def_for_node: SensorDefinition | None = None
     definitions_for_base = SENSOR_DEFINITIONS_BY_BASE_NODE_ID.get(node_id_str, [])
+    settable_definitions = [
+        d for d in definitions_for_base if d.get("ha_platform") == "number" and d.get("setter_type")
+    ]
 
-    for definition in definitions_for_base:
-        if definition.get("ha_platform") == "number" and definition.get("setter_type"):
-            sensor_def_for_node = definition
-            break
-
-    if not sensor_def_for_node:
-        # Simplified error message generation for brevity in this helper
-        error_detail = "No SENSOR_DEFINITIONS entry found or not a settable 'number'."
-        if definitions_for_base:  # More specific if base ID was found but didn't qualify
-            first_def = definitions_for_base[0]
+    if not settable_definitions:
+        error_detail = "No SENSOR_DEFINITIONS entry found or not a settable 'number' platform with a 'setter_type'."
+        if definitions_for_base:
+            # Provide more context if definitions exist but don't match criteria
             error_detail = (
-                f"Node ID found, but not a valid settable 'number'. "
-                f"First found def (hdg_node_id: {first_def.get('hdg_node_id')}): "
-                f"platform='{first_def.get('ha_platform')}', setter_type='{first_def.get('setter_type')}'."
+                f"Node ID found, but no valid settable 'number' definition. "
+                f"Found {len(definitions_for_base)} definition(s), but none matched criteria "
+                f"(ha_platform='number' and 'setter_type' defined)."
             )
         _LOGGER.error(
             f"Node ID '{node_id_str}' not configured as settable 'number'. Details: {error_detail}"
@@ -120,7 +114,19 @@ def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
         raise ServiceValidationError(
             f"Node ID '{node_id_str}' not settable. Reason: {error_detail}"
         )
-    return sensor_def_for_node
+
+    # At this point, settable_definitions is not empty.
+    # Now check if there are multiple definitions (len > 1).
+    if len(settable_definitions) > 1:
+        _LOGGER.error(
+            f"Multiple settable 'number' SensorDefinitions found for node_id '{node_id_str}': {settable_definitions}. "
+            "Please ensure only one settable definition exists per node to avoid ambiguity."
+        )
+        raise ServiceValidationError(
+            f"Multiple settable 'number' definitions for node ID '{node_id_str}'. Ambiguous configuration."
+        )
+    # If we reach here, len(settable_definitions) must be 1.
+    return settable_definitions[0]
 
 
 def _coerce_and_validate_value_type(

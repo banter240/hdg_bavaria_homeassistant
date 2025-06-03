@@ -7,7 +7,7 @@ response parsing, error management, and offers methods for fetching
 data and setting values.
 """
 
-__version__ = "0.8.19"
+__version__ = "0.8.23"
 
 import asyncio
 import logging
@@ -16,6 +16,10 @@ from urllib.parse import urlparse, urlunparse, urlencode, parse_qsl
 
 import aiohttp
 import async_timeout
+
+from .utils import (
+    normalize_host_for_scheme,
+)
 
 from .const import API_ENDPOINT_DATA_REFRESH, API_ENDPOINT_SET_VALUE, DOMAIN, API_TIMEOUT
 
@@ -63,13 +67,6 @@ class HdgApiClient:
             raise HdgApiError("host_address must not be empty or whitespace only.")
 
         if not host_address_stripped.lower().startswith(("http://", "https://")):
-            # If no scheme is provided, prepend "http://".
-            # Use the robust utility function to normalize the host part,
-            # which handles IPv4, IPv6 (with/without brackets, ports, zone indices).
-            from .utils import (
-                normalize_host_for_scheme,
-            )  # Local import to avoid circular dependency if utils imports api
-
             temp_host_for_scheme = host_address_stripped
             normalized_host_part = normalize_host_for_scheme(temp_host_for_scheme)
             schemed_host_input = f"http://{normalized_host_part}"
@@ -103,7 +100,7 @@ class HdgApiClient:
 
     async def _async_handle_data_refresh_response(
         self, response: aiohttp.ClientResponse, node_payload_str: str
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:  # sourcery skip: invert-any-all
         """
         Handle and parse the response from the dataRefresh API endpoint.
 
@@ -121,30 +118,36 @@ class HdgApiClient:
         """
         response.raise_for_status()
 
-        content_type = response.headers.get("Content-Type", "")
-        if "text/plain" in content_type:
+        content_type_header = response.headers.get("Content-Type", "").lower()
+        # Normalize content_type by stripping parameters (e.g., charset)
+        content_type_main = content_type_header.split(";")[0].strip()
+
+        if content_type_main == "text/plain":  # Exact match for plain text
             _LOGGER.warning(
                 f"Accepting 'text/plain' as JSON response for dataRefresh (payload: {node_payload_str}). "
                 "This may mask unexpected server responses or misconfigurations."
             )
 
-        if all(ct not in content_type for ct in ("application/json", "text/json", "text/plain")):
+        if not any(
+            accepted_type in content_type_header
+            for accepted_type in ("application/json", "text/json", "text/plain")
+        ):
             text_response = await response.text()
-            if "text/html" in content_type:  # Common indicator of an error page
+            if "text/html" in content_type_header:  # Common indicator of an error page
                 _LOGGER.warning(
                     f"Received HTML response from HDG API for dataRefresh (payload: {node_payload_str}). "
-                    f"Content-Type: {content_type}, Content (truncated): {text_response[:200]}"
+                    f"Content-Type: {content_type_header}, Content (truncated): {text_response[:200]}"
                 )
                 raise HdgApiResponseError(
                     f"Received HTML error page from HDG API. Content (truncated): {text_response[:100]}"
                 )
             else:
                 _LOGGER.warning(
-                    f"Unexpected Content-Type '{content_type}' for dataRefresh (payload: {node_payload_str}). "
+                    f"Unexpected Content-Type '{content_type_header}' for dataRefresh (payload: {node_payload_str}). "
                     f"Response text: {text_response[:200]}..."
                 )
                 raise HdgApiResponseError(
-                    f"Unexpected Content-Type for dataRefresh: {content_type}"
+                    f"Unexpected Content-Type for dataRefresh: {content_type_header}"
                 )
 
         try:
@@ -153,10 +156,10 @@ class HdgApiClient:
             text_response_for_error = await response.text()
             _LOGGER.warning(
                 f"Failed to parse JSON response for dataRefresh (payload: {node_payload_str}) "
-                f"despite Content-Type '{content_type}'. Error: {err}. Response: {text_response_for_error[:200]}..."
+                f"despite Content-Type '{content_type_header}'. Error: {err}. Response: {text_response_for_error[:200]}..."
             )
             raise HdgApiResponseError(
-                f"Failed to parse JSON response (Content-Type: {content_type}, Error: {err}): {text_response_for_error[:100]}"
+                f"Failed to parse JSON response (Content-Type: {content_type_header}, Error: {err}): {text_response_for_error[:100]}"
             ) from err
 
         if not isinstance(json_response, list):
