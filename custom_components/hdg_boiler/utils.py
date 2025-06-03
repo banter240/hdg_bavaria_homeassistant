@@ -1,25 +1,26 @@
 """
 Utility functions for the HDG Bavaria Boiler integration.
 
-This module contains helper functions used across different parts of the integration,
-such as node ID manipulation and URL normalization.
+This module provides a collection of helper functions utilized across various
+parts of the HDG Bavaria Boiler integration. These include utilities for
+node ID manipulation, URL normalization, string parsing, and value formatting.
 """
 
 from __future__ import annotations
 
-__version__ = "0.6.14"
+__version__ = "0.6.16"
 
 import logging
 import re
-import unicodedata
 import ipaddress
 from urllib.parse import urlparse, urlunparse, quote, splitport
-from typing import Final, Optional, Tuple, Any, Dict
+from typing import Final, Optional, Tuple, Any, Dict, Union
 from .const import DOMAIN, KNOWN_HDG_API_SETTER_SUFFIXES
 
 _LOGGER = logging.getLogger(DOMAIN)
 
 # Pre-compiled regex for efficiently extracting numeric parts from strings.
+# Finds the first sequence of digits, optional sign, and optional decimal point with digits.
 NUMERIC_PART_REGEX: Final = re.compile(r"([-+]?\d*\.?\d+)")
 # Default regex pattern for percent parsing (German output "X %-Schritte").
 DEFAULT_PERCENT_REGEX_PATTERN: Final = r"(\d+)\s*%-Schritte"
@@ -37,10 +38,13 @@ KNOWN_LOCALE_SEPARATORS: Final[Dict[str, Dict[str, str]]] = {
 
 def strip_hdg_node_suffix(node_id_with_suffix: str) -> str:
     """
-    Remove known HDG API setter suffix (TUVWXY, case-insensitive) if present.
+    Remove a known HDG API setter suffix (T, U, V, W, X, Y, case-insensitive) if present.
+
+    Args:
+        node_id_with_suffix: The node ID string, potentially with a suffix.
 
     Returns:
-        The base node ID (numeric part if suffix was present, else original string).
+        The base node ID (numeric part if a known suffix was present, otherwise the original string).
     """
     if node_id_with_suffix and node_id_with_suffix[-1].upper() in KNOWN_HDG_API_SETTER_SUFFIXES:
         return node_id_with_suffix[:-1]
@@ -51,19 +55,20 @@ def normalize_host_for_scheme(host_address: str) -> str:
     """
     Normalize a host address string, particularly for IPv6 addresses.
     Uses ipaddress and urllib.parse.splitport to robustly handle IPv4,
-    IPv6 (with or without brackets), and optional ports.
-    Input 'host_address' is assumed to be already stripped of leading/trailing
-    whitespace and without an explicit scheme (e.g., "http://").
-
-    Raises:
-        ValueError: If an IPv6 address with a port is missing brackets.
+    IPv6 addresses (with or without brackets), and optional port numbers.
+    The input 'host_address' is assumed to be already stripped of leading/trailing
+    whitespace and to not include an explicit scheme (e.g., "http://").
 
     Args:
         host_address: The host address string to normalize.
 
     Returns:
         The normalized host string, with IPv6 addresses bracketed if necessary,
-        and port appended if present, or the original address if parsing fails.
+        and the port appended if present. Returns the original address if parsing
+        or normalization fails.
+
+    Raises:
+        ValueError: If an IPv6 address is provided with a port but is missing the required brackets.
     """
     # Heuristic check for malformed IPv6 with port (e.g., "2001:db8::1:8080" instead of "[2001:db8::1]:8080")
     # Valid IPv6 with port: "[2001:db8::1]:8080"
@@ -131,8 +136,8 @@ def prepare_base_url(host_input_original_raw: str) -> Optional[str]:
     Args:
         host_input_original_raw: The raw host input string from configuration.
 
-    Returns:
-        The prepared base URL string (e.g., "http://192.168.1.100"), or None if invalid.
+    Returns: The prepared base URL string (e.g., "http://192.168.1.100"),
+             or None if the input is invalid or cannot be processed.
     """
     host_input_original = host_input_original_raw.strip()
     host_to_process = host_input_original
@@ -156,7 +161,15 @@ def prepare_base_url(host_input_original_raw: str) -> Optional[str]:
 def _get_locale_separators_from_known_list(
     locale_str: str,
 ) -> Optional[Tuple[str, str]]:
-    """Retrieve decimal and thousands separators for a given locale from a predefined list."""
+    """
+    Retrieve decimal and thousands separators for a given locale from a predefined list.
+
+    Args:
+        locale_str: The locale string (e.g., 'en_US', 'de_DE').
+
+    Returns: A tuple containing the decimal point and thousands separator for the locale,
+             or None if the locale is not in the predefined list.
+    """
     if locale_str in KNOWN_LOCALE_SEPARATORS:
         conv = KNOWN_LOCALE_SEPARATORS[locale_str]
         return conv["decimal_point"], conv["thousands_sep"]
@@ -173,11 +186,11 @@ def _normalize_string_by_locale(
     Args:
         value_str: The string to normalize.
         locale_str: The locale string (e.g., 'en_US', 'de_DE').
-        log_prefix: Prefix for log messages.
+        log_prefix: A prefix string for log messages, providing context.
         raw_cleaned_value_for_log: Original cleaned value for logging.
 
     Returns:
-        The normalized string, or None if locale processing fails critically.
+        The string normalized according to the locale's separators, or None if the locale is not known.
     """
     normalized_value = value_str
 
@@ -208,11 +221,11 @@ def _normalize_string_by_heuristic(
 
     Args:
         value_str: The string to normalize.
-        log_prefix: Prefix for log messages.
+        log_prefix: A prefix string for log messages, providing context.
         raw_cleaned_value_for_log: Original cleaned value for logging.
 
     Returns:
-        The normalized string, or None if ambiguous.
+        The string with heuristically normalized separators, or None if the format is ambiguous.
     """
     if "." in value_str and "," in value_str:
         last_dot_pos = value_str.rfind(".")
@@ -249,23 +262,19 @@ def extract_numeric_string(
     locale: Optional[str] = None,
 ) -> Optional[str]:
     """
-    Helper to extract numeric string part using regex after locale-aware normalization.
-    NUMERIC_PART_REGEX finds the first float-like number, ignoring trailing units.
-    Handles mixed decimal/thousands separators (e.g., "1.234,56" or "1,234.56").
+    Extract the numeric part of a string using regex after locale-aware normalization.
 
-    Ambiguous handling: If `locale` is not provided and both '.' and ',' are present,
-    the function currently relies on the position of the last separator to determine
-    the decimal separator, which may misinterpret ambiguous or malformed input.
-    To reduce risk, you can specify the `locale` parameter (e.g., 'en_US', 'de_DE')
-    to explicitly set decimal and thousands separators.
+    This function first normalizes the input string to use '.' as the decimal
+    separator, based on an optional locale or a heuristic. Then, it uses
+    `NUMERIC_PART_REGEX` to find the first float-like number, ignoring
+    any trailing units or non-numeric characters.
 
     Args:
         raw_cleaned_value: The already whitespace-cleaned string to parse.
         node_id_for_log: Optional HDG node ID for logging context.
         entity_id_for_log: Optional entity ID for logging context.
         locale: Optional locale string (e.g., 'en_US', 'de_DE') to guide
-                decimal/thousands separator normalization. If None, a heuristic is used.
-
+                separator normalization. If None, a heuristic is applied.
 
     Returns:
         The extracted numeric string, or None if not found.
@@ -321,11 +330,12 @@ def parse_percent_from_string(
 
     Args:
         cleaned_value: The whitespace-cleaned string to parse.
-        regex_pattern: The regex pattern to use for extraction. Defaults to DEFAULT_PERCENT_REGEX_PATTERN.
+        regex_pattern: The regex pattern to use for extraction.
+                       Defaults to `DEFAULT_PERCENT_REGEX_PATTERN`.
         node_id_for_log: Optional HDG node ID for logging context.
         entity_id_for_log: Optional entity ID for logging context.
     Returns:
-        The extracted integer percentage, or None if not found or parse error.
+        The extracted integer percentage, or None if not found or if a parsing error occurs.
     """
     log_prefix = (
         f"Node {node_id_for_log} ({entity_id_for_log}): "
@@ -357,19 +367,48 @@ def parse_percent_from_string(
     return None
 
 
+def format_value_for_api(numeric_value: Union[int, float], setter_type: str) -> str:
+    """
+    Format a numeric value into the string representation expected by the HDG API.
+
+    Args:
+        numeric_value: The numeric value (int or float) to format.
+        setter_type: The 'setter_type' string from SENSOR_DEFINITIONS (e.g., "int", "float1", "float2").
+
+    Returns:
+        The formatted string suitable for the HDG API.
+
+    Raises:
+        ValueError: If the `setter_type` is unknown or if the `numeric_value`
+                    cannot be formatted according to the specified type.
+    """
+    if setter_type == "int":
+        # Ensure it's treated as an integer, handle potential float input like 10.0
+        return str(int(round(numeric_value)))
+    elif setter_type == "float1":
+        return f"{numeric_value:.1f}".replace(",", ".")  # Format to 1 decimal, use dot
+    elif setter_type == "float2":
+        return f"{numeric_value:.2f}".replace(",", ".")  # Format to 2 decimals, use dot
+    else:
+        msg = f"Unknown 'setter_type' ('{setter_type}') encountered during API value formatting for value '{numeric_value}'."
+        _LOGGER.error(msg)
+        raise ValueError(msg)  # Use ValueError as it's a data/config issue, not API communication.
+
+
 def coerce_and_round_float(
     value_to_set: Any, precision: int, node_type_str: str
 ) -> Tuple[Optional[float], bool, str]:
     """
-    Coerce input to float and round. Used for 'float1'/'float2' types.
+    Coerce an input value to a float and round it to a specified precision.
+    Typically used for 'float1' or 'float2' setter types.
 
     Args:
         value_to_set: The value to coerce and round.
         precision: The number of decimal places to round to.
-        node_type_str: String representation of the node type for error messages.
+        node_type_str: A string representation of the node type, used in error messages.
 
     Returns:
-        A tuple: (rounded_float_or_None, success_flag, error_message_string).
+        A tuple containing (rounded_float_or_None, success_flag, error_message_string).
     """
     try:
         return round(float(value_to_set), precision), True, ""
@@ -383,13 +422,14 @@ def coerce_and_round_float(
 
 def extract_base_node_id(node_id_from_def: str) -> str:
     """
-    Extract base numeric ID from an 'hdg_node_id' string.
-    Removes known trailing setter suffixes (TUVWXY, case-insensitive).
+    Extract the base numeric ID from an 'hdg_node_id' string from SENSOR_DEFINITIONS.
+    Removes known trailing setter suffixes (T, U, V, W, X, Y, case-insensitive).
 
     Args:
         node_id_from_def: The node ID string from SENSOR_DEFINITIONS.
     Returns:
-        The base numeric part of the node ID, or the original string if no suffix is matched.
+        The base numeric part of the node ID, or the original string if no known
+        suffix is matched or if the format is unexpected.
     """
     if not node_id_from_def:
         return node_id_from_def
@@ -436,18 +476,18 @@ def normalize_alias_for_comparison(alias: str) -> str:
 
     Args:
         alias: The alias string to normalize.
+
     Returns:
         The normalized alias string.
     """
-    if not isinstance(alias, str):
-        return ""
-    return alias.strip().lower()
+    return alias.strip().lower() if isinstance(alias, str) else ""
 
 
 def normalize_unique_id_component(component: str) -> str:
     """
     URL-safe encode a component string for use in unique IDs.
-    Ensures that the component is safe for use in contexts where special characters might be problematic.
+    Ensures that the component is safe for use in contexts where special
+    characters (like ':', '/', etc.) might be problematic.
 
     Args:
         component: The string component to normalize.
@@ -464,8 +504,15 @@ def parse_int_from_string(
     entity_id_for_log: Optional[str] = None,
 ) -> Optional[int]:
     """
-    Parse an integer from a string, robustly handling potential float representations.
-    Uses extract_numeric_string to get the numeric part first.
+    Parse an integer from a string, robustly handling potential float representations (e.g., "10.0").
+
+    This function first extracts a numeric string part (which might be a float)
+    using `extract_numeric_string`, then converts it to a float, and finally to an integer.
+
+    Args:
+        raw_value: The string to parse.
+        node_id_for_log: Optional HDG node ID for logging context.
+        entity_id_for_log: Optional entity ID for logging context.
     """
     numeric_part_str = extract_numeric_string(raw_value, node_id_for_log, entity_id_for_log)
     if numeric_part_str is None:
@@ -492,8 +539,13 @@ def parse_float_from_string(
     entity_id_for_log: Optional[str] = None,
 ) -> Optional[float]:
     """
-    Parse a float from a string.
-    Uses extract_numeric_string to get the numeric part first.
+    Parse a float from a string, extracting the numeric part first.
+
+    Args:
+        raw_value: The string to parse.
+        node_id_for_log: Optional HDG node ID for logging context.
+        entity_id_for_log: Optional entity ID for logging context.
+
     """
     numeric_part_str = extract_numeric_string(raw_value, node_id_for_log, entity_id_for_log)
     if numeric_part_str is None:

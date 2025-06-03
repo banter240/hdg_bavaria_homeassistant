@@ -1,9 +1,9 @@
 """
 Entity Definitions for the HDG Bavaria Boiler integration.
 
-This file contains the core SENSOR_DEFINITIONS dictionary and the
-SensorDefinition TypedDict, which map HDG API nodes to Home Assistant entities.
-This data structure was moved from const.py to improve modularity.
+This module defines the structure and properties of all entities (sensors, numbers, etc.)
+that can be created by the HDG Bavaria Boiler integration. It contains the
+`SENSOR_DEFINITIONS` dictionary, which maps HDG API nodes to Home Assistant entity configurations.
 """
 
 from __future__ import annotations
@@ -33,8 +33,10 @@ from homeassistant.helpers.entity import EntityCategory
 
 class SensorDefinition(TypedDict, total=False):
     """
-    Defines the properties and HA platform configuration for a sensor or entity
-    derived from an HDG boiler data node.
+    Defines the properties and Home Assistant platform configuration for an entity
+    derived from an HDG boiler data node. This dictionary structure is used within
+    `SENSOR_DEFINITIONS` to specify how raw data from a specific HDG node ID
+    should be represented and handled as a Home Assistant entity.
     """
 
     hdg_node_id: str  # Raw HDG API node ID (may include T/U/V/W/X/Y for setters).
@@ -69,7 +71,7 @@ class SensorDefinition(TypedDict, total=False):
 
 # Master dictionary defining all sensors and entities for the integration.
 # Each key is a unique identifier (often matching the translation_key) for the entity.
-SENSOR_DEFINITIONS: Final[Dict[str, SensorDefinition]] = {  # sourcery: skip: generic-api-key
+SENSOR_DEFINITIONS: Final[Dict[str, SensorDefinition]] = {
     "sprache": {
         "hdg_node_id": "1T",
         "translation_key": "sprache",

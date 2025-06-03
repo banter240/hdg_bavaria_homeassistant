@@ -1,13 +1,14 @@
 """
 Sensor platform for the HDG Bavaria Boiler integration.
 
-This module sets up sensor entities that display various data points
-read from the HDG Bavaria boiler system.
+This module creates and manages sensor entities that display various data
+points read from the HDG Bavaria boiler system, utilizing the data update
+coordinator and entity definitions.
 """
 
 from __future__ import annotations
 
-__version__ = "0.8.16"
+__version__ = "0.8.19"
 
 import logging
 import re
@@ -43,20 +44,36 @@ from .entity import HdgNodeEntity
 
 _LOGGER = logging.getLogger(DOMAIN)
 
+# Dictionary mapping 'parse_as_type' strings from SENSOR_DEFINITIONS to
+# corresponding parsing methods. These methods take the cleaned string value
+# and optional logging context arguments (node_id, entity_id).
+# Parsing types requiring additional context (like timezone) are handled directly in _parse_value.
+_PARSERS = {
+    "percent_from_string_regex": lambda cv, node_id, entity_id: parse_percent_from_string(
+        cv, node_id_for_log=node_id, entity_id_for_log=entity_id
+    ),
+    # Pass node_id and entity_id to the parser function for logging context
+    # The lambda signature must match the arguments passed at the call site in _parse_value
+    "int": lambda cv, node_id, entity_id: parse_int_from_string(
+        cv, node_id_for_log=node_id, entity_id_for_log=entity_id
+    ),
+    "enum_text": lambda cv, *_: cv,  # Enum text is the cleaned value itself
+    "text": lambda cv, *_: cv,  # Text is the cleaned value itself
+}
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    async_add_entities: AddEntitiesCallback,  # Callback to add entities to Home Assistant.
 ) -> None:
-    """
+    """Set up HDG Bavaria sensor entities based on a configuration entry.
     Set up HDG Bavaria sensor entities based on a configuration entry.
 
     This function iterates through SENSOR_DEFINITIONS, creating sensor entities
     for those marked for the 'sensor' platform. It uses the HdgDataUpdateCoordinator
     to provide data to these entities.
-    """  # Retrieve the coordinator from hass.data; it's responsible for
-    # fetching data from the HDG boiler and was populated during the integration's initial setup in __init__.py.
+    """
     coordinator: HdgDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     entities: list[HdgBoilerSensor] = []
 
@@ -64,12 +81,9 @@ async def async_setup_entry(
         entity_def = cast(SensorDefinition, entity_definition_dict)
 
         if entity_def.get("ha_platform") == "sensor":
-            # Create a standard Home Assistant SensorEntityDescription.
-            # This is used by SensorEntity and helps define appearance/behavior (per G-2.1.10.1).
-            # Setting 'name=None' and providing a 'translation_key' allows Home Assistant
-            # to handle entity naming and localization (per G-2.1.10.1).
+            # SensorEntityDescription for HA. 'name=None' + 'translation_key' enables localization.
             description = SensorEntityDescription(
-                key=unique_id_suffix,  # This key is used for internal HA identification.
+                key=unique_id_suffix,
                 name=None,  # Entity name will be derived from translation_key by Home Assistant.
                 icon=entity_def.get("icon"),
                 device_class=entity_def.get("ha_device_class"),
@@ -97,10 +111,10 @@ async def async_setup_entry(
 
 class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
     """
-    Representation of an HDG Bavaria Boiler sensor.
+    Represents an HDG Bavaria Boiler sensor entity.
 
     This class inherits from HdgNodeEntity (for HDG-specific node logic)
-    and SensorEntity (for Home Assistant sensor platform integration). It's responsible
+    and SensorEntity (for Home Assistant sensor platform integration). It is responsible
     for parsing raw data from the coordinator into a displayable sensor state.
     """
 
@@ -109,9 +123,9 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
         coordinator: HdgDataUpdateCoordinator,
         entity_description: SensorEntityDescription,  # Standard HA entity description.
         entity_definition: SensorDefinition,  # Our comprehensive definition from const.py.
-    ) -> None:
+    ) -> None:  # No return type for __init__
         """
-        Initialize the sensor.
+        Initialize the HDG Boiler sensor entity.
 
         Args:
             coordinator: The data update coordinator.
@@ -149,52 +163,47 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """
-        Handle updated data from the coordinator.
+        Handle updated data from the HdgDataUpdateCoordinator.
 
-        This method is called by the CoordinatorEntity base class when new data is available.
+        This callback is invoked by the CoordinatorEntity base class when new data is available.
         It updates the sensor's state and then calls the superclass's method, which
         schedules an update for Home Assistant to write the new state (`async_write_ha_state`).
         """
-        self._update_sensor_state()
         super()._handle_coordinator_update()  # Schedules an update via async_write_ha_state.
 
     def _update_sensor_state(self) -> None:
         """
-        Update the sensor's internal state (`_attr_native_value` and `_attr_available`)
-        based on the current data from the coordinator.
-        """
+        Update the sensor's internal state (`_attr_native_value` and `_attr_available`).
+
+        Retrieves the raw value for the node from the coordinator's data and parses it.
+        """  # No return type for methods that update internal state.
         # Determine availability using HdgNodeEntity's `available` property.
         # This checks:
         # 1. Coordinator's overall status (last_update_success).
         # 2. Presence of this specific node's data in coordinator.data.
         self._attr_available = super().available
 
-        if not self._attr_available:  # Entity is not available.
+        if not self._attr_available:
             self._attr_native_value = None
             return
         raw_value_text = self.coordinator.data.get(self._node_id)
         self._attr_native_value = self._parse_value(raw_value_text)
 
-    def _parse_as_enum_text_type(self, cleaned_value: str) -> str:
-        """
-        Parse value as enum text.
-        Returns the direct text from the API. For more structured enum handling,
-        one might map these to standardized keys using HDG_ENUM_MAPPINGS.
-        """  # The mapping to human-readable text happens implicitly via HA's enum device class
-        # and the translation keys/enum options defined in the entity description/const.py.
-        return cleaned_value
-
     def _parse_datetime_value(
-        self, cleaned_value: str, source_timezone_str: str
+        self,
+        cleaned_value: str,  # The cleaned string value from the API.
+        source_timezone_str: str,  # The configured source timezone string (e.g., "Europe/Berlin").
     ) -> Optional[datetime | str]:
         """
         Parse value for 'hdg_datetime_or_text' type.
+
         Returns a datetime object if parsable, or the original string for special
         text values like HDG_DATETIME_SPECIAL_TEXT which are valid, non-datetime states.
         This dual return type (datetime or str) is intentional.
         The input datetime string from the HDG API is assumed to represent local time
+        in the format "DD.MM.YYYY HH:MM". It is then localized to the timezone
         in the timezone specified by `source_timezone_str` (from integration options).
-        """  # cleaned_value is assumed to be whitespace normalized by _parse_value.
+        """
         cleaned_value_dt = cleaned_value.strip()
         if HDG_DATETIME_SPECIAL_TEXT in cleaned_value_dt.lower():
             return cleaned_value_dt
@@ -219,9 +228,10 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
 
     def _parse_as_float_type(
         self,
-        cleaned_value: str,
-        formatter: Optional[str],  # Specific rounding for "iFLOAT2" to two decimal places.
+        cleaned_value: str,  # The cleaned string value from the API.
+        formatter: Optional[str],  # The HDG API formatter hint (e.g., "iTEMP", "iFLOAT2").
     ) -> Optional[float | int]:
+        """Parse the cleaned string value as a float, applying formatter-specific logic."""
         """
         Parse value as float, applying formatter-specific logic for rounding
         or potential conversion to int if the float represents a whole number
@@ -245,26 +255,9 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
             return int(val_float)
         return val_float
 
-    def _parse_as_int_type(self, cleaned_value: str) -> Optional[int]:
-        """
-        Parse value as int.
-        Converts to float first to robustly handle inputs like "21.0"
-        which should be treated as the integer 21.
-        """
-        return parse_int_from_string(cleaned_value, self._node_id, self.entity_id)
-
-    def _parse_as_text_type(self, cleaned_value: str) -> str:
-        """Parse value as plain text."""
-        return cleaned_value
-
-    def _parse_as_allow_empty_string_type(self, cleaned_value: str) -> str:
-        """Parse value as text, explicitly allowing empty strings."""
-        # This type is handled by the initial check in _parse_value.
-        return cleaned_value
-
     def _parse_value(self, raw_value_text: Optional[str]) -> Any | None:
         """
-        Parse the raw string value from the API into the correct type for the sensor's state.
+        Parse the raw string value from the API into the appropriate type for the sensor state.
 
         This method uses hints from the entity_definition (e.g., 'parse_as_type', 'hdg_formatter')
         to determine the appropriate parsing logic.
@@ -289,21 +282,8 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
         if not cleaned_value:
             return None  # For most other types, an empty string implies no valid data.
 
-        # Dictionary mapping parse_as_type strings to their parsing methods.
-        # Methods requiring extra arguments are handled separately below.
-        _PARSERS = {
-            "percent_from_string_regex": lambda cv: parse_percent_from_string(
-                cv, node_id_for_log=self._node_id, entity_id_for_log=self.entity_id
-            ),
-            "int": self._parse_as_int_type,
-            "enum_text": self._parse_as_enum_text_type,
-            "text": self._parse_as_text_type,
-            # 'float' and 'hdg_datetime_or_text' need extra args, handled below.
-            # 'allow_empty_string' is handled above.
-        }
-
-        if parse_as_type in _PARSERS:
-            return _PARSERS[parse_as_type](cleaned_value)
+        if parse_as_type in _PARSERS:  # Use the predefined parsers for simple types.
+            return _PARSERS[parse_as_type](cleaned_value, self._node_id, self.entity_id)
 
         # Handle parsing types that require additional arguments or special logic.
         if parse_as_type == "hdg_datetime_or_text":  # Requires timezone

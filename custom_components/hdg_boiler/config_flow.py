@@ -1,15 +1,15 @@
 """
 Configuration flow for the HDG Bavaria Boiler integration.
 
-This module defines the user interface and logic for setting up the
-HDG Bavaria Boiler integration within Home Assistant. It handles both the
-initial setup (host IP, device alias) and subsequent configuration options
-(scan intervals, debug logging, source timezone).
+This module manages the user interaction for setting up the HDG Bavaria Boiler
+integration. It handles the initial configuration step where the user provides
+the boiler's host IP and an optional device alias. It also provides an options
+flow for adjusting scan intervals, debug logging, and the source timezone post-setup.
 """
 
 from __future__ import annotations
 
-__version__ = "0.9.16"
+__version__ = "0.9.17"
 
 import time
 import logging
@@ -64,9 +64,10 @@ def _create_options_schema(options: Optional[Dict[str, Any]] = None) -> vol.Sche
     """
     Generate the schema for the options flow.
 
-    This function dynamically creates the `voluptuous` schema used in the
-    options flow UI. It pre-fills the form fields with existing option values
-    if available, or with default values otherwise, including the source timezone.
+    Dynamically creates the `voluptuous` schema for the options flow UI.
+    It populates form fields with existing option values if available,
+    otherwise uses default values. This includes settings for scan intervals,
+    debug logging, and the source timezone for datetime parsing.
     """
     options = options or {}
     return vol.Schema(
@@ -142,9 +143,9 @@ async def validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) -> 
     """
     Validate connectivity to the HDG boiler.
 
-    This function attempts a basic API call to the specified host IP
-    to ensure the device is reachable and responds like an HDG boiler.
-    It distinguishes between connection errors and other API issues.
+    Attempts a basic API call to the provided host IP to verify that the
+    device is reachable and responds as an HDG boiler. This helps ensure
+    correct configuration before proceeding with the setup.
     """
     start_time_validation = time.monotonic()
     from .api import (
@@ -226,13 +227,13 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """
         Validate the user-provided host IP and device alias.
 
-        Checks for presence of host IP, ensures alias (if provided) is not
-        just whitespace, and verifies alias uniqueness across existing entries
-        (excluding `current_entry_id` if provided, e.g., during reconfigure).
+        Ensures the host IP is provided. If a device alias is given, it checks
+        that it's not solely whitespace. It also verifies that the (normalized)
+        alias is unique among existing HDG Boiler integration entries, excluding
+        the current entry if `current_entry_id` is supplied (e.g., during reconfigure).
 
         Returns:
-            A tuple containing (stripped_host_ip, stripped_device_alias, errors_dict).
-            `host_ip` or `device_alias` can be None if input was empty/invalid.
+            A tuple: (stripped_host_ip, stripped_device_alias, errors_dict).
         """
 
         errors: Dict[str, str] = {}

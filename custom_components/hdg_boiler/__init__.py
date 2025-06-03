@@ -1,12 +1,14 @@
 """
-The HDG Bavaria Boiler integration.
+Main entry point for the HDG Bavaria Boiler integration.
 
-This component initializes the HDG Bavaria Boiler integration, including the API client,
-data update coordinator, and relevant platforms (sensor, number). It also manages
-the registration and unregistration of custom services for interacting with the boiler.
+This module handles the initialization of the integration when a config entry
+is added to Home Assistant. It sets up the API client, data update coordinator,
+and forwards the setup to relevant platforms (e.g., sensor, number).
+Additionally, it registers custom services for interacting with the boiler and
+manages their lifecycle during entry unload.
 """
 
-__version__ = "0.8.2"
+__version__ = "0.9.5"
 
 import logging
 
@@ -54,8 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     host_ip_original = entry.data[CONF_HOST_IP]
     base_url = prepare_base_url(host_ip_original)
     if not base_url:
-        # prepare_base_url already logs the specific error about why it failed.
-        # We raise ConfigEntryNotReady to inform HA that setup cannot proceed
+        # ConfigEntryNotReady informs HA that setup cannot proceed
         # and should be retried or reconfigured by the user.
         _LOGGER.error(
             f"Failed to prepare base URL from host_ip '{host_ip_original}' for HDG Boiler. Please check configuration."
@@ -84,6 +85,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "api_client": api_client,
     }
 
+    # Start the set_value worker task as a background task tied to the config entry.
+    # This ensures HA doesn't wait for it during startup.
+    coordinator._set_value_worker_task = entry.async_create_background_task(
+        hass,
+        coordinator._set_value_worker(),  # Pass the coroutine to be executed
+        name=f"{DOMAIN}_{entry.entry_id}_set_value_worker",  # Descriptive name for the task
+    )
+    _LOGGER.info(f"HDG set_value_worker background task created for entry {entry.title}.")
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _register_services(hass, coordinator)
     entry.async_on_unload(entry.add_update_listener(async_options_update_listener))
@@ -100,10 +110,19 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
     _LOGGER.info(f"Unloading HDG Boiler integration for {entry.title}")
 
+    # Retrieve coordinator before popping it from hass.data
+    integration_data = hass.data[DOMAIN].get(entry.entry_id)
+    coordinator: HdgDataUpdateCoordinator | None = (
+        integration_data.get("coordinator") if integration_data else None
+    )
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
         if entry.entry_id in hass.data[DOMAIN]:
+            # Gracefully stop the set_value_worker if coordinator exists
+            if coordinator:
+                await coordinator.async_stop_set_value_worker()
             hass.data[DOMAIN].pop(entry.entry_id)
             _LOGGER.debug(f"Removed {entry.entry_id} data from hass.data.{DOMAIN}")
 

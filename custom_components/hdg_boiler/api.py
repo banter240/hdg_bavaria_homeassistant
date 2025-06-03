@@ -7,7 +7,7 @@ response parsing, error management, and offers methods for fetching
 data and setting values.
 """
 
-__version__ = "0.8.23"
+__version__ = "0.8.25"
 
 import asyncio
 import logging
@@ -45,7 +45,12 @@ class HdgApiResponseError(HdgApiError):
 
 
 class HdgApiClient:
-    """Client to interact with the HDG Boiler API."""
+    """
+    Client to interact with the HDG Boiler API.
+
+    Handles HTTP communication, request formatting, response parsing, and error
+    management for fetching data from and setting values on the HDG boiler.
+    """
 
     def __init__(self, session: aiohttp.ClientSession, host_address: str) -> None:
         """
@@ -171,7 +176,7 @@ class HdgApiClient:
             )
 
         valid_items: List[Dict[str, Any]] = []
-        malformed_item_indices: List[int] = []  # For items that are fundamentally unusable
+        malformed_item_indices: List[int] = []
 
         for idx, item in enumerate(json_response):
             if not isinstance(item, dict):
@@ -188,9 +193,8 @@ class HdgApiClient:
                 malformed_item_indices.append(idx)
                 continue
 
-            # Log any unexpected fields found in an item (info level, as they are usually not critical).
             if unexpected_fields := set(item.keys()) - {"id", "text"}:
-                _LOGGER.info(  # Info level, as extra fields are usually not problematic
+                _LOGGER.info(  # Log unexpected fields; usually not critical.
                     f"Item at index {idx} in dataRefresh response (payload: {node_payload_str}) "
                     f"has unexpected fields {unexpected_fields}: {item!r}"
                 )

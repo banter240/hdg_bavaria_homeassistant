@@ -1,13 +1,13 @@
 """
-Base entity classes for the HDG Bavaria Boiler integration.
+Provides base entity classes for the HDG Bavaria Boiler integration.
 
-This module provides base classes for entities within the HDG Bavaria Boiler
-integration. `HdgBaseEntity` offers common properties like `device_info` and
-standardized unique ID generation. `HdgNodeEntity` extends this for entities
-directly corresponding to specific data nodes on the boiler.
+This module defines `HdgBaseEntity`, which offers common properties like
+`device_info` and standardized unique ID generation, and `HdgNodeEntity`,
+which extends it for entities directly corresponding to specific data nodes
+on the boiler.
 """
 
-__version__ = "0.8.3"
+__version__ = "0.8.4"
 
 import logging
 from typing import Any, Dict
@@ -32,9 +32,10 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
     """
     Base class for all HDG Bavaria Boiler integration entities.
 
-    Provides common properties like `device_info` and standardized unique ID
-    generation, ensuring entities are grouped under the correct device in Home Assistant.
-    Setting `_attr_has_entity_name = True` allows Home Assistant to use
+    This class provides common properties such as `device_info` and standardized
+    unique ID generation, ensuring entities are correctly grouped under their
+    respective device in Home Assistant.
+    It sets `_attr_has_entity_name = True` to enable Home Assistant to use
     the `translation_key` from an `EntityDescription` for localized entity naming.
     """
 
@@ -45,7 +46,11 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
         coordinator: HdgDataUpdateCoordinator,
         unique_id_suffix: str,  # Suffix to make the entity's unique_id distinct
     ) -> None:
-        """Initialize the HDG base entity."""
+        """
+        Initialize the HDG base entity.
+
+        Sets up unique ID and device information.
+        """
         _LOGGER.debug(f"HdgBaseEntity.__init__ for unique_id_suffix: '{unique_id_suffix}'")
         super().__init__(coordinator)
 
@@ -132,8 +137,9 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
 
 class HdgNodeEntity(HdgBaseEntity):
     """
-    Base class for HDG entities that directly correspond to a specific data node
-    on the HDG boiler. It extends HdgBaseEntity by adding node-specific logic,
+    Base class for HDG entities directly corresponding to a specific data node.
+
+    Extends `HdgBaseEntity` by adding node-specific logic,
     such as storing the node ID and its definition, and refining availability checks.
     """
 
@@ -143,7 +149,11 @@ class HdgNodeEntity(HdgBaseEntity):
         node_id: str,  # The base HDG node ID (without TUVWXY suffix)
         entity_definition: Dict[str, Any],  # Full definition from SENSOR_DEFINITIONS
     ) -> None:
-        """Initialize the node-specific HDG entity."""
+        """
+        Initialize the node-specific HDG entity.
+
+        Stores the node ID and its definition.
+        """
         _LOGGER.debug(
             f"HdgNodeEntity.__init__ called. Node ID: '{node_id}', Entity Definition: {entity_definition}"
         )
@@ -199,9 +209,10 @@ class HdgNodeEntity(HdgBaseEntity):
     @property
     def available(self) -> bool:
         """
-        Return True if entity is available.
+        Determine if the entity is available.
 
-        Checks base availability, then specific node data presence and validity.
+        Checks base availability (coordinator status) and then verifies the
+        presence and validity of the specific node's data in the coordinator.
         """
         if not super().available:
             # Base availability (coordinator status, data store initialized) failed.

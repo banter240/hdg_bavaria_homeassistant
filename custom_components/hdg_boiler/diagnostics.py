@@ -9,7 +9,7 @@ and entity states.
 
 from __future__ import annotations
 
-__version__ = "0.9.32"
+__version__ = "0.9.34"
 
 import logging
 from typing import Any, Dict
@@ -83,6 +83,72 @@ async def async_get_config_entry_diagnostics(
     return diag_data
 
 
+def _get_redacted_unique_id(
+    unique_id: str | None,
+    sensitive_raw_value: str | None,
+    placeholder: str,
+) -> str:
+    """Redacts a sensitive raw value (like host_ip) from a unique_id string for diagnostics output.
+
+    Unique IDs can sometimes contain sensitive information derived from the configuration,
+    such as the host IP. This function replaces occurrences of the sensitive raw value
+    (after normalization for comparison) within the unique ID string with a placeholder.
+
+    Args:
+        unique_id: The original unique ID string.
+        sensitive_raw_value: The specific sensitive value (e.g., host IP) to look for and redact.
+                             This value is normalized using `normalize_unique_id_component`
+                             before being compared against parts of the unique ID.
+        placeholder: The string to use as a replacement for the sensitive value.
+
+    Returns:
+        The unique ID string with sensitive parts replaced by the placeholder.
+    """
+    if not unique_id or not sensitive_raw_value:
+        return unique_id or ""
+
+    normalized_sensitive_component = normalize_unique_id_component(sensitive_raw_value)
+
+    # Case 1: The entire unique_id (when normalized) matches the sensitive component.
+    # This is common for the config entry's own unique_id if it's just the host_ip.
+    if normalize_unique_id_component(unique_id) == normalized_sensitive_component:
+        _LOGGER.debug(
+            f"Redacting full unique_id '{unique_id}' as it matches sensitive value '{sensitive_raw_value}'."
+        )
+        return placeholder
+
+    # Case 2: The sensitive component is a distinct part, typically delimited by "::".
+    # Assumes unique_id parts are already normalized if they represent the host.
+    parts = unique_id.split("::")
+    redacted_parts = []
+    was_redacted_in_parts = False
+    for part in parts:
+        if part == normalized_sensitive_component:
+            redacted_parts.append(placeholder)
+            was_redacted_in_parts = True
+        else:
+            redacted_parts.append(part)
+
+    if was_redacted_in_parts:
+        _LOGGER.debug(
+            f"Redacted sensitive component '{sensitive_raw_value}' (normalized: '{normalized_sensitive_component}') "
+            f"within unique_id '{unique_id}' using part-based matching."
+        )
+        return "::".join(redacted_parts)
+
+    # Fallback: If the normalized sensitive component is found as a substring.
+    # This is broader and used if specific structural matches above didn't apply.
+    # This helps catch cases where the sensitive value might be embedded differently.
+    if normalized_sensitive_component in unique_id:
+        _LOGGER.debug(
+            f"Performing fallback redaction of '{sensitive_raw_value}' (normalized: '{normalized_sensitive_component}') "
+            f"in unique_id '{unique_id}' as it was found as a substring."
+        )
+        return unique_id.replace(normalized_sensitive_component, placeholder)
+
+    return unique_id
+
+
 def _get_redacted_config_entry_info(entry: ConfigEntry) -> Dict[str, Any]:
     """
     Prepare redacted configuration entry information for diagnostics.
@@ -95,31 +161,11 @@ def _get_redacted_config_entry_info(entry: ConfigEntry) -> Dict[str, Any]:
     """
     sensitive_host_ip = entry.data.get(CONF_HOST_IP)
 
-    # Redact sensitive_host_ip from unique_id if it's used as the device identifier part.
-    # The unique_id format is typically DOMAIN::DEVICE_IDENTIFIER::SUFFIX
-    # DEVICE_IDENTIFIER can be host_ip (normalized) or device_alias.
-    unique_id_display = entry.unique_id or ""  # Ensure unique_id_display is a string
-    if sensitive_host_ip and entry.unique_id:  # entry.unique_id is often the host_ip itself
-        normalized_sensitive_host_for_id = normalize_unique_id_component(sensitive_host_ip)
-
-        # Attempt to match the normalized host IP as a whole component within the unique ID.
-        # This pattern looks for the normalized host IP either surrounded by '::' or at the start/end.
-        # Example unique_id: "hdg_boiler::normalized_host_ip::entity_suffix"
-        # Example unique_id: "hdg_boiler::device_alias::entity_suffix" (where device_alias might contain host_ip)
-        # If entry.unique_id itself is the host_ip (common case for config entry unique_id):
-        if normalize_unique_id_component(entry.unique_id) == normalized_sensitive_host_for_id:
-            unique_id_display = DIAGNOSTICS_REDACTED_PLACEHOLDER
-            _LOGGER.debug(
-                f"Redacted unique_id as it matches sensitive host IP for entry {entry.entry_id}."
-            )
-        elif f"::{normalized_sensitive_host_for_id}::" in unique_id_display:
-            unique_id_display = unique_id_display.replace(
-                f"::{normalized_sensitive_host_for_id}::",
-                f"::{DIAGNOSTICS_REDACTED_PLACEHOLDER}::",
-            )
-            _LOGGER.debug(
-                f"Redacted sensitive host IP component in unique_id for entry {entry.entry_id}."
-            )
+    unique_id_display = _get_redacted_unique_id(
+        entry.unique_id,
+        sensitive_host_ip,
+        DIAGNOSTICS_REDACTED_PLACEHOLDER,
+    )
 
     return {
         "title": entry.title,
@@ -158,7 +204,7 @@ def _get_coordinator_diagnostics(
             },
             "last_update_times": {
                 group_key: dt_util.utc_from_timestamp(timestamp).isoformat()
-                for group_key, timestamp in coordinator.last_update_times.items()  # Use public property
+                for group_key, timestamp in coordinator.last_update_times_public.items()
                 if isinstance(timestamp, (int, float))
             },
         }
@@ -211,7 +257,7 @@ def _build_redacted_netloc(parsed_url: urlparse.ParseResult, sensitive_host_ip: 
         else:
             netloc_parts.append(host_to_check)
     else:
-        netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)
+        netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)  # Should not happen if URL is valid
     if parsed_url.port:
         netloc_parts.append(f":{parsed_url.port}")
     return "".join(netloc_parts)
@@ -227,10 +273,6 @@ def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str
 
     Returns:
         The redacted base URL string, or "Unknown" if the base URL cannot be determined.
-
-    Note:
-        This function assumes that `api_client` has a `base_url` attribute,
-        which may be an empty string if the base URL is not set or invalid.
     """
     if not (base_url := getattr(api_client, "base_url", None)):
         return "Unknown"
@@ -239,6 +281,7 @@ def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str
         parsed = urlparse(base_url)
         redacted_netloc = _build_redacted_netloc(parsed, sensitive_host_ip)
 
+        # Redact path and query as they might contain sensitive info, though less common for base URLs.
         redacted_path = (
             DIAGNOSTICS_REDACTED_PLACEHOLDER if parsed.path and parsed.path != "/" else parsed.path
         )
@@ -249,8 +292,8 @@ def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str
                 netloc=redacted_netloc,
                 path=redacted_path,
                 query=redacted_query,
-                params="",
-                fragment="",
+                params="",  # Typically empty for base URLs
+                fragment="",  # Typically empty for base URLs
             )
         )
     except Exception as e:
@@ -294,24 +337,13 @@ async def _get_entity_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> li
 
     diagnostics_entities = []
     sensitive_host_ip_for_redaction = entry.data.get(CONF_HOST_IP)
-    normalized_sensitive_host_for_id = (
-        normalize_unique_id_component(sensitive_host_ip_for_redaction)
-        if sensitive_host_ip_for_redaction
-        else None
-    )
 
     for entity in entities:
-        unique_id_display = entity.unique_id
-        if (
-            normalized_sensitive_host_for_id
-            and unique_id_display
-            and normalized_sensitive_host_for_id in unique_id_display
-        ):
-            # Basic redaction: if the normalized host IP is part of the unique_id, replace it.
-            # This is a simplified approach; more complex patterns might be needed for perfect redaction.
-            unique_id_display = unique_id_display.replace(
-                normalized_sensitive_host_for_id, DIAGNOSTICS_REDACTED_PLACEHOLDER
-            )
+        unique_id_display = _get_redacted_unique_id(
+            entity.unique_id,
+            sensitive_host_ip_for_redaction,
+            DIAGNOSTICS_REDACTED_PLACEHOLDER,
+        )
 
         diagnostics_entities.append(
             {
