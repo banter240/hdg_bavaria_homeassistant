@@ -7,7 +7,7 @@ This module defines mappings for HDG API enumeration values to human-readable te
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from typing import Final, TypedDict, Dict
 
@@ -23,7 +23,7 @@ class EnumOption(TypedDict):
 # Used by sensors that represent enumerated states.
 HDG_ENUM_MAPPINGS: Final[Dict[str, Dict[int, EnumOption]]] = {
     "SPRACHE": {
-        0: {"de": "Deutsch", "en": "English"},
+        0: {"de": "Deutsch", "en": "Deutsch"},
         1: {"de": "Englisch", "en": "English"},
         2: {"de": "Dänisch", "en": "Danish"},
         3: {"de": "Französisch", "en": "French"},

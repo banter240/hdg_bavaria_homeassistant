@@ -9,7 +9,7 @@ flow for adjusting scan intervals, debug logging, and the source timezone post-s
 
 from __future__ import annotations
 
-__version__ = "0.9.17"
+__version__ = "0.9.19"
 
 import time
 import logging
@@ -335,10 +335,6 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
     """Handles the options flow for the HDG Bavaria Boiler integration."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize the options flow handler."""
-        pass  # self.config_entry is automatically set by the parent class.
-
     def _get_description_placeholders(self) -> Dict[str, str]:
         """Return placeholders for the options form description."""
         return {
@@ -375,7 +371,7 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
                 _LOGGER.error(
                     f"Invalid timezone string provided in options: {source_timezone_input}"
                 )
-            except Exception as e:  # Catch other potential errors during ZoneInfo creation
+            except Exception as e:  # Catch other unexpected errors during ZoneInfo creation
                 current_errors[CONF_SOURCE_TIMEZONE] = (
                     "invalid_timezone_generic"  # Keep generic error key for translation
                 )

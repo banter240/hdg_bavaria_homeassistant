@@ -7,7 +7,7 @@ response parsing, error management, and offers methods for fetching
 data and setting values.
 """
 
-__version__ = "0.8.25"
+__version__ = "0.8.28"
 
 import asyncio
 import logging
@@ -73,8 +73,16 @@ class HdgApiClient:
 
         if not host_address_stripped.lower().startswith(("http://", "https://")):
             temp_host_for_scheme = host_address_stripped
-            normalized_host_part = normalize_host_for_scheme(temp_host_for_scheme)
-            schemed_host_input = f"http://{normalized_host_part}"
+            try:
+                normalized_host_part = normalize_host_for_scheme(temp_host_for_scheme)
+                schemed_host_input = f"http://{normalized_host_part}"
+            except ValueError as e:
+                _LOGGER.error(
+                    f"Invalid host_address format '{host_address_stripped}' for API client. "
+                    f"Normalization failed: {e}. Please check your configuration."
+                )
+                # Re-raise as HdgApiError to be consistent with other init failures.
+                raise HdgApiError(f"Invalid host_address format: {e}") from e
         else:
             schemed_host_input = host_address_stripped
 
@@ -105,7 +113,7 @@ class HdgApiClient:
 
     async def _async_handle_data_refresh_response(
         self, response: aiohttp.ClientResponse, node_payload_str: str
-    ) -> List[Dict[str, Any]]:  # sourcery skip: invert-any-all
+    ) -> List[Dict[str, Any]]:
         """
         Handle and parse the response from the dataRefresh API endpoint.
 
@@ -132,9 +140,8 @@ class HdgApiClient:
                 f"Accepting 'text/plain' as JSON response for dataRefresh (payload: {node_payload_str}). "
                 "This may mask unexpected server responses or misconfigurations."
             )
-
-        if not any(
-            accepted_type in content_type_header
+        if all(
+            accepted_type not in content_type_header
             for accepted_type in ("application/json", "text/json", "text/plain")
         ):
             text_response = await response.text()

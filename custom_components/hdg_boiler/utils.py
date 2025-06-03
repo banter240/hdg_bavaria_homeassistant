@@ -8,7 +8,7 @@ node ID manipulation, URL normalization, string parsing, and value formatting.
 
 from __future__ import annotations
 
-__version__ = "0.6.16"
+__version__ = "0.6.18"
 
 import logging
 import re
@@ -141,14 +141,31 @@ def prepare_base_url(host_input_original_raw: str) -> Optional[str]:
     """
     host_input_original = host_input_original_raw.strip()
     host_to_process = host_input_original
+    scheme_provided = host_to_process.lower().startswith(("http://", "https://"))
+    current_scheme = ""
 
-    if not host_to_process.lower().startswith(("http://", "https://")):
+    if scheme_provided:
+        parsed_for_scheme = urlparse(host_to_process)
+        current_scheme = parsed_for_scheme.scheme
+        host_to_process = parsed_for_scheme.netloc
+        if not host_to_process:
+            _LOGGER.error(
+                f"Invalid host/IP '{host_input_original_raw}'. Contains scheme but empty host part."
+            )
+            return None
+    # Always normalize the host part, regardless of whether a scheme was initially present.
+    try:
         normalized_host = normalize_host_for_scheme(host_to_process)
-        schemed_host_input = f"http://{normalized_host}"
-    else:
-        schemed_host_input = host_to_process
+    except ValueError as e:
+        _LOGGER.error(
+            f"Invalid host/IP format '{host_input_original_raw}' for HDG Boiler. "
+            f"Normalization of host part '{host_to_process}' failed: {e}. Please check configuration."
+        )
+        return None
+    schemed_host_input = f"{current_scheme or 'http'}://{normalized_host}"
 
     parsed_url = urlparse(schemed_host_input)
+    # Final check after potential normalization and scheme prepending
     if not parsed_url.netloc:
         _LOGGER.error(
             f"Invalid host/IP '{host_input_original}'. Empty netloc after processing to '{schemed_host_input}'."
@@ -227,6 +244,14 @@ def _normalize_string_by_heuristic(
     Returns:
         The string with heuristically normalized separators, or None if the format is ambiguous.
     """
+    # First, remove any spaces or non-breaking spaces that might be used as thousands separators.
+    if " " in value_str or "\u00a0" in value_str:
+        original_for_space_log = value_str
+        value_str = value_str.replace(" ", "").replace("\u00a0", "")
+        _LOGGER.debug(
+            f"{log_prefix}Heuristic: removed spaces/NBSPs from '{original_for_space_log}', now '{value_str}'."
+        )
+
     if "." in value_str and "," in value_str:
         last_dot_pos = value_str.rfind(".")
         last_comma_pos = value_str.rfind(",")
@@ -264,10 +289,13 @@ def extract_numeric_string(
     """
     Extract the numeric part of a string using regex after locale-aware normalization.
 
-    This function first normalizes the input string to use '.' as the decimal
-    separator, based on an optional locale or a heuristic. Then, it uses
-    `NUMERIC_PART_REGEX` to find the first float-like number, ignoring
-    any trailing units or non-numeric characters.
+    This function first attempts to normalize the input string to use '.' as the
+    decimal separator. This normalization can be guided by an optional `locale`
+    parameter. If no locale is provided or if locale-specific normalization fails,
+    a heuristic is applied which also handles removal of spaces and non-breaking
+    spaces used as thousands separators. After normalization, `NUMERIC_PART_REGEX`
+    is used to find the first float-like number, ignoring any trailing units or
+    non-numeric characters.
 
     Args:
         raw_cleaned_value: The already whitespace-cleaned string to parse.
@@ -386,9 +414,9 @@ def format_value_for_api(numeric_value: Union[int, float], setter_type: str) -> 
         # Ensure it's treated as an integer, handle potential float input like 10.0
         return str(int(round(numeric_value)))
     elif setter_type == "float1":
-        return f"{numeric_value:.1f}".replace(",", ".")  # Format to 1 decimal, use dot
+        return f"{numeric_value:.1f}"
     elif setter_type == "float2":
-        return f"{numeric_value:.2f}".replace(",", ".")  # Format to 2 decimals, use dot
+        return f"{numeric_value:.2f}"
     else:
         msg = f"Unknown 'setter_type' ('{setter_type}') encountered during API value formatting for value '{numeric_value}'."
         _LOGGER.error(msg)

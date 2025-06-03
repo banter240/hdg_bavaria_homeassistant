@@ -5,7 +5,7 @@ This module defines the logic for custom Home Assistant services provided by
 the HDG Bavaria Boiler integration, specifically for setting and getting HDG node values.
 """
 
-__version__ = "0.8.1"
+__version__ = "0.8.4"
 
 from decimal import Decimal, InvalidOperation
 import logging
@@ -56,7 +56,6 @@ def _build_sensor_definitions_by_base_node_id() -> Dict[str, list[SensorDefiniti
                 if base_hdg_node_id_from_def not in index:
                     index[base_hdg_node_id_from_def] = []
                 index[base_hdg_node_id_from_def].append(definition)
-                # Removed debug log for multiple definitions as it's expected for some nodes
         else:
             _LOGGER.warning(
                 f"Skipping definition in _build_sensor_definitions_by_base_node_id due to missing or invalid 'hdg_node_id': {definition_dict.get('translation_key', 'Unknown Key')}"
@@ -96,11 +95,9 @@ def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
     matching the base node ID. It then filters for definitions where `ha_platform`
     is "number" and `setter_type` is defined, returning the single matching definition.
 
+    Raises:
     Args:
         node_id_str: The base HDG node ID to search for.
-
-    Raises:
-        ServiceValidationError: If zero or multiple settable 'number' definitions are found for the node.
     """
     definitions_for_base = SENSOR_DEFINITIONS_BY_BASE_NODE_ID.get(node_id_str, [])
     settable_definitions = [
@@ -124,11 +121,12 @@ def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
 
     if len(settable_definitions) > 1:
         _LOGGER.error(
-            f"Multiple settable 'number' SensorDefinitions found for node_id '{node_id_str}': {settable_definitions}. "
+            f"Multiple settable 'number' SensorDefinitions found for node_id '{node_id_str}': "
+            f"{[repr(d) for d in settable_definitions]}. "
             "Please ensure only one settable definition exists per node to avoid ambiguity."
         )
         raise ServiceValidationError(
-            f"Multiple settable 'number' definitions for node ID '{node_id_str}'. Ambiguous configuration."
+            f"Multiple settable 'number' definitions for node ID '{node_id_str}'. Conflicting definitions: {[repr(d) for d in settable_definitions]}"
         )
     return settable_definitions[0]
 
@@ -327,7 +325,7 @@ async def async_handle_set_node_value(
     This function validates the provided `node_id` against SENSOR_DEFINITIONS
     to ensure it's a settable 'number' entity. It then coerces the `value`
     to the expected numeric type, validates it against the node's configured
-    range and step, formats it for the API, and finally delegates the set
+    range and step, formats it for the API, and finally delegates the set # sourcery skip: extract-method
     operation to the HdgDataUpdateCoordinator.
     """  # No return type for service handlers
     node_id_input = call.data.get(ATTR_NODE_ID)
@@ -407,7 +405,7 @@ async def async_handle_set_node_value(
 async def async_handle_get_node_value(
     hass: HomeAssistant, coordinator: HdgDataUpdateCoordinator, call: ServiceCall
 ) -> Dict[str, Any]:
-    """
+    """# sourcery skip: extract-method
     Handle the 'get_node_value' service call.
 
     Retrieves the current raw string value for a specified node ID from the
@@ -419,7 +417,6 @@ async def async_handle_get_node_value(
     if node_id_input is None:
         _LOGGER.error(f"Service '{SERVICE_GET_NODE_VALUE}' missing '{ATTR_NODE_ID}'.")
         raise ServiceValidationError(f"'{ATTR_NODE_ID}' required for {SERVICE_GET_NODE_VALUE}.")
-
     node_id_str = str(node_id_input).strip()
     _LOGGER.debug(
         f"Service '{SERVICE_GET_NODE_VALUE}': node_id='{node_id_input}' (base='{node_id_str}')"

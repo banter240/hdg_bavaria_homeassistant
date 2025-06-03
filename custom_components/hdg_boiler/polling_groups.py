@@ -8,9 +8,9 @@ These definitions were moved from const.py to improve modularity.
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
-from typing import Final, TypedDict, List, Dict
+from typing import Final, TypedDict
 
 # Constants like CONF_SCAN_INTERVAL_GROUPx and DEFAULT_SCAN_INTERVAL_GROUPx
 # will be resolved from const.py when HDG_NODE_PAYLOADS is constructed there.
@@ -20,14 +20,14 @@ class NodeGroupPayload(TypedDict):
     """Structure for defining an HDG API node polling group and its configuration."""
 
     name: str  # User-friendly name for config flow.
-    nodes: List[str]  # HDG node IDs (typically with 'T' suffix).
+    nodes: list[str]  # HDG node IDs (typically with 'T' suffix).
     payload_str: str  # API request payload (e.g., "nodes=ID1-ID2-ID3T").
     config_key_scan_interval: str  # Config flow key for scan interval.
     default_scan_interval: int  # Default scan interval in seconds.
 
 
 # Node lists for each polling group.
-_GROUP1_NODES: Final[List[str]] = [  # Realtime Core Values (34 Nodes)
+_GROUP1_NODES: Final[list[str]] = [  # Realtime Core Values (34 Nodes)
     "20000T",  # aussentemperatur
     "22000T",  # brennraumtemperatur_soll
     "22001T",  # kessel_abgastemperatur_ist
@@ -64,7 +64,7 @@ _GROUP1_NODES: Final[List[str]] = [  # Realtime Core Values (34 Nodes)
     "26099T",  # hk1_vorlauftemperatur_soll
 ]
 
-_GROUP2_NODES: Final[List[str]] = [  # General Status Values (7 Nodes)
+_GROUP2_NODES: Final[list[str]] = [  # General Status Values (7 Nodes)
     "22020T",  # kessel_haupt_betriebsart
     "22026T",  # kessel_betriebsphase_text
     "22029T",  # kessel_ausbrandgrund
@@ -74,7 +74,7 @@ _GROUP2_NODES: Final[List[str]] = [  # General Status Values (7 Nodes)
     "26011T",  # hk1_aktuelle_betriebsart
 ]
 
-_GROUP3_NODES: Final[List[str]] = [  # Configuration & Counters Part 1 (32 Nodes)
+_GROUP3_NODES: Final[list[str]] = [  # Configuration & Counters Part 1 (32 Nodes)
     "1T",  # sprache
     "2T",  # bauart
     "3T",  # kesseltyp_kennung
@@ -109,7 +109,7 @@ _GROUP3_NODES: Final[List[str]] = [  # Configuration & Counters Part 1 (32 Nodes
     "2604T",  # festwertvorgabe_sekundarluft
 ]
 
-_GROUP4_NODES: Final[List[str]] = [  # Configuration & Counters Part 2 (40 Nodes)
+_GROUP4_NODES: Final[list[str]] = [  # Configuration & Counters Part 2 (40 Nodes)
     "2623T",  # pid3_o2_sekundarluft_minimum
     "2624T",  # pid3_o2_sekundarluft_maximum
     "2805T",  # rucklaufmischer_laufzeit_gesamt
@@ -152,7 +152,7 @@ _GROUP4_NODES: Final[List[str]] = [  # Configuration & Counters Part 2 (40 Nodes
     "6067T",  # hk1_restwarme_aufnehmen
 ]
 
-_GROUP5_NODES: Final[List[str]] = [  # Configuration & Counters Part 3 (41 Nodes)
+_GROUP5_NODES: Final[list[str]] = [  # Configuration & Counters Part 3 (41 Nodes)
     "20003T",  # software_version_touch
     "20026T",  # anlagenbezeichnung_sn
     "20031T",  # mac_adresse
@@ -199,11 +199,11 @@ _GROUP5_NODES: Final[List[str]] = [  # Configuration & Counters Part 3 (41 Nodes
 
 def _extract_node_base_for_payload(node_id: str) -> str:
     """Remove a single trailing 'T' if present, otherwise leave unchanged. Used for payload string generation."""
-    return node_id[:-1] if node_id.endswith("T") else node_id
+    return node_id.removesuffix("T")
 
 
 # Defines the polling groups, their constituent nodes, and API payload strings.
-HDG_NODE_PAYLOADS: Final[Dict[str, NodeGroupPayload]] = {
+HDG_NODE_PAYLOADS: Final[dict[str, NodeGroupPayload]] = {
     "group1_realtime_core": {
         "name": "Realtime Core",
         "nodes": _GROUP1_NODES,
@@ -243,7 +243,7 @@ HDG_NODE_PAYLOADS: Final[Dict[str, NodeGroupPayload]] = {
 }
 
 # Defines the order in which polling groups are processed, especially during initial setup.
-POLLING_GROUP_ORDER: Final[List[str]] = [
+POLLING_GROUP_ORDER: Final[list[str]] = [
     "group1_realtime_core",
     "group2_status_general",
     "group3_config_counters_1",
