@@ -9,42 +9,41 @@ flow for adjusting scan intervals, debug logging, and the source timezone post-s
 
 from __future__ import annotations
 
-__version__ = "0.9.19"
+__version__ = "0.9.20"
 
-import time
 import logging
-from typing import Any, Dict, Optional
-import asyncio
+import time
+from typing import Any
 
+import async_timeout
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries, core
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-import homeassistant.helpers.config_validation as cv
 
-import async_timeout
 from .const import (
-    DOMAIN,
-    DEFAULT_NAME,
+    CONF_DEVICE_ALIAS,
+    CONF_ENABLE_DEBUG_LOGGING,
     CONF_HOST_IP,
     CONF_SCAN_INTERVAL_GROUP1,
-    CONF_DEVICE_ALIAS,
     CONF_SCAN_INTERVAL_GROUP2,
     CONF_SCAN_INTERVAL_GROUP3,
     CONF_SCAN_INTERVAL_GROUP4,
     CONF_SCAN_INTERVAL_GROUP5,
+    CONF_SOURCE_TIMEZONE,
+    CONFIG_FLOW_API_TIMEOUT,
+    DEFAULT_ENABLE_DEBUG_LOGGING,
+    DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL_GROUP1,
     DEFAULT_SCAN_INTERVAL_GROUP2,
     DEFAULT_SCAN_INTERVAL_GROUP3,
     DEFAULT_SCAN_INTERVAL_GROUP4,
     DEFAULT_SCAN_INTERVAL_GROUP5,
-    CONF_ENABLE_DEBUG_LOGGING,
-    DEFAULT_ENABLE_DEBUG_LOGGING,
-    MIN_SCAN_INTERVAL,
-    MAX_SCAN_INTERVAL,
-    CONF_SOURCE_TIMEZONE,
     DEFAULT_SOURCE_TIMEZONE,
-    CONFIG_FLOW_API_TIMEOUT,
+    DOMAIN,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
 )
 from .polling_groups import HDG_NODE_PAYLOADS
 from .utils import normalize_alias_for_comparison
@@ -60,7 +59,7 @@ USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-def _create_options_schema(options: Optional[Dict[str, Any]] = None) -> vol.Schema:
+def _create_options_schema(options: dict[str, Any] | None = None) -> vol.Schema:
     """
     Generate the schema for the options flow.
 
@@ -74,7 +73,9 @@ def _create_options_schema(options: Optional[Dict[str, Any]] = None) -> vol.Sche
         {
             vol.Optional(
                 CONF_SCAN_INTERVAL_GROUP1,
-                default=options.get(CONF_SCAN_INTERVAL_GROUP1, DEFAULT_SCAN_INTERVAL_GROUP1),
+                default=options.get(
+                    CONF_SCAN_INTERVAL_GROUP1, DEFAULT_SCAN_INTERVAL_GROUP1
+                ),
             ): vol.All(
                 cv.positive_int,
                 vol.Range(
@@ -85,7 +86,9 @@ def _create_options_schema(options: Optional[Dict[str, Any]] = None) -> vol.Sche
             ),
             vol.Optional(
                 CONF_SCAN_INTERVAL_GROUP2,
-                default=options.get(CONF_SCAN_INTERVAL_GROUP2, DEFAULT_SCAN_INTERVAL_GROUP2),
+                default=options.get(
+                    CONF_SCAN_INTERVAL_GROUP2, DEFAULT_SCAN_INTERVAL_GROUP2
+                ),
             ): vol.All(
                 cv.positive_int,
                 vol.Range(
@@ -96,7 +99,9 @@ def _create_options_schema(options: Optional[Dict[str, Any]] = None) -> vol.Sche
             ),
             vol.Optional(
                 CONF_SCAN_INTERVAL_GROUP3,
-                default=options.get(CONF_SCAN_INTERVAL_GROUP3, DEFAULT_SCAN_INTERVAL_GROUP3),
+                default=options.get(
+                    CONF_SCAN_INTERVAL_GROUP3, DEFAULT_SCAN_INTERVAL_GROUP3
+                ),
             ): vol.All(
                 cv.positive_int,
                 vol.Range(
@@ -107,7 +112,9 @@ def _create_options_schema(options: Optional[Dict[str, Any]] = None) -> vol.Sche
             ),
             vol.Optional(
                 CONF_SCAN_INTERVAL_GROUP4,
-                default=options.get(CONF_SCAN_INTERVAL_GROUP4, DEFAULT_SCAN_INTERVAL_GROUP4),
+                default=options.get(
+                    CONF_SCAN_INTERVAL_GROUP4, DEFAULT_SCAN_INTERVAL_GROUP4
+                ),
             ): vol.All(
                 cv.positive_int,
                 vol.Range(
@@ -118,7 +125,9 @@ def _create_options_schema(options: Optional[Dict[str, Any]] = None) -> vol.Sche
             ),
             vol.Optional(
                 CONF_SCAN_INTERVAL_GROUP5,
-                default=options.get(CONF_SCAN_INTERVAL_GROUP5, DEFAULT_SCAN_INTERVAL_GROUP5),
+                default=options.get(
+                    CONF_SCAN_INTERVAL_GROUP5, DEFAULT_SCAN_INTERVAL_GROUP5
+                ),
             ): vol.All(
                 cv.positive_int,
                 vol.Range(
@@ -129,7 +138,9 @@ def _create_options_schema(options: Optional[Dict[str, Any]] = None) -> vol.Sche
             ),
             vol.Optional(
                 CONF_ENABLE_DEBUG_LOGGING,
-                default=options.get(CONF_ENABLE_DEBUG_LOGGING, DEFAULT_ENABLE_DEBUG_LOGGING),
+                default=options.get(
+                    CONF_ENABLE_DEBUG_LOGGING, DEFAULT_ENABLE_DEBUG_LOGGING
+                ),
             ): cv.boolean,
             vol.Optional(
                 CONF_SOURCE_TIMEZONE,
@@ -150,11 +161,13 @@ async def validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) -> 
     start_time_validation = time.monotonic()
     from .api import (
         HdgApiClient,
-        HdgApiError,
         HdgApiConnectionError,
+        HdgApiError,
     )
 
-    _LOGGER.debug(f"validate_host_connectivity: Starting validation for host_ip: {host_ip}")
+    _LOGGER.debug(
+        f"validate_host_connectivity: Starting validation for host_ip: {host_ip}"
+    )
     session = async_get_clientsession(hass)  # Obtain a session for the API client
     # Create a temporary API client instance for this validation check using the obtained session.
     temp_api_client = HdgApiClient(session, host_ip)
@@ -167,21 +180,25 @@ async def validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) -> 
         async with async_timeout.timeout(CONFIG_FLOW_API_TIMEOUT):
             is_connected = await temp_api_client.async_check_connectivity()
         end_time_check_connectivity = time.monotonic()
-        duration_check_connectivity = end_time_check_connectivity - start_time_check_connectivity
+        duration_check_connectivity = (
+            end_time_check_connectivity - start_time_check_connectivity
+        )
         _LOGGER.debug(
             f"validate_host_connectivity: HdgApiClient.async_check_connectivity() to {host_ip} "
             f"completed in {duration_check_connectivity:.2f}s. Result: {is_connected}"
         )
 
         if is_connected:
-            _LOGGER.debug(f"validate_host_connectivity: Connectivity test to {host_ip} successful.")
+            _LOGGER.debug(
+                f"validate_host_connectivity: Connectivity test to {host_ip} successful."
+            )
             return True
         # `async_check_connectivity` returned False: host reached, but not an HDG boiler.
         _LOGGER.warning(
             f"validate_host_connectivity: Connectivity test to {host_ip} failed (HdgApiClient reported not connected)."
         )
         return False
-    except asyncio.TimeoutError:
+    except TimeoutError:
         # This catches the timeout from the new outer `async_timeout.timeout(CONFIG_FLOW_API_TIMEOUT)`
         _LOGGER.warning(
             f"validate_host_connectivity: Timeout after {CONFIG_FLOW_API_TIMEOUT}s connecting to host_ip {host_ip}."
@@ -216,14 +233,14 @@ async def validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) -> 
         )
 
 
-class HdgBoilerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class HdgBoilerConfigFlow(config_entries.ConfigFlow):
     """Handles the configuration flow for the HDG Bavaria Boiler integration."""
 
     VERSION = 1
 
     async def _async_validate_user_input(
-        self, user_input: Dict[str, Any], current_entry_id: Optional[str] = None
-    ) -> tuple[Optional[str], Optional[str], Dict[str, str]]:  # type: ignore[type-arg]
+        self, user_input: dict[str, Any], current_entry_id: str | None = None
+    ) -> tuple[str | None, str | None, dict[str, str]]:  # type: ignore[type-arg]
         """
         Validate the user-provided host IP and device alias.
 
@@ -236,16 +253,20 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             A tuple: (stripped_host_ip, stripped_device_alias, errors_dict).
         """
 
-        errors: Dict[str, str] = {}
+        errors: dict[str, str] = {}
         host_ip = user_input.get(CONF_HOST_IP, "").strip()
-        raw_device_alias = user_input.get(CONF_DEVICE_ALIAS, "")  # Keep raw for whitespace check
+        raw_device_alias = user_input.get(
+            CONF_DEVICE_ALIAS, ""
+        )  # Keep raw for whitespace check
         device_alias = raw_device_alias.strip()
 
         if not host_ip:
             errors["base"] = "host_ip_required"
             return None, device_alias, errors
 
-        if raw_device_alias and not device_alias:  # Alias was given but is only whitespace.
+        if (
+            raw_device_alias and not device_alias
+        ):  # Alias was given but is only whitespace.
             errors[CONF_DEVICE_ALIAS] = "alias_is_whitespace"
             _LOGGER.warning(
                 "Device alias provided consisted only of whitespace or invisible characters after normalization."
@@ -260,7 +281,9 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 existing_alias_normalized = normalize_alias_for_comparison(
                     entry.data.get(CONF_DEVICE_ALIAS, "")
                 )
-                if existing_alias_normalized == normalize_alias_for_comparison(device_alias):
+                if existing_alias_normalized == normalize_alias_for_comparison(
+                    device_alias
+                ):
                     errors[CONF_DEVICE_ALIAS] = "alias_already_exists"
                     _LOGGER.warning(
                         f"Device alias '{device_alias}' is already in use by another entry."
@@ -268,19 +291,30 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     break
         return host_ip, device_alias, errors
 
-    async def async_step_user(self, user_input: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
         """Handle the initial user-initiated step of the configuration flow."""
-        errors: Dict[str, str] = {}  # Initialize errors at the beginning
+        errors: dict[str, str] = {}  # Initialize errors at the beginning
         current_host_ip = user_input.get(CONF_HOST_IP, "") if user_input else ""
-        current_device_alias = user_input.get(CONF_DEVICE_ALIAS, "") if user_input else ""
+        current_device_alias = (
+            user_input.get(CONF_DEVICE_ALIAS, "") if user_input else ""
+        )
 
         if user_input is not None:
-            host_ip, device_alias, validation_errors = await self._async_validate_user_input(
-                user_input, current_entry_id=None  # This is a new setup, so no current_entry_id.
+            (
+                host_ip,
+                device_alias,
+                validation_errors,
+            ) = await self._async_validate_user_input(
+                user_input,
+                current_entry_id=None,  # This is a new setup, so no current_entry_id.
             )
             errors |= validation_errors
 
-            if not errors and host_ip:  # Proceed if initial validation passed and host_ip is valid.
+            if (
+                not errors and host_ip
+            ):  # Proceed if initial validation passed and host_ip is valid.
                 # Set unique ID based on host_ip to prevent duplicate configurations for the same device.
                 await self.async_set_unique_id(host_ip.lower())
                 # Abort if an entry with this unique ID (host_ip) already exists.
@@ -290,7 +324,7 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 is_connected = await validate_host_connectivity(self.hass, host_ip)
                 if is_connected:
                     # Prepare configuration data for the new entry.
-                    config_data: Dict[str, Any] = {
+                    config_data: dict[str, Any] = {
                         CONF_HOST_IP: host_ip,
                         CONF_DEVICE_ALIAS: device_alias,
                         CONF_SCAN_INTERVAL_GROUP1: DEFAULT_SCAN_INTERVAL_GROUP1,
@@ -316,7 +350,9 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_DEVICE_ALIAS, default=current_device_alias): str,
             }
         )
-        return self.async_show_form(step_id="user", data_schema=data_schema, errors=errors)
+        return self.async_show_form(
+            step_id="user", data_schema=data_schema, errors=errors
+        )
 
     @staticmethod
     @callback
@@ -335,7 +371,7 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
     """Handles the options flow for the HDG Bavaria Boiler integration."""
 
-    def _get_description_placeholders(self) -> Dict[str, str]:
+    def _get_description_placeholders(self) -> dict[str, str]:
         """Return placeholders for the options form description."""
         return {
             "default_realtime_core": str(
@@ -355,15 +391,22 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
             ),
         }
 
-    async def async_step_init(self, user_input: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
         """Manage options for scan intervals and debug logging."""
-        current_errors: Dict[str, str] = {}
+        current_errors: dict[str, str] = {}
 
         if user_input is not None:
             # Validate timezone string if provided
-            source_timezone_input = user_input.get(CONF_SOURCE_TIMEZONE, DEFAULT_SOURCE_TIMEZONE)
+            source_timezone_input = user_input.get(
+                CONF_SOURCE_TIMEZONE, DEFAULT_SOURCE_TIMEZONE
+            )
             try:
-                from zoneinfo import ZoneInfo, ZoneInfoNotFoundError  # Local import for validation
+                from zoneinfo import (  # Local import for validation
+                    ZoneInfo,
+                    ZoneInfoNotFoundError,
+                )
 
                 ZoneInfo(source_timezone_input)  # Attempt to create ZoneInfo object
             except ZoneInfoNotFoundError:
@@ -371,7 +414,9 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
                 _LOGGER.error(
                     f"Invalid timezone string provided in options: {source_timezone_input}"
                 )
-            except Exception as e:  # Catch other unexpected errors during ZoneInfo creation
+            except (
+                Exception
+            ) as e:  # Catch other unexpected errors during ZoneInfo creation
                 current_errors[CONF_SOURCE_TIMEZONE] = (
                     "invalid_timezone_generic"  # Keep generic error key for translation
                 )
@@ -387,7 +432,9 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
             # We only need to explicitly handle `current_errors` if we add custom,
             # non-schema-based validation here.
             if not current_errors:  # No custom errors added in this step.
-                _LOGGER.debug(f"Updating options for {self.config_entry.title}: {user_input}")
+                _LOGGER.debug(
+                    f"Updating options for {self.config_entry.title}: {user_input}"
+                )
                 return self.async_create_entry(title="", data=user_input)
             else:
                 # This block would be hit if `current_errors` was populated by custom validation.

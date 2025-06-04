@@ -9,36 +9,35 @@ and entity states.
 
 from __future__ import annotations
 
-__version__ = "0.9.34"
-
+__version__ = "0.9.35"
+import ipaddress
 import logging
-from typing import Any, Dict
+from typing import Any, cast
+from urllib.parse import ParseResult, urlparse, urlunparse
 
+from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
-import ipaddress
-from urllib.parse import urlparse, urlunparse
-from homeassistant.helpers import entity_registry as er
-from .utils import normalize_unique_id_component
+from .api import HdgApiClient
 from .const import (
-    DOMAIN,
     CONF_HOST_IP,
-    DIAGNOSTICS_TO_REDACT_CONFIG_KEYS,
-    DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS,
     DIAGNOSTICS_REDACTED_PLACEHOLDER,
+    DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS,
+    DIAGNOSTICS_TO_REDACT_CONFIG_KEYS,
+    DOMAIN,
 )
 from .coordinator import HdgDataUpdateCoordinator
-from .api import HdgApiClient
+from .utils import normalize_unique_id_component
 
 _LOGGER = logging.getLogger(DOMAIN)
 
 
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Asynchronously generate and return diagnostics data for a config entry.
 
@@ -65,7 +64,7 @@ async def async_get_config_entry_diagnostics(
 
     coordinator: HdgDataUpdateCoordinator = integration_data.get("coordinator")
     api_client: HdgApiClient = integration_data.get("api_client")
-    diag_data: Dict[str, Any] = {
+    diag_data: dict[str, Any] = {
         "config_entry": _get_redacted_config_entry_info(entry),
         "coordinator": (
             _get_coordinator_diagnostics(coordinator)
@@ -149,7 +148,7 @@ def _get_redacted_unique_id(
     return unique_id
 
 
-def _get_redacted_config_entry_info(entry: ConfigEntry) -> Dict[str, Any]:
+def _get_redacted_config_entry_info(entry: ConfigEntry) -> dict[str, Any]:
     """
     Prepare redacted configuration entry information for diagnostics.
 
@@ -178,7 +177,7 @@ def _get_redacted_config_entry_info(entry: ConfigEntry) -> Dict[str, Any]:
 
 def _get_coordinator_diagnostics(
     coordinator: HdgDataUpdateCoordinator | None,
-) -> Dict[str, Any] | str:
+) -> dict[str, Any] | str:
     """
     Gather diagnostic information about the DataUpdateCoordinator.
 
@@ -190,7 +189,7 @@ def _get_coordinator_diagnostics(
         coordinator is not found or not initialized.
     """
     if coordinator:
-        coordinator_diag = {
+        coordinator_diag: dict[str, Any] = {
             "last_update_success": coordinator.last_update_success,
             "last_update_time_successful": (
                 coordinator.last_update_success_time.isoformat()
@@ -205,14 +204,16 @@ def _get_coordinator_diagnostics(
             "last_update_times": {
                 group_key: dt_util.utc_from_timestamp(timestamp).isoformat()
                 for group_key, timestamp in coordinator.last_update_times_public.items()
-                if isinstance(timestamp, (int, float))
+                if isinstance(timestamp, int | float)
             },
         }
         if coordinator.data:
             redacted_coordinator_data = async_redact_data(
                 coordinator.data, DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS
             )
-            coordinator_diag["data_sample_keys"] = list(redacted_coordinator_data.keys())[:20]
+            coordinator_diag["data_sample_keys"] = list(
+                redacted_coordinator_data.keys()
+            )[:20]
             coordinator_diag["data_item_count"] = len(redacted_coordinator_data)
         return coordinator_diag
     return "Coordinator not found or not initialized."
@@ -227,7 +228,9 @@ def _is_ip_address_for_redaction(host_to_check: str) -> bool:
         return False
 
 
-def _build_redacted_netloc(parsed_url: urlparse.ParseResult, sensitive_host_ip: str | None) -> str:
+def _build_redacted_netloc(
+    parsed_url: ParseResult, sensitive_host_ip: str | None
+) -> str:
     """
     Build the redacted network location (netloc) string.
 
@@ -257,13 +260,17 @@ def _build_redacted_netloc(parsed_url: urlparse.ParseResult, sensitive_host_ip: 
         else:
             netloc_parts.append(host_to_check)
     else:
-        netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)  # Should not happen if URL is valid
+        netloc_parts.append(
+            DIAGNOSTICS_REDACTED_PLACEHOLDER
+        )  # Should not happen if URL is valid
     if parsed_url.port:
         netloc_parts.append(f":{parsed_url.port}")
     return "".join(netloc_parts)
 
 
-def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str | None) -> str:
+def _redact_api_client_base_url(
+    api_client: HdgApiClient, sensitive_host_ip: str | None
+) -> str:
     """
     Redact sensitive parts (host IP or general IP addresses) from the API client's base URL.
 
@@ -283,27 +290,34 @@ def _redact_api_client_base_url(api_client: HdgApiClient, sensitive_host_ip: str
 
         # Redact path and query as they might contain sensitive info, though less common for base URLs.
         redacted_path = (
-            DIAGNOSTICS_REDACTED_PLACEHOLDER if parsed.path and parsed.path != "/" else parsed.path
+            DIAGNOSTICS_REDACTED_PLACEHOLDER
+            if parsed.path and parsed.path != "/"
+            else parsed.path
         )
         redacted_query = DIAGNOSTICS_REDACTED_PLACEHOLDER if parsed.query else ""
 
-        return urlunparse(
-            parsed._replace(
-                netloc=redacted_netloc,
-                path=redacted_path,
-                query=redacted_query,
-                params="",  # Typically empty for base URLs
-                fragment="",  # Typically empty for base URLs
-            )
+        # Correctly cast the result of urlunparse to str
+        return cast(
+            str,
+            urlunparse(
+                parsed._replace(
+                    netloc=redacted_netloc,
+                    path=redacted_path,
+                    query=redacted_query,
+                    params="",  # Typically empty for base URLs
+                    fragment="",  # Typically empty for base URLs
+                )
+            ),
         )
     except Exception as e:
         _LOGGER.warning(f"Error redacting API client base_url '{base_url}': {e}")
-        return DIAGNOSTICS_REDACTED_PLACEHOLDER
+        # Ensure the fallback return is also cast to str
+        return cast(str, DIAGNOSTICS_REDACTED_PLACEHOLDER)
 
 
 def _get_api_client_diagnostics(
     api_client: HdgApiClient | None, sensitive_host_ip: str | None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Gather diagnostic information about the HdgApiClient.
 
@@ -320,7 +334,9 @@ def _get_api_client_diagnostics(
     return {"base_url": base_url_display}
 
 
-async def _get_entity_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> list[Dict[str, Any]]:
+async def _get_entity_diagnostics(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> list[dict[str, Any]]:
     """
     Retrieve information about entities associated with this config entry.
 
@@ -333,7 +349,7 @@ async def _get_entity_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> li
         and contains its diagnostic information.
     """
     entity_registry = er.async_get(hass)
-    entities = await er.async_entries_for_config_entry(entity_registry, entry.entry_id)
+    entities = er.async_entries_for_config_entry(entity_registry, entry.entry_id)
 
     diagnostics_entities = []
     sensitive_host_ip_for_redaction = entry.data.get(CONF_HOST_IP)

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 __version__ = "0.1.1"
 
-from typing import Final, TypedDict, Dict
+from typing import Final, TypedDict
 
 
 class EnumOption(TypedDict):
@@ -21,7 +21,7 @@ class EnumOption(TypedDict):
 
 # Mappings for HDG API enumeration values to human-readable text (German and English).
 # Used by sensors that represent enumerated states.
-HDG_ENUM_MAPPINGS: Final[Dict[str, Dict[int, EnumOption]]] = {
+HDG_ENUM_MAPPINGS: Final[dict[str, dict[int, EnumOption]]] = {
     "SPRACHE": {
         0: {"de": "Deutsch", "en": "Deutsch"},
         1: {"de": "Englisch", "en": "English"},

@@ -10,9 +10,9 @@ from __future__ import annotations
 
 __version__ = "0.1.4"
 
-from typing import Final, TypedDict, Optional, Dict
+from typing import Final, TypedDict
 
-from homeassistant.components.sensor import SensorStateClass, SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfEnergy,
@@ -41,37 +41,41 @@ class SensorDefinition(TypedDict, total=False):
 
     hdg_node_id: str  # Raw HDG API node ID (may include T/U/V/W/X/Y for setters).
     translation_key: str  # Key for HA entity naming and unique ID.
-    hdg_data_type: Optional[
-        str
-    ]  # Original HDG API data type (e.g., "2" for numeric, "10" for enum).
-    hdg_formatter: Optional[str]  # HDG API formatter hint (e.g., "iTEMP", "iPERC").
-    hdg_enum_type: Optional[str]  # Key to HDG_ENUM_MAPPINGS if this is an enum.
+    hdg_data_type: (
+        str | None
+    )  # Original HDG API data type (e.g., "2" for numeric, "10" for enum).
+    hdg_formatter: str | None  # HDG API formatter hint (e.g., "iTEMP", "iPERC").
+    hdg_enum_type: str | None  # Key to HDG_ENUM_MAPPINGS if this is an enum.
     ha_platform: str  # Target Home Assistant platform (e.g., "sensor", "number").
-    ha_device_class: Optional[
-        str
-    ]  # Home Assistant device class (e.g., SensorDeviceClass.TEMPERATURE).
-    ha_native_unit_of_measurement: Optional[str]  # Native unit for the HA entity.
-    ha_state_class: Optional[
-        str
-    ]  # Home Assistant state class (e.g., SensorStateClass.MEASUREMENT).
-    icon: Optional[str]  # Suggested MDI icon for the entity.
-    entity_category: Optional[EntityCategory]  # HA entity category (e.g., CONFIG, DIAGNOSTIC).
+    ha_device_class: (
+        str | None
+    )  # Home Assistant device class (e.g., SensorDeviceClass.TEMPERATURE).
+    ha_native_unit_of_measurement: str | None  # Native unit for the HA entity.
+    ha_state_class: (
+        str | None
+    )  # Home Assistant state class (e.g., SensorStateClass.MEASUREMENT).
+    icon: str | None  # Suggested MDI icon for the entity.
+    entity_category: (
+        EntityCategory | None
+    )  # HA entity category (e.g., CONFIG, DIAGNOSTIC).
     writable: bool  # True if this node's value can be set via the API.
-    parse_as_type: Optional[
-        str
-    ]  # Hint for parsing raw API text value (e.g., "float", "enum_text").
-    setter_type: Optional[str]  # Expected data type for API set validation (e.g., "int", "float1")
-    setter_min_val: Optional[float]  # Min allowed value for setting
-    setter_max_val: Optional[float]  # Max allowed value for setting
-    setter_step: Optional[float]  # Step for numeric value adjustments
-    normalize_internal_whitespace: Optional[
-        bool
-    ]  # If true, collapses multiple internal spaces to one. Defaults to False.
+    parse_as_type: (
+        str | None
+    )  # Hint for parsing raw API text value (e.g., "float", "enum_text").
+    setter_type: (
+        str | None
+    )  # Expected data type for API set validation (e.g., "int", "float1")
+    setter_min_val: float | None  # Min allowed value for setting
+    setter_max_val: float | None  # Max allowed value for setting
+    setter_step: float | None  # Step for numeric value adjustments
+    normalize_internal_whitespace: (
+        bool | None
+    )  # If true, collapses multiple internal spaces to one. Defaults to False.
 
 
 # Master dictionary defining all sensors and entities for the integration.
 # Each key is a unique identifier (often matching the translation_key) for the entity.
-SENSOR_DEFINITIONS: Final[Dict[str, SensorDefinition]] = {
+SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     "sprache": {
         "hdg_node_id": "1T",
         "translation_key": "sprache",

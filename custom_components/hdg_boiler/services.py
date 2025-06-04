@@ -7,37 +7,37 @@ the HDG Bavaria Boiler integration, specifically for setting and getting HDG nod
 
 __version__ = "0.8.4"
 
-from decimal import Decimal, InvalidOperation
 import logging
-from typing import Any, Dict, Union, cast, Optional
+from decimal import Decimal, InvalidOperation
+from typing import Any, cast
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from .api import HdgApiError
-from .coordinator import HdgDataUpdateCoordinator
 from .const import (
     ATTR_NODE_ID,
     ATTR_VALUE,
     DOMAIN,
-    SERVICE_SET_NODE_VALUE,
     SERVICE_GET_NODE_VALUE,
+    SERVICE_SET_NODE_VALUE,
 )
+from .coordinator import HdgDataUpdateCoordinator
 from .definitions import (
-    SensorDefinition,
     SENSOR_DEFINITIONS,
+    SensorDefinition,
 )
 from .utils import (
     extract_base_node_id,
-    safe_float_convert,
     format_value_for_api,
+    safe_float_convert,
 )
 
 _LOGGER = logging.getLogger(DOMAIN)
 
 
 # Index SensorDefinitions by base node id for fast lookup.
-def _build_sensor_definitions_by_base_node_id() -> Dict[str, list[SensorDefinition]]:
+def _build_sensor_definitions_by_base_node_id() -> dict[str, list[SensorDefinition]]:
     """
     Build an index of sensor definitions keyed by their base HDG node ID.
 
@@ -101,7 +101,9 @@ def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
     """
     definitions_for_base = SENSOR_DEFINITIONS_BY_BASE_NODE_ID.get(node_id_str, [])
     settable_definitions = [
-        d for d in definitions_for_base if d.get("ha_platform") == "number" and d.get("setter_type")
+        d
+        for d in definitions_for_base
+        if d.get("ha_platform") == "number" and d.get("setter_type")
     ]
 
     if not settable_definitions:
@@ -132,8 +134,8 @@ def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
 
 
 def _coerce_value_to_numeric_type(
-    value_to_set: Any, node_type: Optional[str], entity_name_for_log: str
-) -> Union[int, float]:
+    value_to_set: Any, node_type: str | None, entity_name_for_log: str
+) -> int | float:
     """
     Coerce input value to the target numeric type (int or float) based on setter_type.
 
@@ -230,7 +232,7 @@ def _perform_decimal_step_validation(
 
 
 def _validate_value_range_and_step(
-    coerced_numeric_value: Union[int, float],  # Type-coerced value
+    coerced_numeric_value: int | float,  # Type-coerced value
     min_val_def: Any,  # Raw definition value for min
     max_val_def: Any,  # Raw definition value for max
     node_step_def: Any,  # Raw definition value for step
@@ -303,9 +305,7 @@ def _validate_value_range_and_step(
                 node_step_def,
             )
         except InvalidOperation as dec_err:
-            error_message = (
-                f"Invalid numeric format for step validation (min, step, or value): {dec_err}"
-            )
+            error_message = f"Invalid numeric format for step validation (min, step, or value): {dec_err}"
             _LOGGER.error(
                 f"{error_message} for node '{entity_name_for_log}'. Input: value='{original_value_to_set_for_log}', min='{min_val_def}', step='{node_step_def}'."
             )
@@ -364,7 +364,9 @@ async def async_handle_set_node_value(
     # This uses the utility function from utils.py. It raises ValueError on configuration issues.
     try:
         # node_type is confirmed to be non-None and valid by _find_settable_sensor_definition
-        api_value_to_send_str = format_value_for_api(coerced_numeric_value, cast(str, node_type))
+        api_value_to_send_str = format_value_for_api(
+            coerced_numeric_value, cast(str, node_type)
+        )
     except ValueError as e:
         _LOGGER.error(
             f"Configuration error formatting value for API for node '{entity_name_for_log}' (ID: {node_id_str}): {e}"
@@ -389,7 +391,9 @@ async def async_handle_set_node_value(
                 f"Failed to set node '{entity_name_for_log}' (ID: {node_id_str}). Coordinator reported failure."
             )
     except HdgApiError as err:
-        _LOGGER.error(f"API error setting node '{entity_name_for_log}' (ID: {node_id_str}): {err}")
+        _LOGGER.error(
+            f"API error setting node '{entity_name_for_log}' (ID: {node_id_str}): {err}"
+        )
         raise HomeAssistantError(
             f"API error setting node '{entity_name_for_log}' (ID: {node_id_str}): {err}"
         ) from err
@@ -404,7 +408,7 @@ async def async_handle_set_node_value(
 
 async def async_handle_get_node_value(
     hass: HomeAssistant, coordinator: HdgDataUpdateCoordinator, call: ServiceCall
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """# sourcery skip: extract-method
     Handle the 'get_node_value' service call.
 
@@ -416,7 +420,9 @@ async def async_handle_get_node_value(
 
     if node_id_input is None:
         _LOGGER.error(f"Service '{SERVICE_GET_NODE_VALUE}' missing '{ATTR_NODE_ID}'.")
-        raise ServiceValidationError(f"'{ATTR_NODE_ID}' required for {SERVICE_GET_NODE_VALUE}.")
+        raise ServiceValidationError(
+            f"'{ATTR_NODE_ID}' required for {SERVICE_GET_NODE_VALUE}."
+        )
     node_id_str = str(node_id_input).strip()
     _LOGGER.debug(
         f"Service '{SERVICE_GET_NODE_VALUE}': node_id='{node_id_input}' (base='{node_id_str}')"
@@ -435,7 +441,9 @@ async def async_handle_get_node_value(
 
     if node_id_str in coordinator.data:
         value = coordinator.data[node_id_str]
-        _LOGGER.debug(f"Node '{node_id_str}' found in coordinator. Raw value: '{value}'")
+        _LOGGER.debug(
+            f"Node '{node_id_str}' found in coordinator. Raw value: '{value}'"
+        )
         return {"node_id": node_id_str, "value": value, "status": "found"}
     else:
         _LOGGER.warning(f"Node '{node_id_str}' not found in coordinator data.")

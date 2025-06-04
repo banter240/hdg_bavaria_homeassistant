@@ -8,14 +8,17 @@ coordinator and entity definitions.
 
 from __future__ import annotations
 
-__version__ = "0.8.23"
+__version__ = "0.8.27"
 
 import logging
 import re
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Optional, cast
+from typing import Any, cast
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from homeassistant.components.sensor import (
+    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
@@ -23,32 +26,35 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
+
 from .const import (
-    DOMAIN,
     CONF_SOURCE_TIMEZONE,
     DEFAULT_SOURCE_TIMEZONE,
+    DOMAIN,
     HDG_DATETIME_SPECIAL_TEXT,
 )
+from .coordinator import HdgDataUpdateCoordinator
 from .definitions import (
     SENSOR_DEFINITIONS,
     SensorDefinition,
 )
+from .entity import HdgNodeEntity
 from .utils import (
+    parse_float_from_string,
+    parse_int_from_string,
     parse_percent_from_string,
     strip_hdg_node_suffix,
-    parse_int_from_string,
-    parse_float_from_string,
 )
-from .coordinator import HdgDataUpdateCoordinator
-from .entity import HdgNodeEntity
 
 _LOGGER = logging.getLogger(DOMAIN)
 
 # Dictionary mapping 'parse_as_type' strings from SENSOR_DEFINITIONS to
 # corresponding parsing methods. These methods take the cleaned string value
 # and optional logging context arguments (node_id, entity_id).
-_PARSERS = {
-    "percent_from_string_regex": lambda cv, node_id, entity_id: parse_percent_from_string(
+_PARSERS: dict[str, Callable[[str, str | None, str | None], Any | None]] = {
+    "percent_from_string_regex": lambda cv,
+    node_id,
+    entity_id: parse_percent_from_string(
         cv, node_id_for_log=node_id, entity_id_for_log=entity_id
     ),
     "int": lambda cv, node_id, entity_id: parse_int_from_string(
@@ -70,7 +76,9 @@ async def async_setup_entry(
     Iterates through SENSOR_DEFINITIONS, creating sensor entities for those
     defined with `ha_platform: "sensor"`.
     """
-    coordinator: HdgDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator: HdgDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
+        "coordinator"
+    ]
     entities: list[HdgBoilerSensor] = []
 
     for unique_id_suffix, entity_definition_dict in SENSOR_DEFINITIONS.items():
@@ -81,8 +89,12 @@ async def async_setup_entry(
                 key=unique_id_suffix,
                 name=None,
                 icon=entity_def.get("icon"),
-                device_class=entity_def.get("ha_device_class"),
-                native_unit_of_measurement=entity_def.get("ha_native_unit_of_measurement"),
+                device_class=cast(
+                    SensorDeviceClass | None, entity_def.get("ha_device_class")
+                ),
+                native_unit_of_measurement=entity_def.get(
+                    "ha_native_unit_of_measurement"
+                ),
                 state_class=entity_def.get("ha_state_class"),
                 entity_category=entity_def.get("entity_category"),
                 translation_key=entity_def.get("translation_key"),
@@ -125,7 +137,9 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
         """
         hdg_api_node_id_from_def = entity_definition["hdg_node_id"]
         super().__init__(
-            coordinator, strip_hdg_node_suffix(hdg_api_node_id_from_def), entity_definition
+            coordinator,
+            strip_hdg_node_suffix(hdg_api_node_id_from_def),
+            cast(dict[str, Any], entity_definition),
         )
         self.entity_description = entity_description
 
@@ -154,7 +168,7 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
         self,
         cleaned_value: str,
         source_timezone_str: str,
-    ) -> Optional[datetime | str]:
+    ) -> datetime | str | None:
         """
         Parse a string value that represents a datetime or special text.
 
@@ -172,7 +186,7 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
         """
         cleaned_value_dt = cleaned_value.strip()
         if HDG_DATETIME_SPECIAL_TEXT in cleaned_value_dt.lower():
-            return cleaned_value_dt  # Return special text as is.
+            return cast(str, cleaned_value_dt)
         try:
             dt_object_naive = datetime.strptime(cleaned_value_dt, "%d.%m.%Y %H:%M")
             try:
@@ -185,7 +199,7 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
                 return None
 
             dt_object_source_aware = dt_object_naive.replace(tzinfo=source_tz)
-            return dt_util.as_utc(dt_object_source_aware)
+            return cast(datetime, dt_util.as_utc(dt_object_source_aware))
         except ValueError:
             _LOGGER.debug(
                 f"Node {self._node_id} ({self.entity_id}): Could not parse '{cleaned_value_dt}' as datetime. Setting to None."
@@ -195,8 +209,8 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
     def _parse_as_float_type(
         self,
         cleaned_value: str,
-        formatter: Optional[str],
-    ) -> Optional[float | int]:
+        formatter: str | None,
+    ) -> float | int | None:
         """
         Parse a string value as a float, with specific handling for certain formatters.
 
@@ -211,7 +225,9 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
         Returns:
             The parsed float or int, or None if parsing fails.
         """
-        val_float = parse_float_from_string(cleaned_value, self._node_id, self.entity_id)
+        val_float = parse_float_from_string(
+            cleaned_value, self._node_id, self.entity_id
+        )
         if val_float is None:
             return None
         if formatter == "iFLOAT2":
@@ -229,7 +245,7 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
             return int(val_float)
         return val_float
 
-    def _parse_value(self, raw_value_text: Optional[str]) -> Any | None:
+    def _parse_value(self, raw_value_text: str | None) -> Any | None:
         """
         Parse the raw string value from the API into the appropriate type for the sensor state.
 
@@ -261,7 +277,11 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
             return None  # Most types treat empty string as no valid data.
 
         if parse_as_type in _PARSERS:
-            return _PARSERS[parse_as_type](cleaned_value, self._node_id, self.entity_id)
+            parser_func = cast(
+                Callable[[str, str | None, str | None], Any | None],
+                _PARSERS[parse_as_type],
+            )
+            return parser_func(cleaned_value, self._node_id, self.entity_id)
 
         if parse_as_type == "hdg_datetime_or_text":
             value_for_datetime_parse = re.sub(r"\s+", " ", cleaned_value).strip()
@@ -284,7 +304,10 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
         if data_type == "10":  # HDG data_type "10" indicates an enumeration.
             return cleaned_value  # Assume it's enum_text.
 
-        if data_type == "4" or formatter in ["iVERSION", "iREVISION"]:  # HDG data_type "4" is text.
+        if data_type == "4" or formatter in [
+            "iVERSION",
+            "iREVISION",
+        ]:  # HDG data_type "4" is text.
             return cleaned_value
 
         if data_type == "2":  # HDG data_type "2" is numeric.

@@ -8,13 +8,14 @@ node ID manipulation, URL normalization, string parsing, and value formatting.
 
 from __future__ import annotations
 
-__version__ = "0.6.18"
+__version__ = "0.6.21"
 
+import ipaddress
 import logging
 import re
-import ipaddress
-from urllib.parse import urlparse, urlunparse, quote, splitport
-from typing import Final, Optional, Tuple, Any, Dict, Union
+from typing import Any, Final
+from urllib.parse import quote, urlparse, urlunparse
+
 from .const import DOMAIN, KNOWN_HDG_API_SETTER_SUFFIXES
 
 _LOGGER = logging.getLogger(DOMAIN)
@@ -26,11 +27,14 @@ NUMERIC_PART_REGEX: Final = re.compile(r"([-+]?\d*\.?\d+)")
 DEFAULT_PERCENT_REGEX_PATTERN: Final = r"(\d+)\s*%-Schritte"
 
 # Predefined locale separators to avoid global pylocale.setlocale
-KNOWN_LOCALE_SEPARATORS: Final[Dict[str, Dict[str, str]]] = {
+KNOWN_LOCALE_SEPARATORS: Final[dict[str, dict[str, str]]] = {
     "en_US": {"decimal_point": ".", "thousands_sep": ","},
     "de_DE": {"decimal_point": ",", "thousands_sep": "."},
     "en_GB": {"decimal_point": ".", "thousands_sep": ","},
-    "fr_FR": {"decimal_point": ",", "thousands_sep": " "},  # NBSP often, but space is common
+    "fr_FR": {
+        "decimal_point": ",",
+        "thousands_sep": " ",
+    },  # NBSP often, but space is common
     "it_IT": {"decimal_point": ",", "thousands_sep": "."},
     "es_ES": {"decimal_point": ",", "thousands_sep": "."},
 }
@@ -46,89 +50,66 @@ def strip_hdg_node_suffix(node_id_with_suffix: str) -> str:
     Returns:
         The base node ID (numeric part if a known suffix was present, otherwise the original string).
     """
-    if node_id_with_suffix and node_id_with_suffix[-1].upper() in KNOWN_HDG_API_SETTER_SUFFIXES:
+    if (
+        node_id_with_suffix
+        and node_id_with_suffix[-1].upper() in KNOWN_HDG_API_SETTER_SUFFIXES
+    ):
         return node_id_with_suffix[:-1]
     return node_id_with_suffix
 
 
 def normalize_host_for_scheme(host_address: str) -> str:
     """
-    Normalize a host address string, particularly for IPv6 addresses.
-    Uses ipaddress and urllib.parse.splitport to robustly handle IPv4,
-    IPv6 addresses (with or without brackets), and optional port numbers.
+    Normalize a host address string, particularly for IPv6 addresses and ports. Uses
+    urllib.parse.urlparse and ipaddress to robustly handle IPv4, IPv6 addresses (with or
+    without brackets), and optional port numbers.
+
     The input 'host_address' is assumed to be already stripped of leading/trailing
     whitespace and to not include an explicit scheme (e.g., "http://").
 
     Args:
         host_address: The host address string to normalize.
+        Expected format: "host", "host:port", "[ipv6]", "[ipv6]:port".
 
     Returns:
-        The normalized host string, with IPv6 addresses bracketed if necessary,
-        and the port appended if present. Returns the original address if parsing
-        or normalization fails.
+        The normalized host string (e.g., "192.168.1.100", "[::1]", "example.com:8080"), with
+        IPv6 addresses bracketed if necessary, and the port appended if present.
 
     Raises:
-        ValueError: If an IPv6 address is provided with a port but is missing the required brackets.
+        ValueError: If the host address is invalid or cannot be parsed into a valid
+            hostname.
     """
-    # Heuristic check for malformed IPv6 with port (e.g., "2001:db8::1:8080" instead of "[2001:db8::1]:8080")
-    # Valid IPv6 with port: "[2001:db8::1]:8080"
-    # Invalid: "2001:db8::1:8080" (ambiguous)
-    if ":" in host_address and not host_address.startswith("["):
-        try:
-            potential_host, potential_port = splitport(host_address)
-            if potential_port and potential_host and ":" in potential_host:
-                # Check if the host part is indeed a valid IPv6 address
-                ipaddress.ip_address(potential_host)
-                # If we reach here, it's a valid IPv6 address, a port was found,
-                # but the original string was not bracketed. This is the malformed case.
-                raise ValueError(
-                    f"Malformed IPv6 address with port (missing brackets): '{host_address}'. "
-                    "IPv6 addresses with ports must be enclosed in brackets, e.g. '[2001:db8::1]:8080'"
-                )
-        except ValueError as e:
-            if "Malformed IPv6 address with port" in str(e):  # Propagate our specific error
-                raise
-            # Otherwise, potential_host was not a valid IPv6, or splitport failed.
-            # This is not the specific malformation we're checking for here, so we continue.
-            _LOGGER.debug(
-                f"Pre-check for malformed IPv6 with port for '{host_address}' did not confirm specific error: {e}"
-            )
-        except Exception as e_generic:  # Catch any other unexpected errors during this check
-            _LOGGER.debug(
-                f"Unexpected error during pre-check for malformed IPv6 for '{host_address}': {e_generic}"
-            )
+    if not host_address:
+        raise ValueError("Host address cannot be empty.")
 
-    # Split out port if present
-    host, port_str = splitport(host_address)
-    if host is None:  # Should not happen if host_address is not empty
-        _LOGGER.warning(
-            f"Could not parse hostname from '{host_address}' using splitport. Returning original."
+    # urlparse needs a scheme to correctly parse the netloc.
+    # Prepend a dummy scheme. This works even if host_address is already bracketed IPv6 with port.
+    parsed = urlparse(f"scheme://{host_address}")  # Using "scheme" as a generic dummy
+
+    host = parsed.hostname  # Extracts hostname, unbrackets IPv6
+    port = parsed.port
+
+    if not host:
+        # This can happen if host_address is malformed, e.g., just ":8080"
+        raise ValueError(
+            f"Invalid host address format: '{host_address}'. Could not extract hostname."
         )
-        return host_address
 
-    # Remove brackets if present (e.g., "[::1]")
-    if host.startswith("[") and host.endswith("]"):
-        host = host[1:-1]
-
-    # Check if host is a valid IPv6 address
-    is_ipv6 = False
+    # Validate/format the host part
     try:
-        # Ensure host is not empty before passing to ip_address, as ip_address("") raises ValueError
-        if host:
-            ip = ipaddress.ip_address(host)
-            is_ipv6 = ip.version == 6
+        ip = ipaddress.ip_address(
+            host
+        )  # Will raise ValueError if host is not a valid IP string
+        host_part_normalized = f"[{host}]" if ip.version == 6 else host
     except ValueError:
-        # Not a valid IP address (could be a hostname or invalid IP string)
-        is_ipv6 = False  # Treat as not IPv6 for bracketing purposes
+        # Not an IP address, assume it's a valid hostname.
+        # No further normalization needed for hostnames here.
+        host_part_normalized = host
 
-    # Re-bracket if IPv6
-    if is_ipv6:
-        host = f"[{host}]"
-
-    return f"{host}:{port_str}" if port_str else host
+    return f"{host_part_normalized}:{port}" if port else host_part_normalized
 
 
-def prepare_base_url(host_input_original_raw: str) -> Optional[str]:
+def prepare_base_url(host_input_original_raw: str) -> str | None:
     """
     Prepare and validate the base URL from the host input.
     Handles scheme prepending and IPv6 normalization.
@@ -147,13 +128,14 @@ def prepare_base_url(host_input_original_raw: str) -> Optional[str]:
     if scheme_provided:
         parsed_for_scheme = urlparse(host_to_process)
         current_scheme = parsed_for_scheme.scheme
-        host_to_process = parsed_for_scheme.netloc
-        if not host_to_process:
+        host_to_process = parsed_for_scheme.netloc  # This is the part to normalize
+        if not host_to_process:  # e.g. "http://"
             _LOGGER.error(
                 f"Invalid host/IP '{host_input_original_raw}'. Contains scheme but empty host part."
             )
             return None
-    # Always normalize the host part, regardless of whether a scheme was initially present.
+    # If no scheme provided, host_to_process remains the original input.
+    # normalize_host_for_scheme expects something like "host" or "host:port" or "[ipv6]:port"
     try:
         normalized_host = normalize_host_for_scheme(host_to_process)
     except ValueError as e:
@@ -162,7 +144,7 @@ def prepare_base_url(host_input_original_raw: str) -> Optional[str]:
             f"Normalization of host part '{host_to_process}' failed: {e}. Please check configuration."
         )
         return None
-    schemed_host_input = f"{current_scheme or 'http'}://{normalized_host}"
+    schemed_host_input = f"{current_scheme or 'http'}://{normalized_host}"  # Default to http if no scheme was present
 
     parsed_url = urlparse(schemed_host_input)
     # Final check after potential normalization and scheme prepending
@@ -177,7 +159,7 @@ def prepare_base_url(host_input_original_raw: str) -> Optional[str]:
 
 def _get_locale_separators_from_known_list(
     locale_str: str,
-) -> Optional[Tuple[str, str]]:
+) -> tuple[str, str] | None:
     """
     Retrieve decimal and thousands separators for a given locale from a predefined list.
 
@@ -195,7 +177,7 @@ def _get_locale_separators_from_known_list(
 
 def _normalize_string_by_locale(
     value_str: str, locale_str: str, log_prefix: str, raw_cleaned_value_for_log: str
-) -> Optional[str]:
+) -> str | None:
     """
     Normalize a string using locale-specific decimal and thousands separators.
     Uses a predefined list of known locales and their separators.
@@ -213,9 +195,13 @@ def _normalize_string_by_locale(
 
     if separators := _get_locale_separators_from_known_list(locale_str):
         decimal_sep, thousands_sep = separators
-        if thousands_sep:  # Only replace if a thousands separator is defined for the locale
+        if (
+            thousands_sep
+        ):  # Only replace if a thousands separator is defined for the locale
             normalized_value = normalized_value.replace(thousands_sep, "")
-        if decimal_sep and decimal_sep != ".":  # Only replace if decimal is not already '.'
+        if (
+            decimal_sep and decimal_sep != "."
+        ):  # Only replace if decimal is not already '.'
             normalized_value = normalized_value.replace(decimal_sep, ".")
         _LOGGER.debug(
             f"{log_prefix}Normalized '{raw_cleaned_value_for_log}' to '{normalized_value}' "
@@ -232,7 +218,7 @@ def _normalize_string_by_locale(
 
 def _normalize_string_by_heuristic(
     value_str: str, log_prefix: str, raw_cleaned_value_for_log: str
-) -> Optional[str]:
+) -> str | None:
     """
     Normalize a string using a heuristic for mixed decimal/thousands separators.
 
@@ -277,15 +263,17 @@ def _normalize_string_by_heuristic(
             f"{log_prefix}Heuristic: replaced comma with dot in '{raw_cleaned_value_for_log}', now '{normalized_str}'."
         )
         return normalized_str
-    return value_str  # No heuristic normalization needed if only one or no separator type
+    return (
+        value_str  # No heuristic normalization needed if only one or no separator type
+    )
 
 
 def extract_numeric_string(
     raw_cleaned_value: str,
-    node_id_for_log: Optional[str] = None,
-    entity_id_for_log: Optional[str] = None,
-    locale: Optional[str] = None,
-) -> Optional[str]:
+    node_id_for_log: str | None = None,
+    entity_id_for_log: str | None = None,
+    locale: str | None = None,
+) -> str | None:
     """
     Extract the numeric part of a string using regex after locale-aware normalization.
 
@@ -307,7 +295,9 @@ def extract_numeric_string(
     Returns:
         The extracted numeric string, or None if not found.
     """
-    value_str = raw_cleaned_value  # Assumes raw_cleaned_value is already stripped by caller.
+    value_str = (
+        raw_cleaned_value  # Assumes raw_cleaned_value is already stripped by caller.
+    )
 
     log_prefix = ""
     if node_id_for_log and entity_id_for_log:
@@ -317,7 +307,7 @@ def extract_numeric_string(
     elif entity_id_for_log:
         log_prefix = f"Entity {entity_id_for_log}: "
 
-    normalized_value_str: Optional[str] = None
+    normalized_value_str: str | None = None
 
     if locale:
         normalized_value_str = _normalize_string_by_locale(
@@ -350,9 +340,9 @@ def extract_numeric_string(
 def parse_percent_from_string(
     cleaned_value: str,
     regex_pattern: str = DEFAULT_PERCENT_REGEX_PATTERN,
-    node_id_for_log: Optional[str] = None,
-    entity_id_for_log: Optional[str] = None,
-) -> Optional[int]:
+    node_id_for_log: str | None = None,
+    entity_id_for_log: str | None = None,
+) -> int | None:
     """
     Parse percentage from a string using a regex pattern.
 
@@ -371,7 +361,9 @@ def parse_percent_from_string(
         else ""
     )
     if match := re.search(regex_pattern, cleaned_value):
-        if match.lastindex is not None and match.lastindex >= 1:  # Check if group 1 exists
+        if (
+            match.lastindex is not None and match.lastindex >= 1
+        ):  # Check if group 1 exists
             try:
                 return int(match[1])
             except ValueError:
@@ -379,7 +371,9 @@ def parse_percent_from_string(
                     f"{log_prefix}Could not parse numeric part from regex group 1 ('{match[1]}') in '{cleaned_value}' for percent regex."
                 )
                 return None
-            except IndexError:  # Should be caught by lastindex check, but as a safeguard
+            except (
+                IndexError
+            ):  # Should be caught by lastindex check, but as a safeguard
                 _LOGGER.error(
                     f"{log_prefix}Regex pattern '{regex_pattern}' did not capture group 1 as expected from '{cleaned_value}'."
                 )
@@ -395,7 +389,7 @@ def parse_percent_from_string(
     return None
 
 
-def format_value_for_api(numeric_value: Union[int, float], setter_type: str) -> str:
+def format_value_for_api(numeric_value: int | float, setter_type: str) -> str:
     """
     Format a numeric value into the string representation expected by the HDG API.
 
@@ -420,12 +414,14 @@ def format_value_for_api(numeric_value: Union[int, float], setter_type: str) -> 
     else:
         msg = f"Unknown 'setter_type' ('{setter_type}') encountered during API value formatting for value '{numeric_value}'."
         _LOGGER.error(msg)
-        raise ValueError(msg)  # Use ValueError as it's a data/config issue, not API communication.
+        raise ValueError(
+            msg
+        )  # Use ValueError as it's a data/config issue, not API communication.
 
 
 def coerce_and_round_float(
     value_to_set: Any, precision: int, node_type_str: str
-) -> Tuple[Optional[float], bool, str]:
+) -> tuple[float | None, bool, str]:
     """
     Coerce an input value to a float and round it to a specified precision.
     Typically used for 'float1' or 'float2' setter types.
@@ -471,8 +467,8 @@ def extract_base_node_id(node_id_from_def: str) -> str:
 
 
 def safe_float_convert(
-    val_to_convert: Any, val_name: str, entity_name_for_log: Optional[str] = None
-) -> Tuple[bool, Optional[float], str]:
+    val_to_convert: Any, val_name: str, entity_name_for_log: str | None = None
+) -> tuple[bool, float | None, str]:
     """
     Safely convert a value (typically from SENSOR_DEFINITIONS min/max/step) to float.
 
@@ -494,7 +490,11 @@ def safe_float_convert(
         _LOGGER.error(
             f"{log_prefix}Config error: {val_name} '{val_to_convert}' not valid number: {e}"
         )
-        return False, None, f"Config error: {val_name} '{val_to_convert}' not valid number."
+        return (
+            False,
+            None,
+            f"Config error: {val_name} '{val_to_convert}' not valid number.",
+        )
 
 
 def normalize_alias_for_comparison(alias: str) -> str:
@@ -528,9 +528,9 @@ def normalize_unique_id_component(component: str) -> str:
 
 def parse_int_from_string(
     raw_value: str,
-    node_id_for_log: Optional[str] = None,
-    entity_id_for_log: Optional[str] = None,
-) -> Optional[int]:
+    node_id_for_log: str | None = None,
+    entity_id_for_log: str | None = None,
+) -> int | None:
     """
     Parse an integer from a string, robustly handling potential float representations (e.g., "10.0").
 
@@ -542,7 +542,9 @@ def parse_int_from_string(
         node_id_for_log: Optional HDG node ID for logging context.
         entity_id_for_log: Optional entity ID for logging context.
     """
-    numeric_part_str = extract_numeric_string(raw_value, node_id_for_log, entity_id_for_log)
+    numeric_part_str = extract_numeric_string(
+        raw_value, node_id_for_log, entity_id_for_log
+    )
     if numeric_part_str is None:
         return None
     try:
@@ -563,9 +565,9 @@ def parse_int_from_string(
 
 def parse_float_from_string(
     raw_value: str,
-    node_id_for_log: Optional[str] = None,
-    entity_id_for_log: Optional[str] = None,
-) -> Optional[float]:
+    node_id_for_log: str | None = None,
+    entity_id_for_log: str | None = None,
+) -> float | None:
     """
     Parse a float from a string, extracting the numeric part first.
 
@@ -575,7 +577,9 @@ def parse_float_from_string(
         entity_id_for_log: Optional entity ID for logging context.
 
     """
-    numeric_part_str = extract_numeric_string(raw_value, node_id_for_log, entity_id_for_log)
+    numeric_part_str = extract_numeric_string(
+        raw_value, node_id_for_log, entity_id_for_log
+    )
     if numeric_part_str is None:
         return None
     try:

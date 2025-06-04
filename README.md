@@ -67,7 +67,7 @@ This custom component allows you to integrate your HDG Bavaria boiler (e.g., HDG
 
 - An HDG Bavaria boiler with a network interface and an accessible web API. Please consult your boiler's manual or HDG service partner to ensure API access is enabled and to understand any implications.
 - A **static IP address** assigned to your HDG boiler on your local network. This is crucial for reliable communication.
-- Home Assistant version 2023.x or newer (recommended).
+- Home Assistant version 2024.6.0 or newer (recommended).
 
 ## Installation
 

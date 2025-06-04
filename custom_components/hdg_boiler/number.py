@@ -6,12 +6,13 @@ updates from the data coordinator and implement debouncing for API calls
 when setting new values to prevent overwhelming the boiler's API.
 """
 
-__version__ = "0.8.47"
+from __future__ import annotations
 
-import logging
+__version__ = "0.8.49"
+
 import functools
-from typing import Any, Optional, cast, Union
-import asyncio
+import logging
+from typing import Any, cast
 
 from homeassistant.components.number import (
     NumberEntity,
@@ -19,26 +20,26 @@ from homeassistant.components.number import (
     NumberMode,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback, HassJob, CALLBACK_TYPE
-from homeassistant.helpers.event import async_call_later
+from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_call_later
 
+from .api import HdgApiClient, HdgApiError
 from .const import (
     DOMAIN,
     NUMBER_SET_VALUE_DEBOUNCE_DELAY_S,
 )
-from .definitions import (
-    SensorDefinition,
-    SENSOR_DEFINITIONS,
-)
 from .coordinator import HdgDataUpdateCoordinator
+from .definitions import (
+    SENSOR_DEFINITIONS,
+    SensorDefinition,
+)
 from .entity import HdgNodeEntity
-from .api import HdgApiClient, HdgApiError
 from .utils import (
-    strip_hdg_node_suffix,
-    parse_int_from_string,
-    parse_float_from_string,
     format_value_for_api,
+    parse_float_from_string,
+    parse_int_from_string,
+    strip_hdg_node_suffix,
 )
 
 _LOGGER = logging.getLogger(DOMAIN)
@@ -76,7 +77,10 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         """
         hdg_api_node_id_from_def = entity_definition["hdg_node_id"]
         super().__init__(
-            coordinator, strip_hdg_node_suffix(hdg_api_node_id_from_def), entity_definition
+            coordinator=coordinator,
+            node_id=strip_hdg_node_suffix(hdg_api_node_id_from_def),
+            # Cast to dict[str, Any] to satisfy mypy, as TypedDict is compatible.
+            entity_definition=cast(dict[str, Any], entity_definition),
         )
 
         self.entity_description = entity_description
@@ -84,10 +88,10 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
 
         # Timer and generation tracking for debouncing set value calls.
         self._current_set_generation: int = 0
-        self._pending_api_call_timer: Optional[CALLBACK_TYPE] = None  # Correct type hint
+        self._pending_api_call_timer: CALLBACK_TYPE | None = None  # Correct type hint
         self._value_for_current_generation: Any | None = None
 
-        self._attr_native_value = None
+        self._attr_native_value: int | float | None = None
         self._update_number_state()
 
         _LOGGER.debug(
@@ -112,7 +116,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         raw_value_text = self.coordinator.data.get(self._node_id)
         self._attr_native_value = self._parse_value(raw_value_text)
 
-    def _parse_value(self, raw_value_text: Optional[str]) -> Optional[Union[int, float]]:
+    def _parse_value(self, raw_value_text: str | None) -> int | float | None:
         """Parse the raw string value from the API into an int or float.
 
         The method uses the 'setter_type' from the entity's definition to
@@ -122,6 +126,9 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         if raw_value_text is None:
             return None
         cleaned_value = raw_value_text.strip()
+        # Explicitly check for None after stripping, although the initial check should cover this.
+        if cleaned_value is None:
+            return None
         if not cleaned_value:
             return None
 
@@ -132,7 +139,9 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
 
         # Default to float parsing for other numeric setter types (e.g., 'float1', 'float2').
         # This ensures that values like "10.0" are treated as floats if not explicitly 'int'.
-        parsed_float = parse_float_from_string(cleaned_value, self._node_id, self.entity_id)
+        parsed_float = parse_float_from_string(
+            cleaned_value, self._node_id, self.entity_id
+        )
         if parsed_float is None:
             _LOGGER.warning(
                 f"Could not parse float for {self.entity_id} (node {self._node_id}) from raw value '{raw_value_text}' (cleaned: '{cleaned_value}')."
@@ -197,7 +206,8 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
 
         This method is scheduled by `async_set_native_value` and executed after
         the `NUMBER_SET_VALUE_DEBOUNCE_DELAY_S`. It checks if the job's generation
-        matches the current generation to ensure only the latest value is processed.
+        matches the current generation to ensure only the most recent value
+        set by the user is processed.
 
         Args:
             *args: A tuple containing (scheduled_generation: int, value_at_schedule_time: float).
@@ -278,7 +288,9 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
             if callable(self._pending_api_call_timer):
                 self._pending_api_call_timer()  # Call the cancel callback
             self._pending_api_call_timer = None
-            _LOGGER.debug(f"Cancelled API call timer for {self.entity_id} during removal.")
+            _LOGGER.debug(
+                f"Cancelled API call timer for {self.entity_id} during removal."
+            )
         await super().async_will_remove_from_hass()
 
 
@@ -286,7 +298,7 @@ def _determine_ha_number_step_val(
     entity_def: SensorDefinition,
     translation_key: str,  # Used for logging context.
     raw_hdg_node_id: str,  # Used for logging context.
-) -> Optional[float]:
+) -> float | None:
     """
     Determine the `native_step` for the Home Assistant NumberEntity.
 
@@ -302,12 +314,12 @@ def _determine_ha_number_step_val(
         None if a critical configuration error is found (e.g., invalid or negative step),
         which should prevent entity creation.
     """
-    setter_type_for_step_default = entity_def.get("setter_type", "").strip().lower()
+    setter_type_for_step_default = (entity_def.get("setter_type") or "").strip().lower()
     raw_step_val_config = entity_def.get("setter_step")
     step_val: float
 
     if raw_step_val_config is None:
-        # Infer default step based on setter_type if 'setter_step' is not explicitly defined.
+        # Infer default step based on setter_type if 'setter_step' is not explicitly defined
         step_val = 0.1 if setter_type_for_step_default in {"float1", "float2"} else 1.0
         _LOGGER.debug(
             f"'setter_step' not defined for translation_key '{translation_key}' (Node {raw_hdg_node_id}). "
@@ -315,6 +327,7 @@ def _determine_ha_number_step_val(
         )
         return step_val
 
+    # At this point, raw_step_val_config is not None.
     try:
         parsed_step_val_config = float(raw_step_val_config)
     except (ValueError, TypeError):
@@ -341,7 +354,6 @@ def _determine_ha_number_step_val(
             "Service calls will correctly enforce the 0.0 step logic (only min_value allowed)."
         )
         return step_val
-
     return parsed_step_val_config  # Valid, positive step defined.
 
 
@@ -350,7 +362,7 @@ def _create_number_entity_if_valid(
     entity_def: SensorDefinition,
     coordinator: HdgDataUpdateCoordinator,
     api_client: HdgApiClient,
-) -> Optional[HdgBoilerNumber]:
+) -> HdgBoilerNumber | None:
     """
     Validate an entity definition and create an HdgBoilerNumber entity.
 
@@ -370,7 +382,9 @@ def _create_number_entity_if_valid(
             f"missing or invalid 'hdg_node_id' (value: {hdg_node_id_with_suffix})."
         )
         return None
-    raw_hdg_node_id = strip_hdg_node_suffix(hdg_node_id_with_suffix)  # Base ID for API calls.
+    raw_hdg_node_id = strip_hdg_node_suffix(
+        hdg_node_id_with_suffix
+    )  # Base ID for API calls.
 
     setter_type = entity_def.get("setter_type")
     if not isinstance(setter_type, str) or not setter_type:
@@ -383,8 +397,13 @@ def _create_number_entity_if_valid(
     min_val_def = entity_def.get("setter_min_val")
     max_val_def = entity_def.get("setter_max_val")
     try:
-        min_val = float(min_val_def)  # Ensure min_val can be converted to float.
-        max_val = float(max_val_def)  # Ensure max_val can be converted to float.
+        # Cast to float as it's expected to be convertible by the caller (_create_number_entity_if_valid)
+        min_val = float(
+            cast(float, min_val_def)
+        )  # Ensure min_val can be converted to float.
+        max_val = float(
+            cast(float, max_val_def)
+        )  # Ensure max_val can be converted to float.
     except (ValueError, TypeError) as e:
         _LOGGER.error(
             f"Invalid 'setter_min_val' ('{min_val_def}') or 'setter_max_val' ('{max_val_def}') "
@@ -393,7 +412,9 @@ def _create_number_entity_if_valid(
         )
         return None
 
-    ha_native_step_val = _determine_ha_number_step_val(entity_def, translation_key, raw_hdg_node_id)
+    ha_native_step_val = _determine_ha_number_step_val(
+        entity_def, translation_key, raw_hdg_node_id
+    )
     if ha_native_step_val is None:
         # Error already logged by _determine_ha_number_step_val.
         return None

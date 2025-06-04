@@ -10,9 +10,9 @@ manages their lifecycle during entry unload.
 
 __version__ = "0.9.5"
 
-import logging
-
 import functools
+import logging
+from typing import cast
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -22,26 +22,34 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import HdgApiClient
 from .const import (
-    DOMAIN,
     CONF_HOST_IP,
-    SERVICE_SET_NODE_VALUE,
+    DOMAIN,
     SERVICE_GET_NODE_VALUE,
+    SERVICE_SET_NODE_VALUE,
 )
 from .coordinator import HdgDataUpdateCoordinator
+from .services import async_handle_get_node_value, async_handle_set_node_value
 from .utils import prepare_base_url
-from .services import async_handle_set_node_value, async_handle_get_node_value
 
 _LOGGER = logging.getLogger(DOMAIN)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.NUMBER]
 
 
-def _register_services(hass: HomeAssistant, coordinator: HdgDataUpdateCoordinator) -> None:
+def _register_services(
+    hass: HomeAssistant, coordinator: HdgDataUpdateCoordinator
+) -> None:
     """Register integration-specific services with Home Assistant."""
-    bound_set_node_value_handler = functools.partial(async_handle_set_node_value, hass, coordinator)
-    hass.services.async_register(DOMAIN, SERVICE_SET_NODE_VALUE, bound_set_node_value_handler)
+    bound_set_node_value_handler = functools.partial(
+        async_handle_set_node_value, hass, coordinator
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_SET_NODE_VALUE, bound_set_node_value_handler
+    )
 
-    bound_get_node_value_handler = functools.partial(async_handle_get_node_value, hass, coordinator)
+    bound_get_node_value_handler = functools.partial(
+        async_handle_get_node_value, hass, coordinator
+    )
     hass.services.async_register(
         DOMAIN,
         SERVICE_GET_NODE_VALUE,
@@ -92,7 +100,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator._set_value_worker(),  # Pass the coroutine to be executed
         name=f"{DOMAIN}_{entry.entry_id}_set_value_worker",  # Descriptive name for the task
     )
-    _LOGGER.info(f"HDG set_value_worker background task created for entry {entry.title}.")
+    _LOGGER.info(
+        f"HDG set_value_worker background task created for entry {entry.title}."
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _register_services(hass, coordinator)
@@ -115,8 +125,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator: HdgDataUpdateCoordinator | None = (
         integration_data.get("coordinator") if integration_data else None
     )
-
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    # Cast to bool to satisfy mypy, as async_unload_platforms is expected to return bool. # type: ignore[no-untyped-call] # async_unload_platforms is typed elsewhere
+    unload_ok = cast(
+        bool, await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    )
 
     if unload_ok:
         if entry.entry_id in hass.data[DOMAIN]:
@@ -134,7 +146,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def async_options_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_options_update_listener(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
     """
     Handle options update.
 

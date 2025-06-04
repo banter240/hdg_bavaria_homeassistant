@@ -33,7 +33,9 @@ API_ENDPOINT_SET_VALUE: Final = "/ActionManager.php?action=set_value_changed"
 
 # --- API Timeouts (seconds) ---
 API_TIMEOUT: Final = 30  # Default timeout for general API calls.
-CONFIG_FLOW_API_TIMEOUT: Final = 15  # Shorter timeout for config flow connectivity check.
+CONFIG_FLOW_API_TIMEOUT: Final = (
+    15  # Shorter timeout for config flow connectivity check.
+)
 
 # ============================================================================
 # API Data Interpretation
@@ -71,15 +73,25 @@ CONF_SOURCE_TIMEZONE: Final = "source_timezone"
 # --- Default Configuration Values ---
 DEFAULT_ENABLE_DEBUG_LOGGING: Final = False
 DEFAULT_HOST_IP: Final = ""  # Must be provided by the user.
-DEFAULT_SOURCE_TIMEZONE: Final = "Europe/Berlin"  # For parsing datetimes from the boiler.
+DEFAULT_SOURCE_TIMEZONE: Final = (
+    "Europe/Berlin"  # For parsing datetimes from the boiler.
+)
 
 # Default scan intervals for polling groups (in seconds).
 # These are staggered to distribute API load.
 DEFAULT_SCAN_INTERVAL_GROUP1: Final = 15  # Group 1: Core real-time data.
-DEFAULT_SCAN_INTERVAL_GROUP2: Final = 304  # Group 2: General status data (approx. 5 mins).
-DEFAULT_SCAN_INTERVAL_GROUP3: Final = 86410  # Group 3: Config/Counters 1 (approx. 24 hours).
-DEFAULT_SCAN_INTERVAL_GROUP4: Final = 86420  # Group 4: Config/Counters 2 (approx. 24 hours).
-DEFAULT_SCAN_INTERVAL_GROUP5: Final = 86430  # Group 5: Config/Counters 3 (approx. 24 hours).
+DEFAULT_SCAN_INTERVAL_GROUP2: Final = (
+    304  # Group 2: General status data (approx. 5 mins).
+)
+DEFAULT_SCAN_INTERVAL_GROUP3: Final = (
+    86410  # Group 3: Config/Counters 1 (approx. 24 hours).
+)
+DEFAULT_SCAN_INTERVAL_GROUP4: Final = (
+    86420  # Group 4: Config/Counters 2 (approx. 24 hours).
+)
+DEFAULT_SCAN_INTERVAL_GROUP5: Final = (
+    86430  # Group 5: Config/Counters 3 (approx. 24 hours).
+)
 
 # ============================================================================
 # Polling & Update Behavior
@@ -111,8 +123,12 @@ RECENTLY_SET_POLL_IGNORE_WINDOW_S: Final[float] = 10.0
 # ============================================================================
 # Constants for the retry logic in the `_set_value_worker`.
 
-SET_VALUE_RETRY_MAX_ATTEMPTS: Final[int] = 3  # Max number of retries for a failed set operation.
-SET_VALUE_RETRY_BASE_BACKOFF_S: Final[float] = 2.0  # Initial backoff delay in seconds for retries.
+SET_VALUE_RETRY_MAX_ATTEMPTS: Final[int] = (
+    3  # Max number of retries for a failed set operation.
+)
+SET_VALUE_RETRY_BASE_BACKOFF_S: Final[float] = (
+    2.0  # Initial backoff delay in seconds for retries.
+)
 
 # ============================================================================
 # UI & Entity Behavior

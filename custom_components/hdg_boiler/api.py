@@ -9,19 +9,22 @@ data and setting values.
 
 __version__ = "0.8.28"
 
-import asyncio
 import logging
-from typing import Any, Dict, List
-from urllib.parse import urlparse, urlunparse, urlencode, parse_qsl
+from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import aiohttp
 import async_timeout
 
+from .const import (
+    API_ENDPOINT_DATA_REFRESH,
+    API_ENDPOINT_SET_VALUE,
+    API_TIMEOUT,
+    DOMAIN,
+)
 from .utils import (
     normalize_host_for_scheme,
 )
-
-from .const import API_ENDPOINT_DATA_REFRESH, API_ENDPOINT_SET_VALUE, DOMAIN, API_TIMEOUT
 
 _LOGGER = logging.getLogger(DOMAIN)
 
@@ -89,7 +92,7 @@ class HdgApiClient:
         parsed_url = urlparse(schemed_host_input)
         # Ensure that urlparse successfully extracted a network location (netloc).
         # An empty netloc typically means the input host_address was fundamentally invalid.
-        if not parsed_url.netloc:  # pragma: no cover
+        if not parsed_url.netloc:
             _LOGGER.error(
                 f"Invalid host_address '{host_address_stripped}' for API client. "
                 f"Expected a valid hostname or IP address, optionally with a port (e.g., '192.168.1.100', 'example.com:8080', '[fe80::1]:8080'). "
@@ -102,7 +105,9 @@ class HdgApiClient:
                 f"Please check your configuration."
             )
 
-        self._base_url = urlunparse((parsed_url.scheme, parsed_url.netloc, "", "", "", ""))
+        self._base_url = urlunparse(
+            (parsed_url.scheme, parsed_url.netloc, "", "", "", "")
+        )
         self._url_data_refresh = f"{self._base_url}{API_ENDPOINT_DATA_REFRESH}"
         self._url_set_value_base = f"{self._base_url}{API_ENDPOINT_SET_VALUE}"
 
@@ -113,7 +118,7 @@ class HdgApiClient:
 
     async def _async_handle_data_refresh_response(
         self, response: aiohttp.ClientResponse, node_payload_str: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Handle and parse the response from the dataRefresh API endpoint.
 
@@ -164,7 +169,10 @@ class HdgApiClient:
 
         try:
             json_response = await response.json()
-        except (aiohttp.ContentTypeError, ValueError) as err:  # ValueError for json.JSONDecodeError
+        except (
+            aiohttp.ContentTypeError,
+            ValueError,
+        ) as err:  # ValueError for json.JSONDecodeError
             text_response_for_error = await response.text()
             _LOGGER.warning(
                 f"Failed to parse JSON response for dataRefresh (payload: {node_payload_str}) "
@@ -182,8 +190,8 @@ class HdgApiClient:
                 f"Unexpected API response type for dataRefresh (not a list): {type(json_response)}"
             )
 
-        valid_items: List[Dict[str, Any]] = []
-        malformed_item_indices: List[int] = []
+        valid_items: list[dict[str, Any]] = []
+        malformed_item_indices: list[int] = []
 
         for idx, item in enumerate(json_response):
             if not isinstance(item, dict):
@@ -193,7 +201,9 @@ class HdgApiClient:
                 malformed_item_indices.append(idx)
                 continue
 
-            if missing_fields := [field for field in ("id", "text") if field not in item]:
+            if missing_fields := [
+                field for field in ("id", "text") if field not in item
+            ]:
                 _LOGGER.warning(
                     f"Item at index {idx} in dataRefresh response (payload: {node_payload_str}) is missing required fields {missing_fields}: {item!r}. Skipping."
                 )
@@ -213,7 +223,7 @@ class HdgApiClient:
         )
         return valid_items
 
-    async def async_get_nodes_data(self, node_payload_str: str) -> List[Dict[str, Any]]:
+    async def async_get_nodes_data(self, node_payload_str: str) -> list[dict[str, Any]]:
         """
         Fetch data for a specified set of nodes from the HDG boiler.
 
@@ -252,7 +262,7 @@ class HdgApiClient:
                     return await self._async_handle_data_refresh_response(
                         response, node_payload_str
                     )
-        except asyncio.TimeoutError as err:
+        except TimeoutError as err:
             _LOGGER.error(
                 f"Timeout connecting to HDG API at {self._url_data_refresh} for dataRefresh (payload: {node_payload_str}): {err}"
             )
@@ -262,12 +272,14 @@ class HdgApiClient:
             _LOGGER.error(
                 f"Client error during dataRefresh to {self._url_data_refresh} (payload: {node_payload_str}): {err}"
             )
-            raise HdgApiConnectionError(f"Client error during dataRefresh: {err}") from err
+            raise HdgApiConnectionError(
+                f"Client error during dataRefresh: {err}"
+            ) from err
         except HdgApiError:
             raise
         except Exception as err:
-            if isinstance(err, (KeyboardInterrupt, SystemExit)):
-                raise  # pragma: no cover
+            if isinstance(err, KeyboardInterrupt | SystemExit):
+                raise
             _LOGGER.exception(  # Use .exception to include traceback automatically
                 f"Unexpected error during dataRefresh to {self._url_data_refresh} (payload: {node_payload_str}): {err}",
             )
@@ -300,7 +312,9 @@ class HdgApiClient:
         new_query_string = urlencode(existing_query_dict)
 
         url_with_params = urlunparse(base_url_parts._replace(query=new_query_string))
-        _LOGGER.debug(f"Setting node '{node_id}' to '{value}' via GET: {url_with_params}")
+        _LOGGER.debug(
+            f"Setting node '{node_id}' to '{value}' via GET: {url_with_params}"
+        )
         try:
             async with async_timeout.timeout(API_TIMEOUT):
                 async with self._session.get(url_with_params) as response:
@@ -317,16 +331,24 @@ class HdgApiClient:
                             f"Failed to set HDG node '{node_id}'. Status: {response.status}. Response: {response_text[:200]}"
                         )
                         return False
-        except asyncio.TimeoutError as err:
+        except TimeoutError as err:
             _LOGGER.error(
                 f"Timeout connecting to HDG API at {url_with_params} for set_node_value: {err}"
             )
-            raise HdgApiConnectionError(f"Timeout during set_node_value: {err}") from err
+            raise HdgApiConnectionError(
+                f"Timeout during set_node_value: {err}"
+            ) from err
         except aiohttp.ClientError as err:
-            _LOGGER.error(f"Client error during set_node_value to {url_with_params}: {err}")
-            raise HdgApiConnectionError(f"Client error during set_node_value: {err}") from err
+            _LOGGER.error(
+                f"Client error during set_node_value to {url_with_params}: {err}"
+            )
+            raise HdgApiConnectionError(
+                f"Client error during set_node_value: {err}"
+            ) from err
         except Exception as err:
-            _LOGGER.exception(f"Unexpected error during set_node_value to {url_with_params}: {err}")
+            _LOGGER.exception(
+                f"Unexpected error during set_node_value to {url_with_params}: {err}"
+            )
             raise HdgApiError(f"Unexpected error during set_node_value: {err}") from err
 
     async def async_check_connectivity(self) -> bool:

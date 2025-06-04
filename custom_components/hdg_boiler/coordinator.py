@@ -14,51 +14,51 @@ __version__ = "0.10.22"
 import asyncio
 import logging
 import time
+from asyncio import Task
 from contextlib import suppress
 from datetime import timedelta
 from typing import (
     Any,
-    Dict,
-    List,
-    Optional,
 )
 
 import async_timeout
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
+
+from .api import (
+    HdgApiClient,
+    HdgApiConnectionError,
+    HdgApiError,
+    HdgApiResponseError,
+)
 from .const import (
-    DOMAIN,
     CONF_ENABLE_DEBUG_LOGGING,
-    MIN_SCAN_INTERVAL as CONFIG_FLOW_MIN_SCAN_INTERVAL,
-    SET_NODE_COOLDOWN_S,
+    DEFAULT_ENABLE_DEBUG_LOGGING,
+    DOMAIN,
     INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S,
     POLLING_API_LOCK_TIMEOUT_S,
-    DEFAULT_ENABLE_DEBUG_LOGGING,
-    SET_VALUE_QUEUE_MAX_SIZE,
-    SET_VALUE_RETRY_MAX_ATTEMPTS,
-    SET_VALUE_RETRY_BASE_BACKOFF_S,
     RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+    SET_NODE_COOLDOWN_S,
+    SET_VALUE_QUEUE_MAX_SIZE,
+    SET_VALUE_RETRY_BASE_BACKOFF_S,
+    SET_VALUE_RETRY_MAX_ATTEMPTS,
+)
+from .const import (
+    MIN_SCAN_INTERVAL as CONFIG_FLOW_MIN_SCAN_INTERVAL,
 )
 from .polling_groups import (
     HDG_NODE_PAYLOADS,
     POLLING_GROUP_ORDER,
     NodeGroupPayload,
 )
-from .api import (
-    HdgApiClient,
-    HdgApiConnectionError,
-    HdgApiResponseError,
-    HdgApiError,
-)
 from .utils import strip_hdg_node_suffix
 
 _LOGGER = logging.getLogger(DOMAIN)
 
 
-class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
+class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """
     Manages fetching data from the HDG boiler and coordinates updates to entities.
 
@@ -106,7 +106,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         self.api_client = api_client
         self.entry = entry
         current_config = self.entry.options or self.entry.data
-        self.scan_intervals: Dict[str, timedelta] = {}
+        self.scan_intervals: dict[str, timedelta] = {}
 
         # Validate that polling group definitions in polling_groups.py are consistent.
         # This is a critical check to ensure the coordinator can operate correctly.
@@ -146,12 +146,14 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                 scan_val_seconds_float = float(default_scan_val)
             self.scan_intervals[group_key] = timedelta(seconds=scan_val_seconds_float)
 
-        self._last_update_times: Dict[str, float] = {}
+        self._last_update_times: dict[str, float] = {}
         self._initialize_last_update_times_monotonic()  # Set initial last update times for all groups.
 
         # Determine the shortest scan interval to use as the base update interval for the coordinator.
         shortest_interval = (
-            min(self.scan_intervals.values()) if self.scan_intervals else timedelta(seconds=60)
+            min(self.scan_intervals.values())
+            if self.scan_intervals
+            else timedelta(seconds=60)
         )
 
         super().__init__(
@@ -160,16 +162,24 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             name=f"{DOMAIN} ({self.entry.title})",
             update_interval=shortest_interval,  # This interval triggers _async_update_data.
         )
-        self.data: Dict[str, Any] = {}  # Central data store for all node values.
+        self.data: dict[str, Any] = {}  # Central data store for all node values.
         self._api_lock = asyncio.Lock()  # Ensures sequential access to the HDG API.
-        self._pending_set_values: Dict[str, tuple[str, str]] = {}  # Queue for set operations.
-        self._pending_set_values_lock = asyncio.Lock()  # Lock for accessing _pending_set_values.
-        self._new_set_value_event = asyncio.Event()  # Signals the set worker of new items.
-        self._last_set_times: Dict[str, float] = {}  # Tracks when nodes were last set via API.
-
+        self._pending_set_values: dict[
+            str, tuple[str, str]
+        ] = {}  # Queue for set operations.
+        self._pending_set_values_lock = (
+            asyncio.Lock()
+        )  # Lock for accessing _pending_set_values.
+        self._new_set_value_event = (
+            asyncio.Event()
+        )  # Signals the set worker of new items.
+        self._last_set_times: dict[str, float] = {}
+        self._set_value_worker_task: Task[None] | None = None
         # The set_value worker task is started in __init__.py after the coordinator
         # is successfully initialized and the initial data refresh is complete.
-        self._set_value_worker_task = None  # Initialized to None, assigned in __init__.py
+        self._set_value_worker_task = (
+            None  # Initialized to None, assigned in __init__.py
+        )
 
         _LOGGER.debug(
             f"HdgDataUpdateCoordinator for '{self.entry.title}' initialized. Update interval: {shortest_interval}."
@@ -178,12 +188,14 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
     @property
     def enable_debug_logging(self) -> bool:
         """Return True if detailed debug logging for polling cycles is enabled."""
-        return (self.entry.options or {}).get(
-            CONF_ENABLE_DEBUG_LOGGING, DEFAULT_ENABLE_DEBUG_LOGGING
+        return bool(
+            (self.entry.options or {}).get(
+                CONF_ENABLE_DEBUG_LOGGING, DEFAULT_ENABLE_DEBUG_LOGGING
+            )
         )
 
     @property
-    def last_update_times_public(self) -> Dict[str, float]:
+    def last_update_times_public(self) -> dict[str, float]:
         """Return the dictionary of last update times for polling groups."""
         return self._last_update_times
 
@@ -225,8 +237,8 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             )
 
     def _validate_and_extract_api_item_fields(
-        self, item: Dict[str, Any], group_key: str
-    ) -> tuple[Optional[str], Optional[str]]:
+        self, item: dict[str, Any], group_key: str
+    ) -> tuple[str | None, str | None]:
         """
         Validate and extract 'id' and 'text' fields from a single API item dictionary.
 
@@ -245,7 +257,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             If 'text' is missing but 'id' is valid, returns (node_id_with_suffix, None).
         """
         api_id_value = item.get("id")
-        node_id_with_suffix: Optional[str] = None
+        node_id_with_suffix: str | None = None
 
         # Validate 'id' field
         if isinstance(api_id_value, str):
@@ -343,11 +355,11 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
 
     def _process_single_api_item(
         self,
-        item: Dict[str, Any],
+        item: dict[str, Any],
         group_key: str,
         raw_ids_seen: set[str],
         cleaned_node_ids_processed: set[str],
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Process a single item from the API response list.
 
@@ -370,8 +382,8 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             "recently set" ignore logic.
         """
         # Step 1: Basic validation of 'id' and 'text' fields.
-        node_id_with_suffix, item_text_value = self._validate_and_extract_api_item_fields(
-            item, group_key
+        node_id_with_suffix, item_text_value = (
+            self._validate_and_extract_api_item_fields(item, group_key)
         )
         if node_id_with_suffix is None or item_text_value is None:
             return None  # Critical fields missing or invalid.
@@ -394,7 +406,9 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         # This catches cases like "123T" and "123U" both mapping to "123".
         if node_id_clean in cleaned_node_ids_processed:
             existing_value = self.data.get(node_id_clean)
-            log_level = _LOGGER.critical if existing_value != item_text_value else _LOGGER.debug
+            log_level = (
+                _LOGGER.critical if existing_value != item_text_value else _LOGGER.debug
+            )
             log_level(
                 f"Duplicate base node ID '{node_id_clean}' (from API ID '{node_id_with_suffix}') "
                 f"in API response for group '{group_key}' "
@@ -411,8 +425,8 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
     def _parse_and_store_api_items(
         self,
         group_key: str,
-        api_items: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
+        api_items: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """
         Parse, validate, and store API items from a polling group response.
 
@@ -432,7 +446,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             successfully processed and whose data was stored in `self.data`.
             Items that were skipped or ignored are not included.
         """
-        successfully_processed_items: List[Dict[str, Any]] = []
+        successfully_processed_items: list[dict[str, Any]] = []
         raw_ids_seen_in_this_call: set[str] = (
             set()
         )  # Tracks raw IDs within this single API response.
@@ -443,7 +457,10 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         for item in api_items:
             # Delegate processing of each item.
             if processed_item := self._process_single_api_item(
-                item, group_key, raw_ids_seen_in_this_call, cleaned_node_ids_processed_this_call
+                item,
+                group_key,
+                raw_ids_seen_in_this_call,
+                cleaned_node_ids_processed_this_call,
             ):
                 successfully_processed_items.append(processed_item)
         return successfully_processed_items
@@ -453,7 +470,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         group_key: str,
         payload_config: NodeGroupPayload,
         polling_cycle_start_time_for_log: float,
-    ) -> Optional[List[Dict[str, Any]]]:
+    ) -> list[dict[str, Any]] | None:
         """
         Fetch and process data for a single polling group.
 
@@ -479,8 +496,12 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             Exception: For other unexpected errors during the fetch process.
         """
         payload_str = payload_config.get("payload_str")
-        if payload_str is None:  # Should be caught by __init__ validation, but safeguard here.
-            _LOGGER.error(f"Config error: 'payload_str' missing for group '{group_key}'.")
+        if (
+            payload_str is None
+        ):  # Should be caught by __init__ validation, but safeguard here.
+            _LOGGER.error(
+                f"Config error: 'payload_str' missing for group '{group_key}'."
+            )
             return None
         try:
             # Acquire lock to ensure exclusive API access for this fetch operation.
@@ -492,17 +513,23 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                             f"FETCHING (lock acquired) for group: {group_key} at {dt_util.as_local(dt_util.utcnow())}"
                         )
                     # Perform the API call.
-                    fetched_data_list = await self.api_client.async_get_nodes_data(payload_str)
+                    fetched_data_list = await self.api_client.async_get_nodes_data(
+                        payload_str
+                    )
             # Lock is released automatically here.
 
             if fetched_data_list is not None:
                 # Parse and store the fetched data.
-                processed_items = self._parse_and_store_api_items(group_key, fetched_data_list)
+                processed_items = self._parse_and_store_api_items(
+                    group_key, fetched_data_list
+                )
                 _LOGGER.debug(
                     f"Processed data for HDG group: {group_key}. {len(processed_items)} valid items."
                 )
                 if self.enable_debug_logging:
-                    duration_fetch_actual = time.monotonic() - start_time_group_fetch_actual
+                    duration_fetch_actual = (
+                        time.monotonic() - start_time_group_fetch_actual
+                    )
                     _LOGGER.info(
                         f"COMPLETED FETCH for group: {group_key}. Duration: {duration_fetch_actual:.2f}s"
                     )
@@ -513,15 +540,20 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             return None
         except HdgApiConnectionError as conn_err:  # Network or connection issue.
             self._log_fetch_error_duration(
-                group_key, "Connection error", polling_cycle_start_time_for_log, conn_err
+                group_key,
+                "Connection error",
+                polling_cycle_start_time_for_log,
+                conn_err,
             )
             raise  # Re-raise to be handled by the calling method (_sequentially_fetch_groups).
-        except HdgApiResponseError as err:  # API returned an error or unexpected response.
+        except (
+            HdgApiResponseError
+        ) as err:  # API returned an error or unexpected response.
             self._log_fetch_error_duration(
                 group_key, "API response error", polling_cycle_start_time_for_log, err
             )
             return None  # Treat as a failed fetch for this group, but don't stop overall polling.
-        except asyncio.TimeoutError:  # Timeout waiting for the API lock.
+        except TimeoutError:  # Timeout waiting for the API lock.
             _LOGGER.warning(
                 f"Polling for group {group_key} timed out after {POLLING_API_LOCK_TIMEOUT_S}s waiting for API lock."
             )
@@ -561,7 +593,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
 
         for i, (group_key, payload_config) in enumerate(groups_to_fetch):
             _LOGGER.debug(
-                f"Fetching data for group: {group_key} (Index {i+1}/{len(groups_to_fetch)})"
+                f"Fetching data for group: {group_key} (Index {i + 1}/{len(groups_to_fetch)})"
             )
             try:
                 processed_items = await self._fetch_group_data(
@@ -572,7 +604,9 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                 ):  # Indicates successful fetch and parse for this group.
                     self._last_update_times[group_key] = time.monotonic()
                     any_group_fetched_successfully = True
-            except HdgApiConnectionError as err:  # Connection error specific to this group.
+            except (
+                HdgApiConnectionError
+            ) as err:  # Connection error specific to this group.
                 _LOGGER.warning(
                     f"Connection error for group {group_key} during sequential fetch: {err}."
                 )
@@ -609,25 +643,35 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
 
         # Prepare a list of all groups to fetch, respecting POLLING_GROUP_ORDER.
         all_groups_to_fetch = [
-            (gk, HDG_NODE_PAYLOADS[gk]) for gk in POLLING_GROUP_ORDER if gk in HDG_NODE_PAYLOADS
+            (gk, HDG_NODE_PAYLOADS[gk])
+            for gk in POLLING_GROUP_ORDER
+            if gk in HDG_NODE_PAYLOADS
         ]
 
         # Attempt to fetch data for all groups.
         (
             any_group_fetched_successfully,
             any_connection_error_encountered,
-        ) = await self._sequentially_fetch_groups(all_groups_to_fetch, start_time_first_refresh)
+        ) = await self._sequentially_fetch_groups(
+            all_groups_to_fetch, start_time_first_refresh
+        )
 
         # Check if the initial refresh was successful.
         if not any_group_fetched_successfully:
-            error_message = f"Initial data refresh for {self.name} failed to retrieve any data."
+            error_message = (
+                f"Initial data refresh for {self.name} failed to retrieve any data."
+            )
             if any_connection_error_encountered:
                 error_message += " Connection errors encountered."
             else:
-                error_message += " No connection errors, but all groups failed to yield data."
+                error_message += (
+                    " No connection errors, but all groups failed to yield data."
+                )
             _LOGGER.error(error_message)
             raise UpdateFailed(error_message)  # Signal HA that setup failed.
-        elif not self.data:  # Successfully fetched some groups, but self.data is still empty.
+        elif (
+            not self.data
+        ):  # Successfully fetched some groups, but self.data is still empty.
             _LOGGER.warning(
                 f"Initial data refresh for {self.name} completed, but no data was fetched overall."
             )
@@ -677,13 +721,15 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             if (current_time_monotonic - last_update) >= interval_seconds:
                 due_groups.append((group_key, payload_config))
             elif self.enable_debug_logging:  # Log if not due and debug is enabled.
-                next_poll_in = max(0, interval_seconds - (current_time_monotonic - last_update))
+                next_poll_in = max(
+                    0, interval_seconds - (current_time_monotonic - last_update)
+                )
                 _LOGGER.debug(
                     f"Skipping poll for HDG group: {group_key} (Next in approx. {next_poll_in:.0f}s)"
                 )
         return due_groups
 
-    async def _async_update_data(self) -> Dict[str, Any]:
+    async def _async_update_data(self) -> dict[str, Any]:
         """
         Fetch data for all polling groups that are currently due for an update.
 
@@ -718,13 +764,17 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                 )
             return self.data  # Return current data if no groups are due.
 
-        _LOGGER.debug(f"Due groups to fetch in this cycle: {[g[0] for g in due_groups_to_fetch]}")
+        _LOGGER.debug(
+            f"Due groups to fetch in this cycle: {[g[0] for g in due_groups_to_fetch]}"
+        )
 
         # Fetch data for the due groups.
         (
             any_group_fetched_successfully,
             any_connection_error_encountered,
-        ) = await self._sequentially_fetch_groups(due_groups_to_fetch, polling_cycle_start_time)
+        ) = await self._sequentially_fetch_groups(
+            due_groups_to_fetch, polling_cycle_start_time
+        )
 
         # Handle cases where fetching failed for all due groups.
         if not any_group_fetched_successfully and due_groups_to_fetch:
@@ -742,7 +792,9 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             )
         return self.data  # Return the (potentially updated) data.
 
-    async def async_update_internal_node_state(self, node_id: str, new_value: str) -> None:
+    async def async_update_internal_node_state(
+        self, node_id: str, new_value: str
+    ) -> None:
         """
         Update a node's value in the internal data store and notify listeners.
 
@@ -774,8 +826,8 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             )
 
     def _calculate_set_worker_wait_timeout(
-        self, retry_state: Dict[str, tuple[int, float]]
-    ) -> Optional[float]:
+        self, retry_state: dict[str, tuple[int, float]]
+    ) -> float | None:
         """
         Calculate the wait timeout for the `_set_value_worker`.
 
@@ -800,7 +852,9 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             valid_retry_times := [
                 next_attempt
                 for _, next_attempt in retry_state.values()
-                if isinstance(next_attempt, (int, float))  # Ensure it's a numeric timestamp.
+                if isinstance(
+                    next_attempt, int | float
+                )  # Ensure it's a numeric timestamp.
             ]
         ):
             return None  # No valid retry times found.
@@ -810,8 +864,8 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         return max(0, earliest_retry_time - time.monotonic())
 
     async def _collect_items_to_process_for_set_worker(
-        self, retry_state: Dict[str, tuple[int, float]]
-    ) -> Dict[str, tuple[str, str]]:
+        self, retry_state: dict[str, tuple[int, float]]
+    ) -> dict[str, tuple[str, str]]:
         """
         Collect items for the `_set_value_worker` to process in the current cycle.
 
@@ -829,10 +883,12 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
             A dictionary of items to process now, mapping `node_id` to
             `(value_str_for_api, entity_name_for_log)`.
         """
-        items_to_process_now: Dict[str, tuple[str, str]] = {}
+        items_to_process_now: dict[str, tuple[str, str]] = {}
         current_monotonic_time = time.monotonic()
 
-        async with self._pending_set_values_lock:  # Ensure thread-safe access to the queue.
+        async with (
+            self._pending_set_values_lock
+        ):  # Ensure thread-safe access to the queue.
             # Iterate over a copy of items in case of modification during iteration.
             for node_id, data_tuple in list(self._pending_set_values.items()):
                 retry_count, next_attempt_time = retry_state.get(node_id, (0, 0.0))
@@ -848,7 +904,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         node_id: str,
         value_str: str,
         entity_name: str,
-        retry_state: Dict[str, tuple[int, float]],
+        retry_state: dict[str, tuple[int, float]],
     ) -> None:
         """
         Handle successful API set operation.
@@ -878,7 +934,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         value_str: str,
         entity_name: str,
         api_err: Exception,
-        retry_state: Dict[str, tuple[int, float]],
+        retry_state: dict[str, tuple[int, float]],
     ) -> None:
         """
         Handle a failed API set operation, including retry logic.
@@ -937,25 +993,31 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
         """
         _LOGGER.info("HDG set_value_worker started.")
         # {node_id: (retry_count, next_attempt_monotonic_time)}
-        retry_state: Dict[str, tuple[int, float]] = {}
+        retry_state: dict[str, tuple[int, float]] = {}
 
         while True:  # Main loop of the worker.
             try:
                 # Determine how long to wait: until the next retry or indefinitely for new items.
                 wait_timeout = self._calculate_set_worker_wait_timeout(retry_state)
                 # Wait for a new item event or until the timeout for a retry is reached.
-                with suppress(asyncio.TimeoutError):  # Timeout is expected if waiting for a retry.
-                    await asyncio.wait_for(self._new_set_value_event.wait(), timeout=wait_timeout)
+                with suppress(
+                    asyncio.TimeoutError
+                ):  # Timeout is expected if waiting for a retry.
+                    await asyncio.wait_for(
+                        self._new_set_value_event.wait(), timeout=wait_timeout
+                    )
                 self._new_set_value_event.clear()  # Reset the event after waking.
 
                 # Collect items that are new or due for retry.
-                items_to_process_now = await self._collect_items_to_process_for_set_worker(
-                    retry_state
+                items_to_process_now = (
+                    await self._collect_items_to_process_for_set_worker(retry_state)
                 )
                 if not items_to_process_now:  # No items to process, loop back to wait.
                     continue
 
-                _LOGGER.debug(f"Set_value_worker: Processing {len(items_to_process_now)} items.")
+                _LOGGER.debug(
+                    f"Set_value_worker: Processing {len(items_to_process_now)} items."
+                )
 
                 # Process each item sequentially.
                 for node_id, (value_str, entity_name) in items_to_process_now.items():
@@ -965,10 +1027,14 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                             _LOGGER.debug(
                                 f"Set_value_worker: Acquired API lock for node '{entity_name}' (ID: {node_id})."
                             )
-                            success = await self.api_client.async_set_node_value(node_id, value_str)
+                            success = await self.api_client.async_set_node_value(
+                                node_id, value_str
+                            )
                         # API lock released here.
 
-                        if not success:  # API call reported failure (e.g., HTTP non-200).
+                        if (
+                            not success
+                        ):  # API call reported failure (e.g., HTTP non-200).
                             raise HdgApiError(
                                 f"API reported failure for set_node_value on node {node_id}"
                             )
@@ -984,14 +1050,16 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                         )
                         await asyncio.sleep(SET_NODE_COOLDOWN_S)
 
-                    except (HdgApiConnectionError, HdgApiError, HdgApiResponseError) as api_err:
+                    except (
+                        HdgApiConnectionError,
+                        HdgApiError,
+                        HdgApiResponseError,
+                    ) as api_err:
                         # Handle API errors, including scheduling retries.
                         await self._handle_failed_set_operation(
                             node_id, value_str, entity_name, api_err, retry_state
                         )
-                    except (
-                        Exception
-                    ) as e:  # Catch-all for unexpected errors during single item processing.
+                    except Exception as e:  # Catch-all for unexpected errors during single item processing.
                         _LOGGER.exception(
                             f"Set_value_worker: Unexpected error processing item for node '{entity_name}' (ID: {node_id}): {e}"
                         )
@@ -1046,7 +1114,10 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
 
         # Check if the value is already what the coordinator knows.
         current_known_raw_value = self.data.get(node_id)
-        if current_known_raw_value is not None and current_known_raw_value == new_value_str_for_api:
+        if (
+            current_known_raw_value is not None
+            and current_known_raw_value == new_value_str_for_api
+        ):
             _LOGGER.info(
                 f"Coordinator: Value for node '{entity_name_for_log}' (ID: {node_id}) is already '{new_value_str_for_api}'. Skipping API set."
             )
@@ -1068,7 +1139,10 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                         node_id,
                     )
                 # Add/update the request in the queue.
-                self._pending_set_values[node_id] = (new_value_str_for_api, entity_name_for_log)
+                self._pending_set_values[node_id] = (
+                    new_value_str_for_api,
+                    entity_name_for_log,
+                )
             # Signal the worker that there's a new/updated item.
             self._new_set_value_event.set()
             _LOGGER.info(
@@ -1098,7 +1172,11 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[Dict[str, Any]]):
                 asyncio.TimeoutError, asyncio.CancelledError
             ):  # Handles both timeout and if task cancels itself quickly.
                 await asyncio.wait_for(self._set_value_worker_task, timeout=10.0)
-                _LOGGER.debug("HDG set_value_worker task successfully joined after cancellation.")
+                _LOGGER.debug(
+                    "HDG set_value_worker task successfully joined after cancellation."
+                )
             self._set_value_worker_task = None  # Clear the task handle.
         else:
-            _LOGGER.debug("HDG set_value_worker task was not running or already stopped.")
+            _LOGGER.debug(
+                "HDG set_value_worker task was not running or already stopped."
+            )

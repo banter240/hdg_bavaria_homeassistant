@@ -10,20 +10,22 @@ on the boiler.
 __version__ = "0.8.4"
 
 import logging
-from typing import Any, Dict
+from typing import Any, cast
 
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.components.sensor import SensorDeviceClass
 
 from .const import (
+    CONF_DEVICE_ALIAS,
+    CONF_HOST_IP,
+    DEFAULT_NAME,
     DOMAIN,
-    HDG_UNAVAILABLE_STRINGS,
     HDG_DATETIME_SPECIAL_TEXT,
+    HDG_UNAVAILABLE_STRINGS,
 )
-from .utils import normalize_unique_id_component
 from .coordinator import HdgDataUpdateCoordinator
-from .const import CONF_DEVICE_ALIAS, CONF_HOST_IP, DEFAULT_NAME
+from .utils import normalize_unique_id_component
 
 _LOGGER = logging.getLogger(DOMAIN)
 
@@ -51,13 +53,17 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
 
         Sets up unique ID and device information.
         """
-        _LOGGER.debug(f"HdgBaseEntity.__init__ for unique_id_suffix: '{unique_id_suffix}'")
+        _LOGGER.debug(
+            f"HdgBaseEntity.__init__ for unique_id_suffix: '{unique_id_suffix}'"
+        )
         super().__init__(coordinator)
 
         device_alias = self.coordinator.entry.data.get(CONF_DEVICE_ALIAS)
         # Use alias, HA unique_id, or entry_id as device identifier.
         device_identifier = (
-            device_alias or self.coordinator.entry.unique_id or self.coordinator.entry.entry_id
+            device_alias
+            or self.coordinator.entry.unique_id
+            or self.coordinator.entry.entry_id
         )
 
         host_ip = self.coordinator.entry.data.get(CONF_HOST_IP)
@@ -65,7 +71,9 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
         if device_alias or host_ip:
             device_name = f"{DEFAULT_NAME} ({device_alias or host_ip})"
         else:
-            device_name = f"{DEFAULT_NAME} (Unknown Device - {self.coordinator.entry.entry_id})"
+            device_name = (
+                f"{DEFAULT_NAME} (Unknown Device - {self.coordinator.entry.entry_id})"
+            )
             _LOGGER.warning(
                 "Device alias and host IP are both missing for config entry '%s'. Using fallback device name: '%s'",
                 self.coordinator.entry.entry_id,
@@ -78,7 +86,9 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
         _LOGGER.debug(
             f"HdgBaseEntity: Using device_identifier: '{device_identifier}' for unique_id_suffix: '{unique_id_suffix}' (normalized: '{norm_device_identifier}', '{norm_unique_id_suffix}')"
         )
-        self._attr_unique_id = f"{DOMAIN}::{norm_device_identifier}::{norm_unique_id_suffix}"
+        self._attr_unique_id = (
+            f"{DOMAIN}::{norm_device_identifier}::{norm_unique_id_suffix}"
+        )
         _LOGGER.debug(
             f"HdgBaseEntity: Final _attr_unique_id for '{unique_id_suffix}': '{self._attr_unique_id}'"
         )
@@ -86,7 +96,9 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
             f"HdgBaseEntity: Using device_name: '{device_name}' for unique_id_suffix: '{unique_id_suffix}'"
         )
 
-        config_url = getattr(getattr(self.coordinator, "api_client", None), "base_url", None)
+        config_url = getattr(
+            getattr(self.coordinator, "api_client", None), "base_url", None
+        )
         if config_url:
             _LOGGER.debug(
                 f"HdgBaseEntity: Determined configuration_url '{config_url}' for DeviceInfo for '{unique_id_suffix}'"
@@ -132,7 +144,7 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
                     "but last_update_success is True. Treating as unavailable to prevent errors."
                 )
             return False
-        return self.coordinator.last_update_success
+        return cast(bool, self.coordinator.last_update_success)
 
 
 class HdgNodeEntity(HdgBaseEntity):
@@ -147,7 +159,7 @@ class HdgNodeEntity(HdgBaseEntity):
         self,
         coordinator: HdgDataUpdateCoordinator,
         node_id: str,  # The base HDG node ID (without TUVWXY suffix)
-        entity_definition: Dict[str, Any],  # Full definition from SENSOR_DEFINITIONS
+        entity_definition: dict[str, Any],  # Full definition from SENSOR_DEFINITIONS
     ) -> None:
         """
         Initialize the node-specific HDG entity.
@@ -188,7 +200,9 @@ class HdgNodeEntity(HdgBaseEntity):
             f"HdgNodeEntity {unique_id_suffix}: Set _attr_state_class to: {self._attr_state_class}"
         )
         self._attr_icon = self._entity_definition.get("icon")
-        _LOGGER.debug(f"HdgNodeEntity {unique_id_suffix}: Set _attr_icon to: {self._attr_icon}")
+        _LOGGER.debug(
+            f"HdgNodeEntity {unique_id_suffix}: Set _attr_icon to: {self._attr_icon}"
+        )
 
     async def async_added_to_hass(self) -> None:
         """Handle entity being added to Home Assistant."""
@@ -235,7 +249,7 @@ class HdgNodeEntity(HdgBaseEntity):
         return True
 
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return entity-specific state attributes, primarily for diagnostic purposes."""
         attributes = {
             "hdg_node_id": self._node_id,  # Base HDG node ID for this entity.
