@@ -27,8 +27,8 @@ def make_log_prefix(
         A formatted string prefix for log messages, e.g., "Node 1234 (sensor.my_sensor): ",
         "Node 1234: ", or "Entity sensor.my_sensor: ".
     """
-    if node_id_for_log and entity_id_for_log:
-        return f"Node {node_id_for_log} ({entity_id_for_log}): "
     if node_id_for_log:
+        if entity_id_for_log:
+            return f"Node {node_id_for_log} ({entity_id_for_log}): "
         return f"Node {node_id_for_log}: "
     return f"Entity {entity_id_for_log}: " if entity_id_for_log else ""
