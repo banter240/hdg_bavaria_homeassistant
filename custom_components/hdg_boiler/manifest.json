@@ -1,13 +1,12 @@
 {
   "domain": "hdg_boiler",
   "name": "HDG Bavaria Boiler",
-  "documentation": "https://github.com/banter240/hdg_bavaria_homeassistant",
-  "issue_tracker": "https://github.com/banter240/hdg_bavaria_homeassistant/issues",
   "codeowners": ["@banter240"],
-  "requirements": [],
-  "dependencies": ["http"],
-  "iot_class": "local_polling",
-  "version": "0.6.1",
   "config_flow": true,
-  "icon": "mdi:fire-circle"
+  "dependencies": ["http"],
+  "documentation": "https://github.com/banter240/hdg_bavaria_homeassistant",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/banter240/hdg_bavaria_homeassistant/issues",
+  "requirements": [],
+  "version": "0.10.3"
 }
