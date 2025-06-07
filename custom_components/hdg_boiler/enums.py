@@ -2,25 +2,25 @@
 Enumeration mappings for the HDG Bavaria Boiler integration.
 
 This module defines mappings for HDG API enumeration values to human-readable text
-(German and English), used by sensors that represent enumerated states.
+(German and English). These mappings are crucial for interpreting and displaying
+the state of sensor entities that represent enumerated values from the boiler,
+such as operating modes, status codes, or configuration options.
 """
 
 from __future__ import annotations
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
-from typing import Final, TypedDict
+from typing import Final
 
-
-class EnumOption(TypedDict):
-    """Represents a single option in an enumeration, with translations."""
-
-    de: str  # German translation
-    en: str  # English translation
-
+from .models import EnumOption
 
 # Mappings for HDG API enumeration values to human-readable text (German and English).
-# Used by sensors that represent enumerated states.
+# Each top-level key (e.g., "SPRACHE", "KESSELSTATUS") corresponds to an 'hdg_enum_type'
+# defined in SENSOR_DEFINITIONS. The inner dictionary maps the numeric value received
+# from the API to an EnumOption TypedDict, which contains 'de' (German) and 'en' (English)
+# translations. These translations are used by sensor entities to provide a
+# user-friendly representation of the enumerated state.
 HDG_ENUM_MAPPINGS: Final[dict[str, dict[int, EnumOption]]] = {
     "SPRACHE": {
         0: {"de": "Deutsch", "en": "Deutsch"},

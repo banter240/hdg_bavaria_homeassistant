@@ -1,15 +1,14 @@
 """
-Diagnostics support for the HDG Bavaria Boiler integration.
+Provides diagnostic support for the HDG Bavaria Boiler integration.
 
-This module provides functions to gather diagnostic information for the
-HDG Bavaria Boiler integration, aiding in troubleshooting and support by
-collecting configuration details, coordinator status, API client information,
-and entity states.
+This module includes functions to gather comprehensive diagnostic information,
+such as configuration details, coordinator status, API client information,
+and entity states. This data aids in troubleshooting and support for the integration.
 """
 
 from __future__ import annotations
 
-__version__ = "0.9.35"
+__version__ = "0.9.36"
 import ipaddress
 import logging
 from typing import Any, cast
@@ -30,7 +29,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import HdgDataUpdateCoordinator
-from .utils import normalize_unique_id_component
+from .helpers.string_utils import normalize_unique_id_component
 
 _LOGGER = logging.getLogger(DOMAIN)
 
@@ -261,8 +260,8 @@ def _build_redacted_netloc(
             netloc_parts.append(host_to_check)
     else:
         netloc_parts.append(
-            DIAGNOSTICS_REDACTED_PLACEHOLDER
-        )  # Should not happen if URL is valid
+            DIAGNOSTICS_REDACTED_PLACEHOLDER  # This case implies an invalid or unexpected URL structure.
+        )
     if parsed_url.port:
         netloc_parts.append(f":{parsed_url.port}")
     return "".join(netloc_parts)
@@ -304,8 +303,8 @@ def _redact_api_client_base_url(
                     netloc=redacted_netloc,
                     path=redacted_path,
                     query=redacted_query,
-                    params="",  # Typically empty for base URLs
-                    fragment="",  # Typically empty for base URLs
+                    params="",  # Parameters are typically not part of a base URL.
+                    fragment="",  # Fragments are typically not part of a base URL.
                 )
             ),
         )

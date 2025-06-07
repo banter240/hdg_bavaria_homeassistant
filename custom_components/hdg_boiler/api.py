@@ -1,14 +1,15 @@
 """
 API client for interacting with the HDG Bavaria Boiler web interface.
 
-This module provides the `HdgApiClient` class for HTTP communication
-with the HDG Bavaria boiler's web API. It handles request formatting,
-response parsing, error management, and offers methods for fetching
-data and setting values.
+This module provides the `HdgApiClient` class, which facilitates HTTP
+communication with the HDG Bavaria boiler's web API. It is responsible for
+formatting requests, parsing responses, managing errors, and providing
+methods to fetch data and set values on the boiler.
 """
 
-__version__ = "0.8.28"
+__version__ = "0.8.30"
 
+import asyncio
 import logging
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
@@ -22,29 +23,14 @@ from .const import (
     API_TIMEOUT,
     DOMAIN,
 )
-from .utils import (
-    normalize_host_for_scheme,
+from .exceptions import (
+    HdgApiConnectionError,
+    HdgApiError,
+    HdgApiResponseError,
 )
+from .helpers.network_utils import async_execute_icmp_ping, normalize_host_for_scheme
 
 _LOGGER = logging.getLogger(DOMAIN)
-
-
-class HdgApiError(Exception):
-    """Base exception for all HDG API client errors."""
-
-    pass
-
-
-class HdgApiConnectionError(HdgApiError):
-    """Raised when there's an issue connecting to the HDG API (e.g., timeout, network error)."""
-
-    pass
-
-
-class HdgApiResponseError(HdgApiError):
-    """Raised when the HDG API returns an unexpected or error response (e.g., non-JSON, bad status code)."""
-
-    pass
 
 
 class HdgApiClient:
@@ -52,7 +38,8 @@ class HdgApiClient:
     Client to interact with the HDG Boiler API.
 
     Handles HTTP communication, request formatting, response parsing, and error
-    management for fetching data from and setting values on the HDG boiler.
+    management for fetching data from and setting values on the HDG boiler. It
+    ensures that host addresses are correctly formatted and manages API endpoints.
     """
 
     def __init__(self, session: aiohttp.ClientSession, host_address: str) -> None:
@@ -69,6 +56,7 @@ class HdgApiClient:
             HdgApiError: If the `host_address` is invalid (e.g., results in an empty netloc).
         """
         self._session = session
+        # Ensure host_address is not empty or just whitespace.
         host_address_stripped = host_address.strip()
         if not host_address_stripped:
             _LOGGER.error("Provided host_address is empty after stripping whitespace.")
@@ -79,6 +67,7 @@ class HdgApiClient:
             try:
                 normalized_host_part = normalize_host_for_scheme(temp_host_for_scheme)
                 schemed_host_input = f"http://{normalized_host_part}"
+            # Handle errors during host normalization.
             except ValueError as e:
                 _LOGGER.error(
                     f"Invalid host_address format '{host_address_stripped}' for API client. "
@@ -89,9 +78,8 @@ class HdgApiClient:
         else:
             schemed_host_input = host_address_stripped
 
+        # Parse the schemed host input and validate the network location.
         parsed_url = urlparse(schemed_host_input)
-        # Ensure that urlparse successfully extracted a network location (netloc).
-        # An empty netloc typically means the input host_address was fundamentally invalid.
         if not parsed_url.netloc:
             _LOGGER.error(
                 f"Invalid host_address '{host_address_stripped}' for API client. "
@@ -105,6 +93,7 @@ class HdgApiClient:
                 f"Please check your configuration."
             )
 
+        # Construct base URLs for API endpoints.
         self._base_url = urlunparse(
             (parsed_url.scheme, parsed_url.netloc, "", "", "", "")
         )
@@ -115,6 +104,23 @@ class HdgApiClient:
     def base_url(self) -> str:
         """Return the base URL of the HDG boiler API."""
         return self._base_url
+
+    async def async_pre_check_host_reachability(self) -> bool:
+        """
+        Perform a pre-check to see if the host is reachable via ICMP ping.
+
+        Returns:
+            True if the host is reachable, False otherwise.
+        """
+        parsed_url = urlparse(self._base_url)
+        host_to_ping = parsed_url.hostname
+        if not host_to_ping:
+            _LOGGER.error(
+                f"Could not extract hostname from base_url '{self._base_url}' for pre-check."
+            )
+            return False
+        # Using a short timeout for the pre-check ping.
+        return await async_execute_icmp_ping(host_to_ping, timeout_seconds=3)
 
     async def _async_handle_data_refresh_response(
         self, response: aiohttp.ClientResponse, node_payload_str: str
@@ -133,24 +139,26 @@ class HdgApiClient:
             HdgApiResponseError: If the response is malformed, has an unexpected
                                  status code, or an unexpected content type.
             aiohttp.ClientResponseError: If response.raise_for_status() detects an HTTP error.
-        """
+        """  # noqa: D402
+        # Ensure the response status indicates success.
         response.raise_for_status()
 
         content_type_header = response.headers.get("Content-Type", "").lower()
-        # Normalize content_type by stripping parameters (e.g., charset)
+        # Extract the main content type, ignoring charset or other parameters.
         content_type_main = content_type_header.split(";")[0].strip()
 
-        if content_type_main == "text/plain":  # Exact match for plain text
+        if content_type_main == "text/plain":
             _LOGGER.warning(
                 f"Accepting 'text/plain' as JSON response for dataRefresh (payload: {node_payload_str}). "
                 "This may mask unexpected server responses or misconfigurations."
             )
+        # Check if the content type is one of the accepted JSON-like types.
         if all(
             accepted_type not in content_type_header
             for accepted_type in ("application/json", "text/json", "text/plain")
         ):
             text_response = await response.text()
-            if "text/html" in content_type_header:  # Common indicator of an error page
+            if "text/html" in content_type_header:
                 _LOGGER.warning(
                     f"Received HTML response from HDG API for dataRefresh (payload: {node_payload_str}). "
                     f"Content-Type: {content_type_header}, Content (truncated): {text_response[:200]}"
@@ -167,12 +175,13 @@ class HdgApiClient:
                     f"Unexpected Content-Type for dataRefresh: {content_type_header}"
                 )
 
+        # Attempt to parse the response as JSON.
         try:
             json_response = await response.json()
         except (
             aiohttp.ContentTypeError,
             ValueError,
-        ) as err:  # ValueError for json.JSONDecodeError
+        ) as err:
             text_response_for_error = await response.text()
             _LOGGER.warning(
                 f"Failed to parse JSON response for dataRefresh (payload: {node_payload_str}) "
@@ -182,6 +191,7 @@ class HdgApiClient:
                 f"Failed to parse JSON response (Content-Type: {content_type_header}, Error: {err}): {text_response_for_error[:100]}"
             ) from err
 
+        # Validate that the JSON response is a list, as expected.
         if not isinstance(json_response, list):
             _LOGGER.error(
                 f"API response for dataRefresh (payload: {node_payload_str}) was not a list: {str(json_response)[:200]}"
@@ -193,6 +203,7 @@ class HdgApiClient:
         valid_items: list[dict[str, Any]] = []
         malformed_item_indices: list[int] = []
 
+        # Iterate through items in the JSON list, validating each one.
         for idx, item in enumerate(json_response):
             if not isinstance(item, dict):
                 _LOGGER.warning(
@@ -201,6 +212,7 @@ class HdgApiClient:
                 malformed_item_indices.append(idx)
                 continue
 
+            # Check for required fields 'id' and 'text'.
             if missing_fields := [
                 field for field in ("id", "text") if field not in item
             ]:
@@ -210,8 +222,9 @@ class HdgApiClient:
                 malformed_item_indices.append(idx)
                 continue
 
+            # Log if unexpected fields are present, but still process the item.
             if unexpected_fields := set(item.keys()) - {"id", "text"}:
-                _LOGGER.info(  # Log unexpected fields; usually not critical.
+                _LOGGER.info(
                     f"Item at index {idx} in dataRefresh response (payload: {node_payload_str}) "
                     f"has unexpected fields {unexpected_fields}: {item!r}"
                 )
@@ -226,49 +239,44 @@ class HdgApiClient:
     async def async_get_nodes_data(self, node_payload_str: str) -> list[dict[str, Any]]:
         """
         Fetch data for a specified set of nodes from the HDG boiler.
-
-        The HDG API expects a POST request with node IDs in a specific format
-        (e.g., "nodes=ID1T-ID2T-ID3T") to the `API_ENDPOINT_DATA_REFRESH` endpoint.
-        A successful response is typically a JSON list of dictionaries, where each
-        dictionary contains an 'id' (the API node ID, often with a 'T' suffix)
-        and a 'text' (the raw string value of the node).
+        Includes a pre-check using HTTP HEAD.
 
         Args:
-            node_payload_str: The payload string for the POST request,
-                              formatted as "nodes=ID1T-ID2T-..."
+            node_payload_str: The payload string specifying which nodes to fetch.
 
         Returns:
-            A list of node data dictionaries upon successful API interaction.
-            An empty list is considered a valid successful response, for instance,
-            if the API returns no data for the requested nodes or if an empty
-            payload string was sent.
+            A list of dictionaries, where each dictionary represents a node's data.
 
         Raises:
-            HdgApiConnectionError: If there's a connection issue (e.g., timeout, network error).
-            HdgApiResponseError: If the API response is malformed, has an unexpected
-                                 status code, or an unexpected content type.
-            HdgApiError: For other unexpected API-related errors during the process.
+            HdgApiConnectionError: If the HTTP pre-check fails or a connection error occurs.
+            HdgApiError: For other API-related errors.
         """
+        if not await self.async_pre_check_host_reachability():
+            _LOGGER.warning(
+                f"ICMP pre-check to host for {self._base_url} failed. Skipping data refresh for payload: {node_payload_str}"
+            )
+            raise HdgApiConnectionError(
+                f"ICMP pre-check failed for host of {self._base_url}"
+            )
+
         _LOGGER.debug(
             f"Requesting data refresh. URL: {self._url_data_refresh}, Payload: {node_payload_str}"
         )
-
         headers = {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"}
         try:
             async with async_timeout.timeout(API_TIMEOUT):
-                async with self._session.post(
+                async with self._session.post(  # type: ignore[attr-defined] # `post` is a valid method on ClientSession
                     self._url_data_refresh, data=node_payload_str, headers=headers
                 ) as response:
                     return await self._async_handle_data_refresh_response(
                         response, node_payload_str
                     )
-        except TimeoutError as err:
+        except asyncio.TimeoutError as err:  # noqa: UP041
             _LOGGER.error(
                 f"Timeout connecting to HDG API at {self._url_data_refresh} for dataRefresh (payload: {node_payload_str}): {err}"
             )
             raise HdgApiConnectionError(f"Timeout during dataRefresh: {err}") from err
         except aiohttp.ClientError as err:
-            # Handles various client-side connection errors and HTTP 4xx/5xx errors via response.raise_for_status().
             _LOGGER.error(
                 f"Client error during dataRefresh to {self._url_data_refresh} (payload: {node_payload_str}): {err}"
             )
@@ -280,33 +288,40 @@ class HdgApiClient:
         except Exception as err:
             if isinstance(err, KeyboardInterrupt | SystemExit):
                 raise
-            _LOGGER.exception(  # Use .exception to include traceback automatically
+            _LOGGER.exception(
                 f"Unexpected error during dataRefresh to {self._url_data_refresh} (payload: {node_payload_str}): {err}",
             )
-            raise  # Re-raise the original (non-system-exiting) exception
+            raise HdgApiError(
+                f"Unexpected error during dataRefresh: {err}"
+            ) from err  # Ensure HdgApiError is raised
 
     async def async_set_node_value(self, node_id: str, value: str) -> bool:
         """
         Set a specific node value on the HDG boiler.
-
-        The HDG API for setting values uses a GET request with parameters in the URL
-        (e.g., `/ActionManager.php?action=set_value_changed&i=NODE_ID&v=VALUE`).
-        A successful operation is typically indicated by an HTTP 200 status code
-        in the response. The response body is often minimal (e.g., "OK") or empty.
+        Includes a pre-check using HTTP HEAD.
 
         Args:
-            node_id: The node ID to set (e.g., "6024"). This should be the base ID
-                     without API-specific suffixes like 'T', 'U', etc.
-            value: The value to set for the node, as a string.
+            node_id: The ID of the node to set.
+            value: The string value to set for the node.
 
         Returns:
-            True if the value was successfully set (HTTP 200), False otherwise.
+            True if the value was set successfully, False otherwise.
 
         Raises:
-            HdgApiConnectionError: If there's a connection issue (timeout, network error).
-            HdgApiError: For other unexpected API-related errors during the set operation.
+            HdgApiConnectionError: If the HTTP pre-check fails or a connection error occurs.
+            HdgApiResponseError: If the API returns an error status for the set operation.
+            HdgApiError: For other API-related errors.
         """
+        if not await self.async_pre_check_host_reachability():
+            _LOGGER.warning(
+                f"ICMP pre-check to host for {self._base_url} failed. Skipping set_node_value for node {node_id}"
+            )
+            raise HdgApiConnectionError(
+                f"ICMP pre-check failed for host of {self._base_url}"
+            )
+
         base_url_parts = urlparse(self._url_set_value_base)
+        # Combine existing query parameters with the new node_id and value.
         existing_query_list = parse_qsl(base_url_parts.query, keep_blank_values=True)
         existing_query_dict = dict(existing_query_list) | {"i": node_id, "v": value}
         new_query_string = urlencode(existing_query_dict)
@@ -317,21 +332,21 @@ class HdgApiClient:
         )
         try:
             async with async_timeout.timeout(API_TIMEOUT):
-                async with self._session.get(url_with_params) as response:
+                async with self._session.get(url_with_params) as response:  # type: ignore[attr-defined] # `get` is a valid method
                     response_text = await response.text()
                     if response.status == 200:
-                        # The HDG API usually returns a simple text response (e.g., "OK") or an empty body on success.
                         _LOGGER.debug(
                             f"Successfully set node '{node_id}' to '{value}'. Response status: {response.status}, Text: {response_text[:100]}"
                         )
                         return True
                     else:
-                        # Non-200 status indicates failure.
                         _LOGGER.error(
                             f"Failed to set HDG node '{node_id}'. Status: {response.status}. Response: {response_text[:200]}"
                         )
-                        return False
-        except TimeoutError as err:
+                        raise HdgApiResponseError(
+                            f"Failed to set node {node_id}. Status: {response.status}, Response: {response_text[:100]}"
+                        )
+        except asyncio.TimeoutError as err:  # noqa: UP041
             _LOGGER.error(
                 f"Timeout connecting to HDG API at {url_with_params} for set_node_value: {err}"
             )
@@ -345,6 +360,8 @@ class HdgApiClient:
             raise HdgApiConnectionError(
                 f"Client error during set_node_value: {err}"
             ) from err
+        except HdgApiError:  # Re-raise HdgApiErrors
+            raise
         except Exception as err:
             _LOGGER.exception(
                 f"Unexpected error during set_node_value to {url_with_params}: {err}"
@@ -354,24 +371,14 @@ class HdgApiClient:
     async def async_check_connectivity(self) -> bool:
         """
         Perform a basic connectivity test to the HDG boiler API.
-
-        This method attempts to fetch a small, predefined set of static nodes
-        (e.g., language, boiler type) to verify that the API is reachable and
-        responding correctly. It's a lightweight way to check if the configured
-        host is an HDG boiler and is operational, without fetching all data groups.
+        Uses an ICMP ping to the host.
 
         Returns:
-            True if the connectivity test is successful (API responds as expected).
-            False if any HdgApiError occurs during the test, indicating a problem.
-        """  # Minimal payload to check API responsiveness.
-        connectivity_test_payload_str = "nodes=1-2-3T"
+            True if the boiler's host is reachable via ICMP ping,
+            False otherwise.
+        """
         _LOGGER.debug(
-            f"Performing connectivity test to {self._base_url} with payload: {connectivity_test_payload_str}"
+            f"Performing connectivity test (ICMP ping) to host of {self._base_url}"
         )
-        try:
-            data = await self.async_get_nodes_data(connectivity_test_payload_str)
-            # Success if a list is returned (even empty), indicating no critical API errors.
-            return isinstance(data, list)
-        except HdgApiError:
-            # Any HdgApiError during this minimal fetch indicates a connectivity problem.
-            return False
+
+        return await self.async_pre_check_host_reachability()

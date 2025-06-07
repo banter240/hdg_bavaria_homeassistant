@@ -10,21 +10,9 @@ from __future__ import annotations
 
 __version__ = "0.1.1"
 
-from typing import Final, TypedDict
+from typing import Final
 
-# Constants like CONF_SCAN_INTERVAL_GROUPx and DEFAULT_SCAN_INTERVAL_GROUPx
-# will be resolved from const.py when HDG_NODE_PAYLOADS is constructed there.
-
-
-class NodeGroupPayload(TypedDict):
-    """Structure for defining an HDG API node polling group and its configuration."""
-
-    name: str  # User-friendly name for config flow.
-    nodes: list[str]  # HDG node IDs (typically with 'T' suffix).
-    payload_str: str  # API request payload (e.g., "nodes=ID1-ID2-ID3T").
-    config_key_scan_interval: str  # Config flow key for scan interval.
-    default_scan_interval: int  # Default scan interval in seconds.
-
+from .models import NodeGroupPayload
 
 # Node lists for each polling group.
 _GROUP1_NODES: Final[list[str]] = [  # Realtime Core Values (34 Nodes)

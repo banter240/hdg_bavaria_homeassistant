@@ -47,9 +47,10 @@ echo "Creating ZIP archive '${DIST_DIR}/${RELEASE_NAME}' from the content of '${
 # but not the custom_components/DOMAIN_NAME path itself in the ZIP.
 # Therefore, it's better to change into the directory and pack from there.
 
-# Option 2: Change into the source directory and pack from there (preferred for HACS)
-echo "Changing into directory '${SOURCE_DIR}'..."
-cd "${SOURCE_DIR}"
+# Option 2: Use pushd to change into the source directory (preferred for HACS)
+echo "Changing into directory '${SOURCE_DIR}' using pushd..."
+pushd "${SOURCE_DIR}" > /dev/null # Suppress output of pushd
+
 
 echo "Current working directory after cd: $(pwd)"
 echo "Creating ZIP archive '${RELEASE_NAME}' with content of the current directory..."
@@ -75,9 +76,9 @@ zip -r "../../${DIST_DIR}/${RELEASE_NAME}" . \
 
 echo "ZIP archive successfully created: '../../${DIST_DIR}/${RELEASE_NAME}' (relative to $(pwd))"
 
-# Change back to the original directory (main repository directory).
-echo "Changing back to the main project directory..."
-cd ../..
+# Change back to the original directory using popd.
+echo "Changing back to the original project directory using popd..."
+popd > /dev/null # Suppress output of popd
 echo "Current working directory after cd back: $(pwd)"
 
 echo "--------------------------------------------------"

@@ -3,12 +3,15 @@ Constants for the HDG Bavaria Boiler integration.
 
 This module centralizes all constants used across the HDG Bavaria Boiler
 integration. Constants are grouped by their functional area, such as core
-integration details, API communication, data interpretation, configuration,
-polling behavior, service definitions, and diagnostics.
-Entity-specific definitions (SENSOR_DEFINITIONS) are managed in `definitions.py`.
+integration details, API communication parameters, data interpretation rules,
+configuration keys and defaults, polling and update behavior controls,
+service definitions, and diagnostic settings.
+
+Entity-specific definitions (e.g., `SENSOR_DEFINITIONS`) are managed in `definitions.py`,
+and enumeration mappings (e.g., `HDG_ENUM_MAPPINGS`) are in `enums.py`.
 """
 
-__version__ = "0.9.28"
+__version__ = "0.9.30"
 
 from typing import Final
 
@@ -25,7 +28,8 @@ MODEL_PREFIX: Final = "HDG"  # Prefix for HA device model if not available from 
 # ============================================================================
 # API Communication
 # ============================================================================
-# Constants related to interacting with the HDG Boiler's API.
+# Constants defining how the integration interacts with the HDG Boiler's web API,
+# including endpoint paths and timeout values.
 
 # --- API Endpoints ---
 API_ENDPOINT_DATA_REFRESH: Final = "/ApiManager.php?action=dataRefresh"
@@ -40,7 +44,8 @@ CONFIG_FLOW_API_TIMEOUT: Final = (
 # ============================================================================
 # API Data Interpretation
 # ============================================================================
-# Constants for understanding and processing data received from the API.
+# Constants that aid in understanding and processing data received from the
+# HDG Boiler API, such as markers for unavailable data or known node ID suffixes.
 
 # Known string values from the HDG API that indicate unavailable or invalid data.
 # Used for availability checks. Compared case-insensitively.
@@ -57,7 +62,8 @@ KNOWN_HDG_API_SETTER_SUFFIXES: Final[set[str]] = {"T", "U", "V", "W", "X", "Y"}
 # ============================================================================
 # Configuration & Options Flow
 # ============================================================================
-# Keys and default values used in Home Assistant config entries and options flows.
+# Defines keys for configuration entries (both `data` and `options`) and their
+# default values, used during initial setup and subsequent option adjustments.
 
 # --- Configuration Keys (used in entry.data and entry.options) ---
 CONF_DEVICE_ALIAS: Final = "device_alias"
@@ -71,7 +77,9 @@ CONF_SCAN_INTERVAL_GROUP5: Final = "scan_interval_config_counters_3"
 CONF_SOURCE_TIMEZONE: Final = "source_timezone"
 
 # --- Default Configuration Values ---
-DEFAULT_ENABLE_DEBUG_LOGGING: Final = False
+DEFAULT_ENABLE_DEBUG_LOGGING: Final = (
+    False  # Default for enabling detailed polling logs.
+)
 DEFAULT_HOST_IP: Final = ""  # Must be provided by the user.
 DEFAULT_SOURCE_TIMEZONE: Final = (
     "Europe/Berlin"  # For parsing datetimes from the boiler.
@@ -96,7 +104,8 @@ DEFAULT_SCAN_INTERVAL_GROUP5: Final = (
 # ============================================================================
 # Polling & Update Behavior
 # ============================================================================
-# Constants controlling how the coordinator fetches and processes data.
+# Constants that control the behavior of the `HdgDataUpdateCoordinator`,
+# including polling intervals, inter-group delays, and dynamic adjustments.
 
 # Delay in seconds between fetching different polling groups sequentially,
 # especially during initial setup or when multiple groups are due.
@@ -118,10 +127,25 @@ SET_VALUE_QUEUE_MAX_SIZE: Final[int] = 50
 # Helps prevent recently set values from being overwritten by a slightly delayed poll response.
 RECENTLY_SET_POLL_IGNORE_WINDOW_S: Final[float] = 10.0
 
+# --- Coordinator Dynamic Polling Interval Adjustment ---
+# These constants manage how the coordinator adjusts its update interval
+# based on API communication success or failure.
+COORDINATOR_FALLBACK_UPDATE_INTERVAL_MINUTES: Final[int] = 5
+COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK: Final[int] = 3
+
+# --- Scan Interval Limits for Options Flow ---
+
+# Minimum scan interval allowed in options flow (seconds). Used also by coordinator.
+MIN_SCAN_INTERVAL: Final = 15
+# Maximum scan interval allowed in options flow (seconds, approx. 24 hours).
+MAX_SCAN_INTERVAL: Final = 86430
+
+
 # ============================================================================
 # Set Value Worker Retry Mechanism
 # ============================================================================
-# Constants for the retry logic in the `_set_value_worker`.
+# Constants governing the retry logic for the `HdgSetValueWorker` when
+# API calls to set values on the boiler fail.
 
 SET_VALUE_RETRY_MAX_ATTEMPTS: Final[int] = (
     3  # Max number of retries for a failed set operation.
@@ -129,16 +153,15 @@ SET_VALUE_RETRY_MAX_ATTEMPTS: Final[int] = (
 SET_VALUE_RETRY_BASE_BACKOFF_S: Final[float] = (
     2.0  # Initial backoff delay in seconds for retries.
 )
-
-# ============================================================================
-# UI & Entity Behavior
-# ============================================================================
-# Constants influencing user interface elements and entity behavior.
-
-# Minimum scan interval allowed in options flow (seconds).
-MIN_SCAN_INTERVAL: Final = 15
-# Maximum scan interval allowed in options flow (seconds, approx. 24 hours).
-MAX_SCAN_INTERVAL: Final = 86430
+SET_VALUE_CONNECTION_ERROR_RETRY_MULTIPLIER: Final[int] = (
+    5  # Multiplier for max attempts on connection errors.
+)
+SET_VALUE_CONNECTION_ERROR_BACKOFF_MULTIPLIER: Final[float] = (
+    2.0  # Multiplier for base backoff on connection errors.
+)
+SET_VALUE_MAX_INDIVIDUAL_BACKOFF_S: Final[float] = (
+    300.0  # Max backoff for a single retry.
+)
 
 # Debounce delay for setting number entity values via API (seconds).
 # Prevents API flooding from rapid UI changes for number entities.
@@ -147,7 +170,8 @@ NUMBER_SET_VALUE_DEBOUNCE_DELAY_S: Final = 3.0
 # ============================================================================
 # Service Definitions
 # ============================================================================
-# Constants related to custom services provided by the integration.
+# Constants defining the names and attributes for custom services exposed
+# by the integration (e.g., `set_node_value`, `get_node_value`).
 
 # --- Service Names ---
 SERVICE_GET_NODE_VALUE: Final = "get_node_value"
@@ -160,7 +184,8 @@ ATTR_VALUE: Final = "value"
 # ============================================================================
 # Diagnostics
 # ============================================================================
-# Constants for generating and redacting diagnostic information.
+# Constants used in the generation and redaction of diagnostic information
+# to aid in troubleshooting while protecting sensitive data.
 
 # Configuration keys to redact in diagnostics output.
 DIAGNOSTICS_TO_REDACT_CONFIG_KEYS: Final = {CONF_HOST_IP}

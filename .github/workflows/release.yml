@@ -1,9 +1,9 @@
-name: Semantic Release
+name: Semantic Release (Test)
 
 on:
   push:
     branches:
-      - main
+      - release-test
 
 permissions:
   contents: write
@@ -12,9 +12,9 @@ permissions:
 
 jobs:
   release:
-    name: Create Release
+    name: Create Test Release
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'banter240'
+    if: github.repository_owner == 'banter240' && github.ref == 'refs/heads/release-test'
 
     steps:
       - name: Checkout code

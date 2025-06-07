@@ -1,16 +1,18 @@
 """
 Entity Definitions for the HDG Bavaria Boiler integration.
 
-This module defines the structure and properties of all entities (sensors, numbers, etc.)
-that can be created by the HDG Bavaria Boiler integration. It contains the
-`SENSOR_DEFINITIONS` dictionary, which maps HDG API nodes to Home Assistant entity configurations.
+This module serves as the central repository for defining the structure and
+properties of all entities (sensors, numbers, etc.) that the HDG Bavaria Boiler
+integration can create. The core of this module is the `SENSOR_DEFINITIONS`
+dictionary, which maps specific HDG API node IDs and their characteristics to
+corresponding Home Assistant entity configurations.
 """
 
 from __future__ import annotations
 
 __version__ = "0.1.4"
 
-from typing import Final, TypedDict
+from typing import Final
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
@@ -24,56 +26,18 @@ from homeassistant.const import (
 )
 from homeassistant.helpers.entity import EntityCategory
 
-# Import ENUM Mappings if they are used within SENSOR_DEFINITIONS.
-# If SENSOR_DEFINITIONS directly references keys from HDG_ENUM_MAPPINGS (e.g. for validation or dynamic lookup),
-# then HDG_ENUM_MAPPINGS would need to be accessible here, or this structure might need adjustment.
-# For now, assuming 'hdg_enum_type' is just a string key used by entities later.
-# from .enums import HDG_ENUM_MAPPINGS
-
-
-class SensorDefinition(TypedDict, total=False):
-    """
-    Defines the properties and Home Assistant platform configuration for an entity
-    derived from an HDG boiler data node. This dictionary structure is used within
-    `SENSOR_DEFINITIONS` to specify how raw data from a specific HDG node ID
-    should be represented and handled as a Home Assistant entity.
-    """
-
-    hdg_node_id: str  # Raw HDG API node ID (may include T/U/V/W/X/Y for setters).
-    translation_key: str  # Key for HA entity naming and unique ID.
-    hdg_data_type: (
-        str | None
-    )  # Original HDG API data type (e.g., "2" for numeric, "10" for enum).
-    hdg_formatter: str | None  # HDG API formatter hint (e.g., "iTEMP", "iPERC").
-    hdg_enum_type: str | None  # Key to HDG_ENUM_MAPPINGS if this is an enum.
-    ha_platform: str  # Target Home Assistant platform (e.g., "sensor", "number").
-    ha_device_class: (
-        str | None
-    )  # Home Assistant device class (e.g., SensorDeviceClass.TEMPERATURE).
-    ha_native_unit_of_measurement: str | None  # Native unit for the HA entity.
-    ha_state_class: (
-        str | None
-    )  # Home Assistant state class (e.g., SensorStateClass.MEASUREMENT).
-    icon: str | None  # Suggested MDI icon for the entity.
-    entity_category: (
-        EntityCategory | None
-    )  # HA entity category (e.g., CONFIG, DIAGNOSTIC).
-    writable: bool  # True if this node's value can be set via the API.
-    parse_as_type: (
-        str | None
-    )  # Hint for parsing raw API text value (e.g., "float", "enum_text").
-    setter_type: (
-        str | None
-    )  # Expected data type for API set validation (e.g., "int", "float1")
-    setter_min_val: float | None  # Min allowed value for setting
-    setter_max_val: float | None  # Max allowed value for setting
-    setter_step: float | None  # Step for numeric value adjustments
-    normalize_internal_whitespace: (
-        bool | None
-    )  # If true, collapses multiple internal spaces to one. Defaults to False.
-
+from .models import SensorDefinition  # Import from new models.py
 
 # Master dictionary defining all sensors and entities for the integration.
+# Each key is a unique string identifier for the entity, typically matching its `translation_key`.
+# The value is a `SensorDefinition` TypedDict (defined in `models.py`) which specifies:
+#   - `hdg_node_id`: The raw ID used by the HDG API (e.g., "22003T").
+#   - `translation_key`: Used for localization of names and other UI elements.
+#   - `hdg_data_type`, `hdg_formatter`, `hdg_enum_type`: Info from HDG API about the node.
+#   - `ha_platform`: The Home Assistant platform (e.g., "sensor", "number").
+#   - `ha_device_class`, `ha_native_unit_of_measurement`, `ha_state_class`, `icon`, `entity_category`: HA entity properties.
+#   - `writable`: Boolean, true if the node's value can be set.
+#   - `parse_as_type`: Hint for how to parse the raw string value from the API.
 # Each key is a unique identifier (often matching the translation_key) for the entity.
 SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     "sprache": {
