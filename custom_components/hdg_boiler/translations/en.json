@@ -25,18 +25,21 @@
     "step": {
       "init": {
         "title": "HDG Bavaria Boiler Options",
-        "description": "Adjust scan intervals for data polling. Default values are chosen to balance data freshness with system load on the HDG boiler. \n\nGroup Realtime Core: Default {default_realtime_core}s\nGroup General Status: Default {default_status_general}s\nGroup Config/Counters 1: Default {default_config_counters_1}s\nGroup Config/Counters 2: Default {default_config_counters_2}s\nGroup Config/Counters 3: Default {default_config_counters_3}s",
+        "description": "Adjust scan intervals and other settings. Default scan intervals balance data freshness with system load.\n\nGroup Realtime Core: Default {default_realtime_core}s\nGroup General Status: Default {default_status_general}s\nGroup Config/Counters 1: Default {default_config_counters_1}s\nGroup Config/Counters 2: Default {default_config_counters_2}s\nGroup Config/Counters 3: Default {default_config_counters_3}s\n\nSource Timezone: Enter the IANA timezone string for your boiler's location (e.g., 'Europe/Berlin', 'America/New_York'). A list can be found at: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
         "data": {
           "scan_interval_realtime_core": "Scan Interval: Realtime Core Values (seconds)",
           "scan_interval_status_general": "Scan Interval: General Status Values (seconds)",
           "scan_interval_config_counters_1": "Scan Interval: Config/Counters Part 1 (seconds)",
           "scan_interval_config_counters_2": "Scan Interval: Config/Counters Part 2 (seconds)",
           "scan_interval_config_counters_3": "Scan Interval: Config/Counters Part 3 (seconds)",
-          "enable_debug_logging": "Enable Detailed Timestamp Logging (for troubleshooting, creates large logs)"
+          "enable_debug_logging": "Enable Detailed Timestamp Logging (for troubleshooting, creates large logs)",
+          "source_timezone": "Source Timezone (IANA Format)"
         }
       }
     },
-    "error": {},
+    "error": {
+      "scan_interval_invalid_range_min_max": "Scan interval must be between 15 and 86400 seconds."
+    },
     "abort": {}
   },
   "entity": {

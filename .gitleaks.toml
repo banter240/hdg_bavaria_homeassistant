@@ -1,0 +1,12 @@
+[[rules]]
+  id = "generic-api-key"
+  description = "Detected a Generic API Key, potentially exposing access to various services and sensitive operations."
+  regex = '''(?i)(?P<key>[a-z0-9-_\.]{8,64})(?:['|"]?:\s?['|"]?)(?P<secret>[a-z0-9-_\.]{8,128})['|"]?'''
+  entropy = 3.5
+
+    [[rules.allowlists]]
+      description = "Allow HDG Boiler node IDs in the definitions.py file"
+      paths = ['''custom_component/hdg_boiler/definitions\.py''']
+      regexes = [
+          '''[0-9]+T''',
+      ]

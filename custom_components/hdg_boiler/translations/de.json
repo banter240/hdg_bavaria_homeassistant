@@ -25,18 +25,21 @@
     "step": {
       "init": {
         "title": "HDG Kessel Optionen",
-        "description": "Passen Sie die Scan-Intervalle für die Datenabfrage an. Die Standardwerte wurden gewählt, um ein Gleichgewicht zwischen Datenaktualität und Systemlast auf dem HDG Kessel zu gewährleisten.\n\nGruppe Echtzeit-Kernwerte: Standard {default_realtime_core}s\nGruppe Status-Werte Allgemein: Standard {default_status_general}s\nGruppe Konfig/Zähler Teil 1: Standard {default_config_counters_1}s\nGruppe Konfig/Zähler Teil 2: Standard {default_config_counters_2}s\nGruppe Konfig/Zähler Teil 3: Standard {default_config_counters_3}s",
+        "description": "Passen Sie Scan-Intervalle und andere Einstellungen an. Standard-Scan-Intervalle gewährleisten ein Gleichgewicht zwischen Datenaktualität und Systemlast.\n\nGruppe Echtzeit-Kernwerte: Standard {default_realtime_core}s\nGruppe Status-Werte Allgemein: Standard {default_status_general}s\nGruppe Konfig/Zähler Teil 1: Standard {default_config_counters_1}s\nGruppe Konfig/Zähler Teil 2: Standard {default_config_counters_2}s\nGruppe Konfig/Zähler Teil 3: Standard {default_config_counters_3}s\n\nQuell-Zeitzone: Geben Sie die IANA-Zeitzonenkennung für den Standort Ihres Kessels ein (z.B. 'Europe/Berlin', 'America/New_York'). Eine Liste finden Sie unter: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
         "data": {
           "scan_interval_realtime_core": "Scan-Intervall: Echtzeit-Kernwerte (Sekunden)",
           "scan_interval_status_general": "Scan-Intervall: Status-Werte Allgemein (Sekunden)",
           "scan_interval_config_counters_1": "Scan-Intervall: Konfig/Zähler Teil 1 (Sekunden)",
           "scan_interval_config_counters_2": "Scan-Intervall: Konfig/Zähler Teil 2 (Sekunden)",
           "scan_interval_config_counters_3": "Scan-Intervall: Konfig/Zähler Teil 3 (Sekunden)",
-          "enable_debug_logging": "Detaillierte Zeitstempel-Protokollierung aktivieren (für Fehlersuche, erzeugt große Logs)"
+          "enable_debug_logging": "Detaillierte Zeitstempel-Protokollierung aktivieren (für Fehlersuche, erzeugt große Logs)",
+          "source_timezone": "Quell-Zeitzone (IANA-Format)"
         }
       }
     },
-    "error": {},
+    "error": {
+      "scan_interval_invalid_range_min_max": "Scan-Intervall muss zwischen 15 und 86400 Sekunden liegen."
+    },
     "abort": {}
   },
   "entity": {
