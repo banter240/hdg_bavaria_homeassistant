@@ -30,8 +30,11 @@ ignore_missing_imports = true
 # version_source = "poetry" # This was the old setting, likely causing issues with version_toml
 version_source = "toml" # Explicitly set to toml if you want to use version_toml
 version_toml = ["pyproject.toml:tool.poetry.version"] # Corrected: expects a list of strings
-branch = "release-test" # Add this line to specify the release branch
 
+[tool.semantic_release.branches.release-test]
+match = "release-test"
+prerelease = true
+prerelease_token = "rc"
 
 version_variables = [
     "custom_components/hdg_boiler/manifest.json:version:nf"
