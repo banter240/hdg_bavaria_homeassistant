@@ -12,7 +12,7 @@ manages the online/offline state of the boiler based on polling success.
 
 from __future__ import annotations
 
-__version__ = "0.10.35"  # Apply full scope, commenting, and logging review
+__version__ = "0.10.35"
 
 import asyncio
 import logging

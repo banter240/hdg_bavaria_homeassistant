@@ -8,7 +8,7 @@ It handles state updates from the data coordinator and implements debouncing for
 
 from __future__ import annotations
 
-__version__ = "0.8.68"  # Strict conditional debug logging for set_value flow
+__version__ = "0.8.68"
 
 import functools
 import logging

@@ -9,7 +9,7 @@ and respects the boiler's online status.
 
 from __future__ import annotations
 
-__version__ = "0.1.10"  # Adjusted logging based on debug setting
+__version__ = "0.1.10"
 
 import asyncio
 import logging
