@@ -27,7 +27,6 @@ ignore_missing_imports = true
 
 # --- Configuration for python-semantic-release ---
 [tool.semantic_release]
-# version_source = "poetry"
 version_source = "toml"
 version_toml = ["pyproject.toml:tool.poetry.version"]
 remote.token = "GITHUB_TOKEN"
