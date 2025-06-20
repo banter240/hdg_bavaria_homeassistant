@@ -40,3 +40,21 @@
       paths = ['''custom_components/hdg_boiler/definitions\.py''']
       # This regex targets the values of "translation_key"
       regexes = ['''^[a-z0-9_]+$''']
+
+# Global allowlist to ignore specific known false positives from HdgSetValueWorker logs
+[allowlist]
+    description = "Allow specific HdgSetValueWorker log patterns that are misidentified as secrets by generic rules."
+    # These regexes match the beginning of log lines that were being flagged.
+    # The 'paths' entry restricts these allowlist regexes to only apply to the specified file,
+    # preventing accidental allowlisting of similar patterns in other files.
+    paths = ['''custom_components/hdg_boiler/classes/set_value_worker\.py''']
+    regexes = [
+        # Matches: HdgSetValueWorker: Calculated wait_timeout: ...
+        '''^HdgSetValueWorker: Calculated wait_timeout:.*''',
+        # Matches: HdgSetValueWorker: Collected N items to process: [...]
+        '''^HdgSetValueWorker: Collected \d+ items to process: \[.*\]''',
+        # Matches: HdgSetValueWorker: _process_collected_items: No items to process.
+        '''^HdgSetValueWorker: _process_collected_items: No items to process\.''',
+        # Matches: HdgSetValueWorker: _process_collected_items: Processing N items: [...]
+        '''^HdgSetValueWorker: _process_collected_items: Processing \d+ items: \[.*\]'''
+    ]

@@ -27,7 +27,8 @@ ignore_missing_imports = true
 
 # --- Configuration for python-semantic-release ---
 [tool.semantic_release]
-version_source = "poetry"
+version_source = "toml" # Explicitly set to toml if you want to use version_toml
+version_toml = ["pyproject.toml:tool.poetry.version"] # Corrected: expects a list of strings
 
 version_variables = [
     "custom_components/hdg_boiler/manifest.json:version:nf"

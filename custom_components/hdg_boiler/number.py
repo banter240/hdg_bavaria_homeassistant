@@ -1,17 +1,19 @@
 """
-Platform for number entities for the HDG Bavaria Boiler integration.
+Provides number entities for the HDG Bavaria Boiler integration.
 
-This module creates and manages 'number' entities, enabling users to modify
-numeric settings on their HDG Bavaria boiler. These entities handle state
-updates from the data coordinator and implement debouncing for API calls.
+This module is responsible for creating and managing 'number' entities that
+allow users to view and modify numeric settings on their HDG Bavaria boiler.
+It handles state updates from the data coordinator and implements debouncing for API calls.
 """
 
 from __future__ import annotations
 
-__version__ = "0.8.50"
+__version__ = "0.8.68"  # Strict conditional debug logging for set_value flow
 
 import functools
 import logging
+import time  # Import time for monotonic
+from datetime import datetime
 from typing import Any, cast
 
 from homeassistant.components.number import (
@@ -22,6 +24,7 @@ from homeassistant.components.number import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later
 
@@ -29,6 +32,7 @@ from .api import HdgApiClient
 from .const import (
     DOMAIN,
     NUMBER_SET_VALUE_DEBOUNCE_DELAY_S,
+    RECENTLY_SET_POLL_IGNORE_WINDOW_S,  # Import for use
 )
 from .coordinator import HdgDataUpdateCoordinator
 from .definitions import SENSOR_DEFINITIONS
@@ -37,9 +41,11 @@ from .exceptions import HdgApiError
 from .helpers.parsing_utils import (
     format_value_for_api,
     parse_float_from_string,
-    parse_int_from_string,
 )
 from .helpers.string_utils import strip_hdg_node_suffix
+from .helpers.validation_utils import (
+    validate_value_range_and_step,
+)
 from .models import SensorDefinition
 
 _LOGGER = logging.getLogger(DOMAIN)
@@ -47,11 +53,11 @@ _LOGGER = logging.getLogger(DOMAIN)
 
 class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
     """
-    Represents an HDG Bavaria Boiler number entity.
+    Represents a number entity for an HDG Bavaria Boiler.
 
-    This class allows users to view and adjust numeric settings on their HDG boiler.
-    It handles state updates from the HdgDataUpdateCoordinator and debounces API
-    calls when a new value is set by the user to prevent API overload.
+    This entity allows users to interact with numeric settings of the boiler,
+    such as temperature setpoints. It handles optimistic UI updates, debounces
+    API calls to prevent flooding the device, and validates input values.
     """
 
     def __init__(
@@ -65,10 +71,10 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         Initialize the HDG Boiler number entity.
 
         Args:
-            coordinator: The HdgDataUpdateCoordinator for managing entity data.
-            api_client: The HdgApiClient instance (passed for potential future direct use, though set ops are via coordinator).
-            entity_description: Standard Home Assistant NumberEntityDescription.
-            entity_definition: Custom entity definition from SENSOR_DEFINITIONS.
+            coordinator: The data update coordinator.
+            api_client: The API client for HDG communication (currently unused here, inherited).
+            entity_description: The entity description for this number entity.
+            entity_definition: The sensor definition dictionary for this entity.
         """
         hdg_api_node_id_from_def = entity_definition["hdg_node_id"]
         super().__init__(
@@ -76,204 +82,395 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
             node_id=strip_hdg_node_suffix(hdg_api_node_id_from_def),
             entity_definition=cast(dict[str, Any], entity_definition),
         )
-
         self.entity_description = entity_description
-
-        # Attributes for debouncing set value API calls.
         self._current_set_generation: int = 0
         self._pending_api_call_timer: CALLBACK_TYPE | None = None
-        self._value_for_current_generation: Any | None = None
-
+        self._value_for_current_generation: float | None = None
         self._attr_native_value: int | float | None = None
         self._update_number_state()
-
-        _LOGGER.debug(
-            f"HdgBoilerNumber {self.entity_description.key}: Initialized. "
-            f"Node ID: {self._node_id}, Min: {self.native_min_value}, Max: {self.native_max_value}, Step: {self.native_step}"
-        )
+        if self.coordinator.enable_debug_logging:
+            _LOGGER.debug(
+                # Use entity_description.key as self.entity_id might not be fully available at this stage.
+                f"HdgBoilerNumber {self.entity_description.key or self._node_id}: Initialized. "
+                f"Node ID: {self._node_id}, Min: {self.native_min_value}, Max: {self.native_max_value}, Step: {self.native_step}"
+            )
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle data updates from the coordinator."""
+        # This method is called when the coordinator has new data.
+        # It updates the entity's state and then calls the superclass's
+        # _handle_coordinator_update, which in turn calls async_write_ha_state.
+        if self.coordinator.enable_debug_logging:
+            _LOGGER.debug(
+                f"HdgBoilerNumber {self.entity_id}: _handle_coordinator_update called."
+            )
         self._update_number_state()
         super()._handle_coordinator_update()
+        if self.coordinator.enable_debug_logging:
+            _LOGGER.debug(
+                f"HdgBoilerNumber {self.entity_id}: _handle_coordinator_update finished. New native_value: {self._attr_native_value}"
+            )
 
     def _update_number_state(self) -> None:
-        """Update internal state from coordinator data."""
-        self._attr_available = super().available
+        """
+        Update the entity's internal state from coordinator data.
 
+        This method implements logic to mitigate UI bouncing when a value is
+        set optimistically and a poll with an older value arrives.
+        """
+        self._attr_available = super().available
         if not self._attr_available:
             self._attr_native_value = None
+            if self.coordinator.enable_debug_logging:
+                _LOGGER.debug(
+                    f"HdgBoilerNumber {self.entity_id}: Not available, native_value set to None."
+                )
             return
 
         raw_value_text = self.coordinator.data.get(self._node_id)
-        self._attr_native_value = self._parse_value(raw_value_text)
+        parsed_value = self._parse_value(raw_value_text)
+        current_ui_value = (
+            self._attr_native_value
+        )  # Value currently displayed in the UI.
+
+        if self.coordinator.enable_debug_logging:
+            _LOGGER.debug(
+                f"HdgBoilerNumber {self.entity_id}: _update_number_state: Node ID: {self._node_id}. "
+                f"Optimistic (gen): {self._value_for_current_generation}, Parsed (poll): {parsed_value}, "
+                f"Current UI: {current_ui_value}, Raw Coord: '{raw_value_text}'"
+            )
+
+        last_set_time = self.coordinator._last_set_times.get(
+            self._node_id, 0.0
+        )  # Accessing protected member for specific logic
+        time_since_last_set = time.monotonic() - last_set_time
+        is_recently_set_by_api = (
+            last_set_time > 0.0
+            and time_since_last_set < RECENTLY_SET_POLL_IGNORE_WINDOW_S
+        )
+
+        if self._value_for_current_generation is not None:
+            # An optimistic value is active (i.e., user just changed it in the UI).
+            if parsed_value == self._value_for_current_generation:
+                # Polled value matches the optimistic value.
+                # This means the set operation was successful and confirmed by this poll.
+                self._attr_native_value = parsed_value
+                self._value_for_current_generation = (
+                    None  # Clear optimistic state as it's confirmed by poll.
+                )
+                if self.coordinator.enable_debug_logging:
+                    _LOGGER.debug(
+                        f"HdgBoilerNumber {self.entity_id}: _update_number_state: BRANCH A (Optimistic matches Poll). "
+                        f"UI updated to {parsed_value}. Optimistic state cleared."
+                    )
+            # Polled value differs from optimistic. Keep optimistic UI.
+            # self._attr_native_value already holds the optimistic value set in
+            # async_set_native_value, so no change is needed here.
+            elif self.coordinator.enable_debug_logging:
+                _LOGGER.debug(
+                    f"HdgBoilerNumber {self.entity_id}: _update_number_state: BRANCH B (Optimistic differs from Poll). "
+                    f"Keeping optimistic UI value {self._attr_native_value}. Polled was {parsed_value}."
+                )
+        elif is_recently_set_by_api:
+            # No optimistic value active from UI, but API set this node recently.
+            # The HdgPollingResponseProcessor should have already handled ignoring this poll
+            # if the polled value differed from what the worker set.
+            # If we reach here, it means the PollingResponseProcessor allowed this polled value.
+            # This typically means the polled value matches what was set by the worker,
+            # or the ignore window passed.
+            # We trust the PollingResponseProcessor's decision and update from the poll.
+            self._attr_native_value = parsed_value  # Update UI from the polled value.
+            if self.coordinator.enable_debug_logging:
+                _LOGGER.debug(
+                    f"HdgBoilerNumber {self.entity_id}: _update_number_state: BRANCH C (No optimistic, but recently set by API). "
+                    f"UI updated from poll to {parsed_value}. PollingResponseProcessor should have filtered if needed."
+                )
+        else:
+            # No optimistic value, and not recently set by API. Standard update from poll.
+            self._attr_native_value = parsed_value
+            if self.coordinator.enable_debug_logging:
+                _LOGGER.debug(
+                    f"HdgBoilerNumber {self.entity_id}: _update_number_state: BRANCH D (Standard poll update). "
+                    f"UI updated from poll to {parsed_value}."
+                )
 
     def _parse_value(self, raw_value_text: str | None) -> int | float | None:
-        """Parse the raw string value from the API into an int or float.
+        """
+        Parse the raw string value from the API into an int or float.
 
-        Uses the 'setter_type' from the entity's definition to determine
-        if the native value should be an integer or a float.
-        It handles strings that might include units or non-numeric characters.
+        Args:
+            raw_value_text: The raw string value received from the API.
+
+        Returns:
+            The parsed numeric value (int or float), or None if parsing fails.
         """
         if raw_value_text is None:
             return None
         cleaned_value = raw_value_text.strip()
-        if cleaned_value is None:
-            return None
         if not cleaned_value:
             return None
-
-        setter_type = self._entity_definition.get("setter_type")
-
-        if setter_type == "int":
-            return parse_int_from_string(cleaned_value, self._node_id, self.entity_id)
 
         parsed_float = parse_float_from_string(
             cleaned_value, self._node_id, self.entity_id
         )
         if parsed_float is None:
             _LOGGER.warning(
-                f"Could not parse float for {self.entity_id} (node {self._node_id}) from raw value '{raw_value_text}' (cleaned: '{cleaned_value}')."
+                f"HdgBoilerNumber {self.entity_id}: Could not parse float for node {self._node_id} from raw value '{raw_value_text}'."
             )
             return None
+
+        if (
+            self.native_step is not None
+            and self.native_step == int(self.native_step)
+            and parsed_float == int(parsed_float)
+        ):
+            return int(parsed_float)
         return parsed_float
 
     async def async_set_native_value(self, value: float) -> None:
         """
-        Set the new native value and initiate debounced API call.
+        Set the new native value and initiate a debounced API call.
 
         This method is called by Home Assistant when the user changes the value
-        in the UI. It starts a debounced process to update the boiler via the API.
-        A generation counter is used to ensure that only the most recent value
-        set by the user is actually sent to the boiler after the debounce delay.
+        in the UI. It performs pre-validation, optimistically updates the UI,
+        and schedules a debounced call to `_process_debounced_value` to
+        handle the actual API communication.
         """
+        if self.coordinator.enable_debug_logging:
+            _LOGGER.debug(
+                f"HdgBoilerNumber {self.entity_id}: async_set_native_value called with UI value: {value} (type: {type(value)})"
+            )
+
+        # --- BEGIN Pre-validation ---
+        try:
+            min_val_def = self.native_min_value
+            max_val_def = self.native_max_value
+            node_step_def = self.native_step
+            if (
+                min_val_def is not None
+                and max_val_def is not None
+                and node_step_def is not None
+            ):
+                validate_value_range_and_step(
+                    coerced_numeric_value=value,
+                    min_val_def=min_val_def,
+                    max_val_def=max_val_def,
+                    node_step_def=node_step_def,
+                    entity_name_for_log=self.name
+                    if isinstance(self.name, str)
+                    else self.entity_id,
+                    node_id_str_for_log=self._node_id,
+                    original_value_to_set_for_log=value,
+                )
+        except HomeAssistantError as e:
+            _LOGGER.error(
+                f"HdgBoilerNumber {self.entity_id}: Pre-validation failed for value {value}: {e}. Not setting value."
+            )
+            # Do not proceed with optimistic update or API call if validation fails.
+            # UI should retain its previous valid state.
+            return
+        # --- END Pre-validation ---
+
         self._current_set_generation += 1
         local_generation_for_job = self._current_set_generation
-        self._value_for_current_generation = value
-
-        _LOGGER.debug(
-            f"async_set_native_value called for {self.entity_id} with value {value}. "
-            f"Generation: {local_generation_for_job}. Debouncing for {NUMBER_SET_VALUE_DEBOUNCE_DELAY_S}s."
+        self._value_for_current_generation = (
+            value  # Store the value for optimistic state tracking.
         )
+
+        self._attr_native_value = (
+            int(value)
+            if self.native_step is not None
+            and self.native_step == int(self.native_step)
+            and value == int(value)
+            else value
+        )
+        self.async_write_ha_state()
+        if self.coordinator.enable_debug_logging:
+            _LOGGER.debug(
+                f"HdgBoilerNumber {self.entity_id}: Optimistically set native_value to {self._attr_native_value}. Generation: {local_generation_for_job}."
+            )
 
         if self._pending_api_call_timer:
-            if callable(self._pending_api_call_timer):
-                # Cancel any previously scheduled debounced call.
-                self._pending_api_call_timer()  # Cancel the existing timer.
-                _LOGGER.debug(
-                    f"Successfully cancelled existing API call timer for {self.entity_id}."
-                )
-            else:
-                _LOGGER.warning(
-                    f"Cannot cancel _pending_api_call_timer for {self.entity_id}. "
-                    f"Expected a callable, got {type(self._pending_api_call_timer)}. Value: {self._pending_api_call_timer}."
-                )
+            self._pending_api_call_timer()
+            self._pending_api_call_timer = None
 
-        _LOGGER.debug(
-            f"Scheduling _process_debounced_value for {self.entity_id} (Gen: {local_generation_for_job}, Value: {value})."
-            # The HassJob name includes generation and value for better traceability in logs/diagnostics.
-        )
-
+        if self.coordinator.enable_debug_logging:
+            _LOGGER.debug(
+                f"HdgBoilerNumber {self.entity_id}: Scheduling _process_debounced_value (Gen: {local_generation_for_job}, UI Value: {value})."
+            )
         job_target = functools.partial(
-            self._process_debounced_value, local_generation_for_job, value
+            self._process_debounced_value,
+            scheduled_generation=local_generation_for_job,
+            value_from_ui_at_schedule_time=value,
         )
-
-        new_timer_handle = async_call_later(
+        self._pending_api_call_timer = async_call_later(
             self.hass,
             NUMBER_SET_VALUE_DEBOUNCE_DELAY_S,
             HassJob(
                 job_target,
-                name=f"HdgBoilerNumber_DebounceProcess_{self.entity_id}_{value}_{local_generation_for_job}",
+                name=f"HdgNumDebounce_{self.entity_id}",
                 cancel_on_shutdown=True,
-            ),
+            ),  # type: ignore
         )
-        self._pending_api_call_timer = new_timer_handle
 
-    async def _process_debounced_value(
+    async def _process_debounced_value(  # sourcery skip: extract-method
         self,
+        _now: datetime,
         scheduled_generation: int,
-        value_at_schedule_time: float,
+        value_from_ui_at_schedule_time: float,
     ) -> None:
         """
-        Process the debounced value and queue it for an API call via the coordinator.
+        Process the debounced value and queue it for an API call.
 
-        Scheduled by `async_set_native_value`, this method executes after the
-        `NUMBER_SET_VALUE_DEBOUNCE_DELAY_S`. It verifies if the job's generation
-        matches the current one, ensuring only the latest user-set value is processed.
-
-        Args:
-            scheduled_generation: The generation number when this job was scheduled.
-            value_at_schedule_time: The value that was intended to be set for that generation.
+        This method is called by the timer set in `async_set_native_value`.
+        It checks if the job is stale (i.e., if a newer value has been set in the meantime).
+        If not stale, it formats the value for the API and queues it with the coordinator.
+        Error handling is performed, and the optimistic state (`_value_for_current_generation`)
+        is managed based on the outcome.
         """
-        _LOGGER.debug(
-            f"_process_debounced_value START for {self.entity_id}: "
-            f"Scheduled Gen={scheduled_generation} (Value: {value_at_schedule_time}), "
-            f"Current Instance Gen={self._current_set_generation} (Current Instance Value: {self._value_for_current_generation})"
-        )
-
-        if scheduled_generation != self._current_set_generation:
+        # _now parameter is provided by async_call_later, but not directly used here.
+        if self.coordinator.enable_debug_logging:
             _LOGGER.debug(
-                f"{self.entity_id}: Job for generation {scheduled_generation} (value: {value_at_schedule_time}) is stale. "
-                f"Current generation is {self._current_set_generation} (value: {self._value_for_current_generation}). Skipping API call."
+                f"HdgBoilerNumber {self.entity_id}: _process_debounced_value START. "
+                f"Scheduled Gen={scheduled_generation}, UI Value={value_from_ui_at_schedule_time}, "
+                f"Current Gen={self._current_set_generation}, OptimisticVal={self._value_for_current_generation}"
             )
+
+        if self._is_job_stale(scheduled_generation):
+            # If stale, but this was the generation that set the optimistic value, clear it.
+            # This ensures that if the UI was showing an optimistic value from this stale job,
+            # it can revert to a polled value.
+            if (
+                self._value_for_current_generation == value_from_ui_at_schedule_time
+            ):  # Check if this job was the one that set the current optimistic value
+                self._value_for_current_generation = None
+                _LOGGER.warning(
+                    f"HdgBoilerNumber {self.entity_id}: Stale job for {value_from_ui_at_schedule_time} was current optimistic. Cleared optimistic state."
+                )
             return
 
-        value_to_process = value_at_schedule_time
-        setter_type = cast(str, self._entity_definition.get("setter_type"))
-
+        api_value_str: str | None = None
         try:
+            api_value_str = self._format_value_for_api_safely(
+                value_from_ui_at_schedule_time
+            )
+            await self._queue_set_value_via_coordinator(api_value_str)
+        except Exception as err:
+            self._handle_set_value_error(
+                err, value_from_ui_at_schedule_time, api_value_str
+            )
+            # If API call failed, we should clear the optimistic state for this generation
+            # to allow the next poll to reflect the actual (old) state.
+            if (
+                scheduled_generation == self._current_set_generation
+                and self._value_for_current_generation == value_from_ui_at_schedule_time
+            ):
+                self._value_for_current_generation = (
+                    None  # Clear optimistic state on error.
+                )
+                _LOGGER.warning(
+                    f"HdgBoilerNumber {self.entity_id}: Cleared optimistic state for "
+                    f"{value_from_ui_at_schedule_time} due to error in _process_debounced_value."
+                )
+        # Do NOT clear self._value_for_current_generation here unconditionally.
+        # It should only be cleared if:
+        # 1. The job was stale and it was the one that set the optimistic value. (Handled in _is_job_stale block)
+        # 2. An error occurred during processing this specific generation. (Handled in except block)
+        # 3. The value is successfully confirmed by a poll in _update_number_state (BRANCH A).
+
+    def _is_job_stale(self, scheduled_generation: int) -> bool:
+        """
+        Check if the scheduled job for setting a value is stale.
+
+        A job is considered stale if its generation number does not match the
+        current set generation for this entity. This indicates that a newer
+        value has been set by the user in the meantime.
+        """
+        if scheduled_generation != self._current_set_generation:
+            _LOGGER.warning(
+                f"HdgBoilerNumber {self.entity_id}: Job for gen {scheduled_generation} is STALE (current: {self._current_set_generation}). Skipping."
+            )
+            return True
+        return False
+
+    def _format_value_for_api_safely(self, value: float) -> str:
+        """
+        Format the numeric value into a string suitable for the HDG API.
+        """
+        setter_type = cast(str | None, self._entity_definition.get("setter_type"))
+        if not setter_type:
+            msg = f"HdgBoilerNumber {self.entity_id}: Missing 'setter_type'."
+            _LOGGER.error(msg)
+            raise ValueError(msg)
+        return format_value_for_api(value, setter_type)
+
+    async def _queue_set_value_via_coordinator(self, api_value_str: str) -> bool:
+        """
+        Queue the formatted value with the HdgDataUpdateCoordinator.
+
+        The coordinator manages a worker task that handles the actual API call,
+        including retries and API lock management.
+        """
+        if self.coordinator.enable_debug_logging:
             _LOGGER.debug(
-                f"{self.entity_id}: Job for generation {scheduled_generation} (value: {value_to_process}) IS CURRENT. Proceeding to queue for API."
+                f"HdgBoilerNumber {self.entity_id}: Queuing API value: '{api_value_str}'."
             )
-
-            api_value_to_send_str = format_value_for_api(value_to_process, setter_type)
-
-            success = await self.coordinator.async_set_node_value_if_changed(
-                node_id=self._node_id,
-                new_value_str_for_api=api_value_to_send_str,
-                entity_name_for_log=self.name
-                if isinstance(self.name, str)
-                else self.entity_id,
-            )
-            if not success:
-                _LOGGER.error(
-                    f"Failed to queue/set value for {self.name or self.entity_id} (coordinator reported unchanged or queue full) for value {value_to_process}."
-                )
-            else:
-                _LOGGER.info(
-                    f"Successfully queued set request for {self.name or self.entity_id} to {value_to_process} (API value: {api_value_to_send_str})."
-                )
-        except ValueError as err:  # Error from format_value_for_api (config issue).
+        success = await self.coordinator.async_set_node_value_if_changed(
+            node_id=self._node_id,
+            # Pass entity_name_for_log to the coordinator method for its logging.
+            new_value_str_for_api=api_value_str,
+            entity_name_for_log=self.name
+            if isinstance(self.name, str)
+            else self.entity_id,
+        )
+        if not success:
             _LOGGER.error(
-                f"Configuration error for {self.entity_id} preventing value set. "
-                f"Details: {err}. Please check SENSOR_DEFINITIONS."
+                f"HdgBoilerNumber {self.entity_id}: Failed to queue API value: '{api_value_str}'."
             )
-        except HdgApiError as err:  # API error from coordinator's worker.
+        elif self.coordinator.enable_debug_logging:  # Only log success if debug is on
+            _LOGGER.debug(
+                f"HdgBoilerNumber {self.entity_id}: Successfully queued API value: '{api_value_str}'."
+            )
+        return bool(success)  # Return boolean success status.
+
+    def _handle_set_value_error(
+        self, err: Exception, value_to_process: float, api_value_str: str | None
+    ) -> None:
+        """
+        Centralized error logging for the set value process.
+
+        This method logs errors that occur during the formatting or queuing
+        of a value to be set via the API.
+        """
+        if isinstance(err, ValueError):  # Config error
             _LOGGER.error(
-                f"API error during coordinator.async_set_node_value_if_changed for {self.entity_id} with value {value_to_process}: {err}"
+                f"HdgBoilerNumber {self.entity_id}: Config error formatting UI value {value_to_process}: {err}."
             )
-        except Exception as err:  # Catch-all for other unexpected errors.
+        elif isinstance(err, HdgApiError):  # API error from coordinator/worker
+            _LOGGER.error(
+                f"HdgBoilerNumber {self.entity_id}: API error for UI value {value_to_process} (API val: '{api_value_str}'): {err}"
+            )
+        else:  # Unexpected
             _LOGGER.exception(
-                f"Unexpected error during processing/queueing of debounced value for {self.entity_id} with value {value_to_process}: {err}"
+                f"HdgBoilerNumber {self.entity_id}: Unexpected error for UI value {value_to_process} (API val: '{api_value_str}'): {err}"
             )
 
     async def async_will_remove_from_hass(self) -> None:
         """
         Handle entity being removed from Home Assistant.
-        Cancels any pending debounced API call timer.
+
+        This method ensures that any pending API call timers are cancelled.
         """
         if self._pending_api_call_timer:
-            if callable(self._pending_api_call_timer):
-                # Ensure any pending timer is cancelled when the entity is removed.
-                self._pending_api_call_timer()
+            self._pending_api_call_timer()
             self._pending_api_call_timer = None
-            _LOGGER.debug(
-                f"Cancelled API call timer for {self.entity_id} during removal."
-            )
         await super().async_will_remove_from_hass()
 
 
+# (Rest of the file: _determine_ha_number_step_val, _create_number_entity_if_valid, async_setup_entry)
+# These helper functions remain unchanged from version 0.8.60
+# ... (Code from version 0.8.60 for these functions)
 def _determine_ha_number_step_val(
     entity_def: SensorDefinition,
     translation_key: str,
@@ -282,16 +479,12 @@ def _determine_ha_number_step_val(
     """
     Determine the `native_step` for the Home Assistant NumberEntity.
 
-    This function interprets the 'setter_step' from the entity definition.
-    If 'setter_step' is not defined, it infers a default step.
-    If 'setter_step' is 0.0, it logs a warning and uses a default UI step,
-    as HA requires a positive step for UI controls. The actual 0.0 step logic is handled
-    during service call validation.
+    This function calculates the appropriate step value for the number entity's UI
+    based on the 'setter_step' and 'setter_type' defined in the entity_definition.
+    It provides default step values if 'setter_step' is not explicitly defined or
+    if it's set to 0.0 (which has special meaning for the API but needs a
+    sensible UI step).
 
-    Returns:
-        The step value as a float if valid.
-        None if a critical configuration error is found (e.g., invalid or negative step),
-        which should prevent entity creation.
     """
     setter_type_for_step_default = (entity_def.get("setter_type") or "").strip().lower()
     raw_step_val_config = entity_def.get("setter_step")
@@ -299,7 +492,7 @@ def _determine_ha_number_step_val(
 
     if raw_step_val_config is None:
         step_val = 0.1 if setter_type_for_step_default in {"float1", "float2"} else 1.0
-        _LOGGER.debug(
+        _LOGGER.debug(  # Unconditional debug in module-level helper
             f"'setter_step' not defined for translation_key '{translation_key}' (Node {raw_hdg_node_id}). "
             f"Detected setter_type '{setter_type_for_step_default}', defaulting HA NumberEntity step to {step_val}."
         )
@@ -308,23 +501,21 @@ def _determine_ha_number_step_val(
     try:
         parsed_step_val_config = float(raw_step_val_config)
     except (ValueError, TypeError):
-        _LOGGER.error(
+        _LOGGER.error(  # Keep as error
             f"Invalid 'setter_step' value '{raw_step_val_config}' in SENSOR_DEFINITIONS for translation_key '{translation_key}' (Node {raw_hdg_node_id}). "
             f"Must be a number. This entity will be skipped."
         )
         return None
 
     if parsed_step_val_config < 0.0:
-        _LOGGER.error(
+        _LOGGER.error(  # Keep as error
             f"Invalid 'setter_step' value {parsed_step_val_config} (negative) in SENSOR_DEFINITIONS for translation_key '{translation_key}' (Node {raw_hdg_node_id}). "
             f"Step must be non-negative. This entity will be skipped."
         )
         return None
     if parsed_step_val_config == 0.0:
-        # Home Assistant UI requires a positive step for number entities.
-        # The 0.0 step logic (only min_value allowed) is enforced in service call validation.
         step_val = 0.1 if setter_type_for_step_default in {"float1", "float2"} else 1.0
-        _LOGGER.warning(
+        _LOGGER.warning(  # Keep as warning
             f"[{translation_key}][{raw_hdg_node_id}] SENSOR_DEFINITIONS has 'setter_step' of 0.0. "
             f"Only 'setter_min_val' is valid for API calls. HA UI will use step {step_val}, potentially confusing users. "
             "Service calls will correctly enforce the 0.0 step logic (only min_value allowed)."
@@ -342,17 +533,15 @@ def _create_number_entity_if_valid(
     """
     Validate an entity definition and create an HdgBoilerNumber entity.
 
-    Checks essential keys in the entity definition: 'hdg_node_id', 'setter_type',
-    'setter_min_val', and 'setter_max_val'. Determines the step value for the
-    Home Assistant NumberEntity using `_determine_ha_number_step_val`.
-    If any validation fails, None is returned, and the entity is not created.
-
-    Returns:
-        An HdgBoilerNumber entity instance if the definition is valid, otherwise None.
+    This helper function checks if a given entity definition from `SENSOR_DEFINITIONS`
+    is valid for creating an `HdgBoilerNumber` entity. It verifies the presence and
+    correctness of required fields like `hdg_node_id`, `setter_type`, `setter_min_val`,
+    `setter_max_val`, and calculates the `native_step`. If valid, it instantiates
+    and returns an `HdgBoilerNumber` entity.
     """
     hdg_node_id_with_suffix = entity_def.get("hdg_node_id")
     if not isinstance(hdg_node_id_with_suffix, str) or not hdg_node_id_with_suffix:
-        _LOGGER.warning(
+        _LOGGER.warning(  # Keep as warning
             f"Skipping number entity for translation_key '{translation_key}': "
             f"missing or invalid 'hdg_node_id' (value: {hdg_node_id_with_suffix})."
         )
@@ -361,7 +550,7 @@ def _create_number_entity_if_valid(
 
     setter_type = entity_def.get("setter_type")
     if not isinstance(setter_type, str) or not setter_type:
-        _LOGGER.warning(
+        _LOGGER.warning(  # Keep as warning
             f"Skipping number entity for translation_key '{translation_key}' (HDG Node {raw_hdg_node_id}): "
             f"Missing or invalid 'setter_type' (value: {setter_type})."
         )
@@ -373,7 +562,7 @@ def _create_number_entity_if_valid(
         min_val = float(cast(float, min_val_def))
         max_val = float(cast(float, max_val_def))
     except (ValueError, TypeError) as e:
-        _LOGGER.error(
+        _LOGGER.error(  # Keep as error
             f"Invalid 'setter_min_val' ('{min_val_def}') or 'setter_max_val' ('{max_val_def}') "
             f"in SENSOR_DEFINITIONS for '{translation_key}' (Node {raw_hdg_node_id}): {e}. "
             "Values must be numbers. This entity will be skipped."
@@ -399,10 +588,6 @@ def _create_number_entity_if_valid(
         native_step=ha_native_step_val,
         mode=NumberMode.BOX,
     )
-    _LOGGER.debug(
-        f"Preparing HDG number entity for translation_key: {translation_key} "
-        f"(HDG Node for API set: {raw_hdg_node_id}, SENSOR_DEF Node ID: {hdg_node_id_with_suffix})"
-    )
     return HdgBoilerNumber(coordinator, api_client, description, entity_def)
 
 
@@ -414,18 +599,18 @@ async def async_setup_entry(
     """
     Set up HDG Bavaria Boiler number entities from a config entry.
 
-    Iterates through SENSOR_DEFINITIONS, creating number entities for those
-    defined with `ha_platform: "number"` and having valid setter parameters.
+    This function is called by Home Assistant during the setup of the integration.
+    It iterates through `SENSOR_DEFINITIONS`, identifies entities configured for
+    the 'number' platform, validates their definitions, and creates
+    `HdgBoilerNumber` instances for them.
     """
     integration_data = hass.data[DOMAIN][entry.entry_id]
     coordinator: HdgDataUpdateCoordinator = integration_data["coordinator"]
     api_client: HdgApiClient = integration_data["api_client"]
-
     number_entities: list[HdgBoilerNumber] = []
 
     for translation_key, entity_definition_dict in SENSOR_DEFINITIONS.items():
         entity_def = cast(SensorDefinition, entity_definition_dict)
-
         if entity_def.get("ha_platform") == "number":
             if entity := _create_number_entity_if_valid(
                 translation_key, entity_def, coordinator, api_client
@@ -434,9 +619,4 @@ async def async_setup_entry(
 
     if number_entities:
         async_add_entities(number_entities)
-        _LOGGER.info(f"Added {len(number_entities)} HDG Bavaria number entities.")
-    else:
-        _LOGGER.info(
-            "No number entities to add. Check SENSOR_DEFINITIONS for 'number' platform entities "
-            "with valid setter parameters."
-        )
+    _LOGGER.info(f"Added {len(number_entities)} HDG number entities.")  # Keep as info
