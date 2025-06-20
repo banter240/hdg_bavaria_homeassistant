@@ -27,9 +27,10 @@ ignore_missing_imports = true
 
 # --- Configuration for python-semantic-release ---
 [tool.semantic_release]
-# version_source = "poetry" # This was the old setting, likely causing issues with version_toml
-version_source = "toml" # Explicitly set to toml if you want to use version_toml
-version_toml = ["pyproject.toml:tool.poetry.version"] # Corrected: expects a list of strings
+# version_source = "poetry"
+version_source = "toml"
+version_toml = ["pyproject.toml:tool.poetry.version"]
+remote.token = "GITHUB_TOKEN"
 
 [tool.semantic_release.branches.release-test]
 match = "release-test"
