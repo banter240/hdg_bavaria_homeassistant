@@ -1,5 +1,4 @@
-"""
-Processor for handling and parsing API responses for the HDG Bavaria Boiler.
+"""Processor for handling and parsing API responses for the HDG Bavaria Boiler.
 
 This class encapsulates the logic for validating, transforming, and storing raw
 API response data. It works in conjunction with the `HdgDataUpdateCoordinator`
@@ -29,12 +28,12 @@ class HdgPollingResponseProcessor:
     """Processes raw API polling responses."""
 
     def __init__(self, coordinator: HdgDataUpdateCoordinator) -> None:
-        """
-        Initialize the HdgPollingResponseProcessor.
+        """Initialize the HdgPollingResponseProcessor.
 
         Args:
             coordinator: The HdgDataUpdateCoordinator instance, used to access
                          shared data like `self.data` and `self._last_set_times`.
+
         """
         self._coordinator = coordinator
         _LOGGER.debug("HdgPollingResponseProcessor initialized.")
@@ -42,9 +41,7 @@ class HdgPollingResponseProcessor:
     def _validate_and_extract_api_item_fields(
         self, item: dict[str, Any], group_key: str
     ) -> tuple[str | None, str | None]:
-        """
-        Validate and extract 'id' and 'text' fields from a single API item dictionary.
-        """
+        """Validate and extract 'id' and 'text' fields from a single API item dictionary."""
         api_id_value = item.get("id")
         node_id_with_suffix: str | None = None
 
@@ -81,9 +78,7 @@ class HdgPollingResponseProcessor:
     def _should_ignore_polled_item(
         self, node_id_clean: str, item_text_value: str, group_key_for_log: str
     ) -> bool:
-        """
-        Determine if a polled API item should be ignored due to a recent set operation.
-        """
+        """Determine if a polled API item should be ignored due to a recent set operation."""
         last_set_time_for_node = self._coordinator._last_set_times.get(
             node_id_clean, 0.0
         )
@@ -125,9 +120,7 @@ class HdgPollingResponseProcessor:
         raw_ids_seen: set[str],
         cleaned_node_ids_processed: set[str],
     ) -> dict[str, Any] | None:
-        """
-        Process a single item from the API response list.
-        """
+        """Process a single item from the API response list."""
         node_id_with_suffix, item_text_value = (
             self._validate_and_extract_api_item_fields(item, group_key)
         )
@@ -168,9 +161,7 @@ class HdgPollingResponseProcessor:
         group_key: str,
         api_items: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        """
-        Parse, validate, and store API items from a polling group response.
-        """
+        """Parse, validate, and store API items from a polling group response."""
         successfully_processed_items: list[dict[str, Any]] = []
         raw_ids_seen_in_this_call: set[str] = set()
         cleaned_node_ids_processed_this_call: set[str] = set()

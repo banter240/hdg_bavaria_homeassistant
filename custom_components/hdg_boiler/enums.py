@@ -1,5 +1,4 @@
-"""
-Enumeration mappings for the HDG Bavaria Boiler integration.
+"""Enumeration mappings for the HDG Bavaria Boiler integration.
 
 This module defines mappings for HDG API enumeration values to human-readable text
 (German and English). These mappings are crucial for interpreting and displaying

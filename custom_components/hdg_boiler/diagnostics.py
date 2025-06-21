@@ -1,5 +1,4 @@
-"""
-Provides diagnostic support for the HDG Bavaria Boiler integration.
+"""Provides diagnostic support for the HDG Bavaria Boiler integration.
 
 This module includes functions to gather comprehensive diagnostic information,
 such as configuration details, coordinator status, API client information,
@@ -37,8 +36,7 @@ _LOGGER = logging.getLogger(DOMAIN)
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
-    """
-    Asynchronously generate and return diagnostics data for a config entry.
+    """Asynchronously generate and return diagnostics data for a config entry.
 
     Args:
         hass: The Home Assistant instance.
@@ -47,6 +45,7 @@ async def async_get_config_entry_diagnostics(
     Returns:
         A dictionary containing the diagnostics data. If essential integration
         data is missing, an error dictionary is returned instead.
+
     """
     integration_data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
     if not integration_data:
@@ -101,6 +100,7 @@ def _get_redacted_unique_id(
 
     Returns:
         The unique ID string with sensitive parts replaced by the placeholder.
+
     """
     if not unique_id or not sensitive_raw_value:
         return unique_id or ""
@@ -148,14 +148,14 @@ def _get_redacted_unique_id(
 
 
 def _get_redacted_config_entry_info(entry: ConfigEntry) -> dict[str, Any]:
-    """
-    Prepare redacted configuration entry information for diagnostics.
+    """Prepare redacted configuration entry information for diagnostics.
 
     Args:
         entry: The ConfigEntry object.
 
     Returns:
         A dictionary containing redacted configuration entry information.
+
     """
     sensitive_host_ip = entry.data.get(CONF_HOST_IP)
 
@@ -177,8 +177,7 @@ def _get_redacted_config_entry_info(entry: ConfigEntry) -> dict[str, Any]:
 def _get_coordinator_diagnostics(
     coordinator: HdgDataUpdateCoordinator | None,
 ) -> dict[str, Any] | str:
-    """
-    Gather diagnostic information about the DataUpdateCoordinator.
+    """Gather diagnostic information about the DataUpdateCoordinator.
 
     Args:
         coordinator: The HdgDataUpdateCoordinator instance. Can be None if not initialized.
@@ -186,6 +185,7 @@ def _get_coordinator_diagnostics(
     Returns:
         A dictionary with coordinator diagnostics, or a string message if the
         coordinator is not found or not initialized.
+
     """
     if coordinator:
         coordinator_diag: dict[str, Any] = {  # type: ignore[attr-defined]
@@ -219,7 +219,7 @@ def _get_coordinator_diagnostics(
 
 
 def _is_ip_address_for_redaction(host_to_check: str) -> bool:
-    """Helper to check if a host string is an IP address."""
+    """Check if a host string is an IP address."""
     try:
         ipaddress.ip_address(host_to_check)
         return True
@@ -230,8 +230,7 @@ def _is_ip_address_for_redaction(host_to_check: str) -> bool:
 def _build_redacted_netloc(
     parsed_url: ParseResult, sensitive_host_ip: str | None
 ) -> str:
-    """
-    Build the redacted network location (netloc) string.
+    """Build the redacted network location (netloc) string.
 
     Handles redaction of userinfo (username:password), host/IP, and port.
 
@@ -241,6 +240,7 @@ def _build_redacted_netloc(
 
     Returns:
         The redacted netloc string.
+
     """
     netloc_parts = []
     # Redact userinfo (username:password@)
@@ -270,8 +270,7 @@ def _build_redacted_netloc(
 def _redact_api_client_base_url(
     api_client: HdgApiClient, sensitive_host_ip: str | None
 ) -> str:
-    """
-    Redact sensitive parts (host IP or general IP addresses) from the API client's base URL.
+    """Redact sensitive parts (host IP or general IP addresses) from the API client's base URL.
 
     Args:
         api_client: The HdgApiClient instance.
@@ -279,6 +278,7 @@ def _redact_api_client_base_url(
 
     Returns:
         The redacted base URL string, or "Unknown" if the base URL cannot be determined.
+
     """
     if not (base_url := getattr(api_client, "base_url", None)):
         return "Unknown"
@@ -317,15 +317,16 @@ def _redact_api_client_base_url(
 def _get_api_client_diagnostics(
     api_client: HdgApiClient | None, sensitive_host_ip: str | None
 ) -> dict[str, Any]:
-    """
-    Gather diagnostic information about the HdgApiClient.
+    """Gather diagnostic information about the HdgApiClient.
 
     Args:
         api_client: The HdgApiClient instance. Can be None if not initialized.
         sensitive_host_ip: The specific host IP or hostname to redact from the base URL.
+
     Returns:
         A dictionary containing API client diagnostics (the redacted base URL),
         or an error message if the API client is not found.
+
     """
     if not api_client:
         return {"error": "API Client not found or not initialized."}
@@ -336,8 +337,7 @@ def _get_api_client_diagnostics(
 async def _get_entity_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> list[dict[str, Any]]:
-    """
-    Retrieve information about entities associated with this config entry.
+    """Retrieve information about entities associated with this config entry.
 
     Args:
         hass: The Home Assistant instance.
@@ -346,6 +346,7 @@ async def _get_entity_diagnostics(
     Returns:
         A list of dictionaries, where each dictionary represents an entity
         and contains its diagnostic information.
+
     """
     entity_registry = er.async_get(hass)
     entities = er.async_entries_for_config_entry(entity_registry, entry.entry_id)

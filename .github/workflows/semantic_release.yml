@@ -1,0 +1,61 @@
+# .github/workflows/semantic_release.yml
+#
+# Main release workflow for the HDG Boiler project. This workflow orchestrates
+# quality checks and the automated release process using semantic-release.
+
+name: "CI & Release"
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'dev'
+      - 'release-test' # <-- HIER HINZUGEFÜGT
+
+jobs:
+  # -- Prerequisite Job: Linting --
+  linting:
+    name: "Run Linter"
+    uses: ./.github/workflows/lint.yml
+
+  # -- Prerequisite Job: Validation --
+  validation:
+    name: "Run Validation"
+    uses: ./.github/workflows/validate.yml
+
+  # -- Main Release Job --
+  # This job runs only after linting and validation succeed.
+  semantic_release:
+    name: "Create Semantic Release"
+    needs: [linting, validation]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: "Checkout full repository history"
+        uses: "actions/checkout@v4"
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: "Setup Node.js environment"
+        uses: "actions/setup-node@v4"
+        with:
+          node-version: "20"
+
+      - name: "Install semantic-release and required plugins"
+        run: npm install --save-dev semantic-release @semantic-release/changelog @semantic-release/exec @semantic-release/git @semantic-release/github conventional-changelog-conventionalcommits
+
+      - name: "Execute Semantic Release"
+        id: semantic
+        run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: "Output release information"
+        run: |
+          echo "New release version: ${{ steps.semantic.outputs.new_release_version }}"
+          echo "New release notes: ${{ steps.semantic.outputs.new_release_notes }}"

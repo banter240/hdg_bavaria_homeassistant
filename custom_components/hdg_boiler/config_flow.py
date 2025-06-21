@@ -1,6 +1,4 @@
-"""
-Configuration flow for the HDG Bavaria Boiler integration.
-"""
+"""Configuration flow for the HDG Bavaria Boiler integration."""
 
 from __future__ import annotations
 
@@ -39,6 +37,7 @@ from .const import (
 )
 from .helpers.network_utils import async_execute_icmp_ping
 
+
 _LOGGER = logging.getLogger(DOMAIN)
 
 
@@ -56,9 +55,7 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow):
     def _create_options_schema(
         self, options: config_entries.Mapping[str, Any] | None = None
     ) -> vol.Schema:
-        """
-        Generate the schema for the options flow.
-        """
+        """Generate the schema for the options flow."""
         current_options = options or {}
         options_schema_dict: dict[Marker, Any] = {}
 
@@ -114,9 +111,7 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow):
     async def validate_host_connectivity(
         self, hass: core.HomeAssistant, host_ip: str
     ) -> bool:
-        """
-        Validate connectivity to the HDG boiler.
-        """
+        """Validate connectivity to the HDG boiler."""
 
         # Step 1: Perform an ICMP Ping to check basic host reachability.
         # This requires extracting the hostname from the provided host_ip.
@@ -271,8 +266,8 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
     def _get_options_schema(self) -> vol.Schema:
-        """
-        Helper to get the options schema.
+        """Get the options schema.
+
         This creates a temporary instance of the main config flow to reuse its schema creation logic.
         This is a workaround; a more robust solution might involve static methods or duplicated logic.
         """
@@ -281,8 +276,8 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
         return flow_instance._create_options_schema(self.config_entry.options)
 
     def _get_options_description_placeholders(self) -> dict[str, str]:
-        """
-        Helper to get description placeholders for the options form.
+        """Get description placeholders for the options form.
+
         Similar to _get_options_schema, it reuses logic from the main config flow.
         """
         flow_instance = HdgBoilerConfigFlow()

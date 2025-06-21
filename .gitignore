@@ -169,3 +169,6 @@ hdg_boiler.zip
 
 # prettier config
 .prettierrc.json
+
+# Temporary files
+.old/*

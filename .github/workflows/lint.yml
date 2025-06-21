@@ -1,0 +1,34 @@
+# .github/workflows/lint.yml
+#
+# Reusable GitHub Actions workflow for linting Python code.
+# This workflow can be called by other workflows to ensure code quality.
+
+name: "Lint"
+
+on:
+  # This makes the workflow reusable and callable from other workflows.
+  workflow_call:
+
+jobs:
+  lint:
+    name: "Ruff Linter"
+    runs-on: "ubuntu-latest"
+    steps:
+      # Step 1: Check out the repository's code.
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v4"
+
+      # Step 2: Set up the specified Python version.
+      - name: "Set up Python"
+        uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      # Step 3: Install dependencies listed in requirements.txt.
+      - name: "Install requirements"
+        run: python3 -m pip install -r requirements.txt
+
+      # Step 4: Run the Ruff linter on all files.
+      - name: "Run Ruff"
+        run: python3 -m ruff check .

@@ -28,8 +28,7 @@ _LOGGER = logging.getLogger(DOMAIN)
 
 
 def validate_service_call_input(call: ServiceCall) -> tuple[str, Any]:
-    """
-    Validate and extract node_id and value from the service call.
+    """Validate and extract node_id and value from the service call.
 
     This function ensures that the service call data contains the necessary
     `node_id` and `value` attributes for the `set_node_value` service.
@@ -50,8 +49,7 @@ def validate_service_call_input(call: ServiceCall) -> tuple[str, Any]:
 
 
 def validate_get_node_service_call(call: ServiceCall) -> str:
-    """
-    Validate and extract node_id from the get_node_value service call.
+    """Validate and extract node_id from the get_node_value service call.
 
     This function ensures that the service call data for the `get_node_value`
     service contains the required `node_id` attribute. It raises a
@@ -69,8 +67,7 @@ def validate_get_node_service_call(call: ServiceCall) -> str:
 def safe_float_convert(
     val_to_convert: Any, val_name: str, entity_name_for_log: str | None = None
 ) -> tuple[bool, float | None, str]:
-    """
-    Safely convert a value to a float, providing detailed error information.
+    """Safely convert a value to a float, providing detailed error information.
 
     This function attempts to convert the given `val_to_convert` to a float.
     It's designed to be used when validating configuration values (like min/max/step
@@ -81,6 +78,7 @@ def safe_float_convert(
         `success_flag` is True if conversion was successful, False otherwise.
         `error_message_string` contains a descriptive error if conversion failed.
     Safely convert a value to float.
+
     """
     log_prefix = f"Entity '{entity_name_for_log}': " if entity_name_for_log else ""
     if val_to_convert is None:
@@ -102,8 +100,7 @@ def safe_float_convert(
 def coerce_value_to_numeric_type(
     value_to_set: Any, node_type: str | None, entity_name_for_log: str
 ) -> int | float:
-    """
-    Coerce input value to the target numeric type (int or float) based on setter_type.
+    """Coerce input value to the target numeric type (int or float) based on setter_type.
 
     Args:
         value_to_set: The raw value provided in the service call.
@@ -115,6 +112,7 @@ def coerce_value_to_numeric_type(
 
     Raises:
         ServiceValidationError: If the value cannot be coerced to the expected type.
+
     """
     try:
         if node_type == "int":
@@ -149,8 +147,7 @@ def _perform_decimal_step_validation(
     original_value_to_set_for_log: Any,
     node_step_def_for_log: Any,
 ) -> None:
-    """
-    Perform step validation using Decimal objects for precision.
+    """Perform step validation using Decimal objects for precision.
 
     Args:
         val_decimal: The value to validate, as a Decimal.
@@ -163,6 +160,7 @@ def _perform_decimal_step_validation(
 
     Raises:
         ServiceValidationError: If the value does not align with the step from the minimum.
+
     """
     if step_decimal < Decimal(0):
         _LOGGER.critical(  # Critical configuration error
@@ -205,8 +203,7 @@ def validate_value_range_and_step(
     node_id_str_for_log: str,
     original_value_to_set_for_log: Any,
 ) -> None:
-    """
-    Validate the numeric value against configured min, max, and step.
+    """Validate the numeric value against configured min, max, and step.
 
     Args:
         coerced_numeric_value: The numeric value after type coercion.
@@ -219,6 +216,7 @@ def validate_value_range_and_step(
 
     Raises:
         ServiceValidationError: If the value is outside the range or does not match the step.
+
     """
     is_valid_for_range = True
     error_message = ""

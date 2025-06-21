@@ -1,5 +1,4 @@
-"""
-API client for interacting with the HDG Bavaria Boiler web interface.
+"""API client for interacting with the HDG Bavaria Boiler web interface.
 
 This module provides the `HdgApiClient` class, which facilitates HTTP
 communication with the HDG Bavaria boiler's web API. It is responsible for
@@ -34,8 +33,7 @@ _LOGGER = logging.getLogger(DOMAIN)
 
 
 class HdgApiClient:
-    """
-    Client to interact with the HDG Boiler API.
+    """Client to interact with the HDG Boiler API.
 
     Handles HTTP communication, request formatting, response parsing, and error
     management for fetching data from and setting values on the HDG boiler. It
@@ -43,8 +41,7 @@ class HdgApiClient:
     """
 
     def __init__(self, session: aiohttp.ClientSession, host_address: str) -> None:
-        """
-        Initialize the API client.
+        """Initialize the API client.
 
         Args:
             session: An `aiohttp.ClientSession` instance for making HTTP requests.
@@ -54,6 +51,7 @@ class HdgApiClient:
 
         Raises:
             HdgApiError: If the `host_address` is invalid (e.g., results in an empty netloc).
+
         """
         self._session = session
         # Ensure host_address is not empty or just whitespace.
@@ -105,11 +103,11 @@ class HdgApiClient:
         return self._base_url
 
     async def async_pre_check_host_reachability(self) -> bool:
-        """
-        Perform a pre-check to see if the host is reachable via ICMP ping.
+        """Perform a pre-check to see if the host is reachable via ICMP ping.
 
         Returns:
             True if the host is reachable, False otherwise.
+
         """
         parsed_url = urlparse(self._base_url)
         host_to_ping = parsed_url.hostname
@@ -124,8 +122,7 @@ class HdgApiClient:
     async def _async_handle_data_refresh_response(
         self, response: aiohttp.ClientResponse, node_payload_str: str
     ) -> list[dict[str, Any]]:
-        """
-        Handle and parse the response from the dataRefresh API endpoint.
+        """Handle and parse the response from the dataRefresh API endpoint.
 
         Args:
             response: The aiohttp.ClientResponse object.
@@ -138,6 +135,7 @@ class HdgApiClient:
             HdgApiResponseError: If the response is malformed, has an unexpected
                                  status code, or an unexpected content type.
             aiohttp.ClientResponseError: If response.raise_for_status() detects an HTTP error.
+
         """  # noqa: D402
         # Ensure the response status indicates success.
         response.raise_for_status()
@@ -236,8 +234,8 @@ class HdgApiClient:
         return valid_items
 
     async def async_get_nodes_data(self, node_payload_str: str) -> list[dict[str, Any]]:
-        """
-        Fetch data for a specified set of nodes from the HDG boiler.
+        """Fetch data for a specified set of nodes from the HDG boiler.
+
         Includes a pre-check using ICMP ping.
 
         Args:
@@ -249,6 +247,7 @@ class HdgApiClient:
         Raises:
             HdgApiConnectionError: If the ICMP pre-check fails or a connection error occurs.
             HdgApiError: For other API-related errors.
+
         """
         if not await self.async_pre_check_host_reachability():
             _LOGGER.warning(
@@ -263,13 +262,15 @@ class HdgApiClient:
         )
         headers = {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"}
         try:
-            async with async_timeout.timeout(API_TIMEOUT):
-                async with self._session.post(  # type: ignore[attr-defined] # `post` is a valid method on ClientSession
+            async with (
+                async_timeout.timeout(API_TIMEOUT),
+                self._session.post(
                     self._url_data_refresh, data=node_payload_str, headers=headers
-                ) as response:
-                    return await self._async_handle_data_refresh_response(
-                        response, node_payload_str
-                    )
+                ) as response,
+            ):
+                return await self._async_handle_data_refresh_response(
+                    response, node_payload_str
+                )
         except asyncio.TimeoutError as err:  # noqa: UP041
             _LOGGER.error(
                 f"Timeout connecting to HDG API at {self._url_data_refresh} for dataRefresh (payload: {node_payload_str}): {err}"
@@ -295,8 +296,8 @@ class HdgApiClient:
             ) from err  # Ensure HdgApiError is raised
 
     async def async_set_node_value(self, node_id: str, value: str) -> bool:
-        """
-        Set a specific node value on the HDG boiler.
+        """Set a specific node value on the HDG boiler.
+
         Includes a pre-check using HTTP HEAD.
 
         Args:
@@ -310,6 +311,7 @@ class HdgApiClient:
             HdgApiConnectionError: If the HTTP pre-check fails or a connection error occurs.
             HdgApiResponseError: If the API returns an error status for the set operation.
             HdgApiError: For other API-related errors.
+
         """
         if not await self.async_pre_check_host_reachability():
             _LOGGER.warning(
@@ -330,21 +332,23 @@ class HdgApiClient:
             f"Setting node '{node_id}' to '{value}' via GET: {url_with_params}"
         )
         try:
-            async with async_timeout.timeout(API_TIMEOUT):
-                async with self._session.get(url_with_params) as response:  # type: ignore[attr-defined] # `get` is a valid method
-                    response_text = await response.text()
-                    if response.status == 200:
-                        _LOGGER.debug(
-                            f"Successfully set node '{node_id}' to '{value}'. Response status: {response.status}, Text: {response_text[:100]}"
-                        )
-                        return True
-                    else:
-                        _LOGGER.error(
-                            f"Failed to set HDG node '{node_id}'. Status: {response.status}. Response: {response_text[:200]}"
-                        )
-                        raise HdgApiResponseError(
-                            f"Failed to set node {node_id}. Status: {response.status}, Response: {response_text[:100]}"
-                        )
+            async with (
+                async_timeout.timeout(API_TIMEOUT),
+                self._session.get(url_with_params) as response,
+            ):
+                response_text = await response.text()
+                if response.status == 200:
+                    _LOGGER.debug(
+                        f"Successfully set node '{node_id}' to '{value}'. Response status: {response.status}, Text: {response_text[:100]}"
+                    )
+                    return True
+                else:
+                    _LOGGER.error(
+                        f"Failed to set HDG node '{node_id}'. Status: {response.status}. Response: {response_text[:200]}"
+                    )
+                    raise HdgApiResponseError(
+                        f"Failed to set node {node_id}. Status: {response.status}, Response: {response_text[:100]}"
+                    )
         except asyncio.TimeoutError as err:  # noqa: UP041
             _LOGGER.error(
                 f"Timeout connecting to HDG API at {url_with_params} for set_node_value: {err}"
@@ -368,13 +372,14 @@ class HdgApiClient:
             raise HdgApiError(f"Unexpected error during set_node_value: {err}") from err
 
     async def async_check_connectivity(self) -> bool:
-        """
-        Perform a basic connectivity test to the HDG boiler API.
+        """Perform a basic connectivity test to the HDG boiler API.
+
         Uses an ICMP ping to the host.
 
         Returns:
             True if the boiler's host is reachable via ICMP ping,
             False otherwise.
+
         """
         _LOGGER.debug(
             f"Performing connectivity test (ICMP ping) to host of {self._base_url}"

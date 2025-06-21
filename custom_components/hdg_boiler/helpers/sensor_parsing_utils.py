@@ -1,5 +1,4 @@
-"""
-Sensor value parsing utility functions for the HDG Bavaria Boiler integration.
+"""Sensor value parsing utility functions for the HDG Bavaria Boiler integration.
 
 This module offers utility functions to parse raw string values received from
 the HDG API into appropriate Python data types suitable for Home Assistant
@@ -58,8 +57,7 @@ def parse_datetime_value(
     node_id_for_log: str | None = None,
     entity_id_for_log: str | None = None,
 ) -> datetime | str | None:
-    """
-    Parse a string value that represents a datetime or special text.
+    """Parse a string value that represents a datetime or special text.
 
     Handles HDG's specific "größer 7 tage" text and standard datetime formats.
     Converts naive datetimes to UTC using the provided source timezone.
@@ -96,8 +94,7 @@ def parse_as_float_type(
     node_id_for_log: str | None = None,
     entity_id_for_log: str | None = None,
 ) -> float | int | None:
-    """
-    Parse a string value as a float, with specific handling for certain formatters.
+    """Parse a string value as a float, with specific handling for certain formatters.
 
     Some HDG formatters imply integer representation despite being numeric (e.g., "iKWH").
     This function attempts to return an int if the float value is whole for such cases.
@@ -132,8 +129,7 @@ def parse_sensor_value(
     entity_id_for_log: str | None = None,
     configured_timezone: str = DEFAULT_SOURCE_TIMEZONE,
 ) -> Any | None:
-    """
-    Parse the raw string value from the API into the appropriate type for the sensor state.
+    """Parse the raw string value from the API into the appropriate type for the sensor state.
 
     This function acts as a dispatcher based on 'parse_as_type' and 'hdg_data_type'
     defined in the entity_definition. It handles various parsing strategies,

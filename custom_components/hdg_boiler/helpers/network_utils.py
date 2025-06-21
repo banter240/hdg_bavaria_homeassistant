@@ -1,5 +1,4 @@
-"""
-Network and URL related utility functions for the HDG Bavaria Boiler integration.
+"""Network and URL related utility functions for the HDG Bavaria Boiler integration.
 
 This module provides helpers for normalizing IPv4 host addresses and for preparing
 a full base URL from user-provided host input, ensuring correct
@@ -24,9 +23,9 @@ _LOGGER = logging.getLogger(DOMAIN)
 
 
 def normalize_host_for_scheme(host_address: str) -> str:
-    """
-    Normalize an IPv4 host address string. Uses `urllib.parse.urlparse` to handle
-    IPv4 addresses and optional port numbers.
+    """Normalize an IPv4 host address string.
+
+    Uses `urllib.parse.urlparse` to handle IPv4 addresses and optional port numbers.
 
     The input 'host_address' is assumed to be already stripped of leading/trailing
     whitespace and to not include an explicit scheme (e.g., "http://").
@@ -38,9 +37,11 @@ def normalize_host_for_scheme(host_address: str) -> str:
     Returns:
         The normalized host string (e.g., "192.168.1.100", "example.com:8080").
         The scheme (e.g., "http://") is NOT included in the return value.
+
     Raises:
         ValueError: If the host address is invalid or cannot be parsed into a valid
         hostname.
+
     """
     if not host_address:
         raise ValueError("Host address cannot be empty.")
@@ -59,8 +60,8 @@ def normalize_host_for_scheme(host_address: str) -> str:
 
 
 def prepare_base_url(host_input_original_raw: str) -> str | None:
-    """
-    Prepare and validate the base URL from the host input.
+    """Prepare and validate the base URL from the host input.
+
     Handles scheme prepending (defaults to "http" if none provided).
     Relies on `normalize_host_for_scheme` for host part processing.
     Args:
@@ -68,6 +69,7 @@ def prepare_base_url(host_input_original_raw: str) -> str | None:
 
     Returns: The prepared base URL string (e.g., "http://192.168.1.100"),
              or None if the input is invalid or cannot be processed.
+
     """
     host_input_original = host_input_original_raw.strip()
     host_to_process = host_input_original
@@ -108,8 +110,7 @@ def prepare_base_url(host_input_original_raw: str) -> str | None:
 
 
 async def async_execute_icmp_ping(host_to_ping: str, timeout_seconds: int = 2) -> bool:
-    """
-    Perform an ICMP ping to check host reachability using the OS 'ping' command.
+    """Perform an ICMP ping to check host reachability using the OS 'ping' command.
 
     Args:
         host_to_ping: The hostname or IP address to ping.
@@ -117,6 +118,7 @@ async def async_execute_icmp_ping(host_to_ping: str, timeout_seconds: int = 2) -
 
     Returns:
         True if the host is reachable via ICMP ping, False otherwise.
+
     """
     if not host_to_ping:
         _LOGGER.warning("ICMP Ping: host_to_ping was empty or None.")

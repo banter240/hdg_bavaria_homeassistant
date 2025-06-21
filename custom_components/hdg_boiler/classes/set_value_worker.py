@@ -1,5 +1,4 @@
-"""
-Manages asynchronous 'set value' API calls for the HDG Bavaria Boiler.
+"""Manages asynchronous 'set value' API calls for the HDG Bavaria Boiler.
 
 This worker class runs as a background task, processing a queue of node value
 changes. It implements retry logic with exponential backoff for transient errors,
@@ -37,8 +36,7 @@ _LOGGER = logging.getLogger(DOMAIN)
 
 
 class HdgSetValueWorker:
-    """
-    Manages the queue, execution, and retry logic for 'set value' API calls.
+    """Manages the queue, execution, and retry logic for 'set value' API calls.
 
     This worker runs as a background task, processing a queue of node value
     changes. It uses an API lock shared with the HdgDataUpdateCoordinator to
@@ -54,13 +52,13 @@ class HdgSetValueWorker:
         api_client: HdgApiClient,
         api_lock: asyncio.Lock,
     ) -> None:
-        """
-        Initialize the HdgSetValueWorker.
+        """Initialize the HdgSetValueWorker.
 
         Args:
             coordinator: The data update coordinator instance.
             api_client: The API client for communicating with the HDG boiler.
             api_lock: A shared asyncio.Lock to synchronize API access with the coordinator.
+
         """
         self._coordinator = coordinator
         self._api_client = api_client
@@ -85,8 +83,7 @@ class HdgSetValueWorker:
         _LOGGER.debug("HdgSetValueWorker initialized.")
 
     async def _wait_for_work_or_retry(self) -> None:
-        """
-        Wait until a new item is queued or the next scheduled retry is due.
+        """Wait until a new item is queued or the next scheduled retry is due.
 
         This method suspends execution until either a new 'set value' request
         is added to the queue or the timeout for the next scheduled retry is reached.
@@ -123,8 +120,7 @@ class HdgSetValueWorker:
                 )
 
     def _calculate_wait_timeout(self) -> float | None:
-        """
-        Calculate the timeout for the worker's main loop.
+        """Calculate the timeout for the worker's main loop.
 
         The timeout is determined by the earliest `next_attempt_time` among
         all items currently in the retry state. If no items are in retry state,
@@ -150,8 +146,7 @@ class HdgSetValueWorker:
         return max(0, earliest_retry_time - time.monotonic())
 
     async def _collect_items_to_process(self) -> dict[str, tuple[str, str]]:
-        """
-        Collect items from the pending queue that are due for processing.
+        """Collect items from the pending queue that are due for processing.
 
         An item is due if it's new (retry_count == 0) or its next_attempt_time
         has been reached. Items collected are removed from the main pending queue.
@@ -159,6 +154,7 @@ class HdgSetValueWorker:
         Returns:
             A dictionary containing the collected items, where keys are node IDs
             and values are tuples of (value_str, entity_name). The dictionary may be empty if no items are due.
+
         """
         items_to_process_now: dict[str, tuple[str, str]] = {}
         current_monotonic_time = time.monotonic()
@@ -191,8 +187,7 @@ class HdgSetValueWorker:
     async def _handle_successful_set_operation(
         self, node_id: str, value_str: str, entity_name: str
     ) -> None:
-        """
-        Handle a successful API 'set value' operation.
+        """Handle a successful API 'set value' operation.
 
         This method is called after the API client confirms a successful write.
         It updates the coordinator's internal data store with the new value,
@@ -203,6 +198,7 @@ class HdgSetValueWorker:
             node_id: The ID of the node that was successfully set.
             value_str: The string value that was set.
             entity_name: The name of the entity associated with the node, for logging.
+
         """
         log_prefix = make_log_prefix(node_id, entity_name)
         if self._coordinator.enable_debug_logging:
@@ -217,8 +213,7 @@ class HdgSetValueWorker:
     async def _ensure_boiler_online(
         self, node_id: str, value_str: str, entity_name: str
     ) -> bool:
-        """
-        Check if the boiler is considered online by the coordinator.
+        """Check if the boiler is considered online by the coordinator.
 
         If the boiler is offline, this method re-queues the item for later processing
         (when the boiler comes back online) and returns False. If the boiler is online,
@@ -231,6 +226,7 @@ class HdgSetValueWorker:
 
         Returns:
             True if the boiler is online, False if the item was re-queued due to boiler being offline.
+
         """
         if not self._coordinator.boiler_is_online:
             log_prefix = make_log_prefix(node_id, entity_name)
@@ -250,8 +246,7 @@ class HdgSetValueWorker:
     async def _check_for_newer_pending_value(
         self, node_id: str, value_str: str, entity_name: str
     ) -> bool:
-        """
-        Check if a newer value for the same node is already pending in the queue.
+        """Check if a newer value for the same node is already pending in the queue.
 
         This prevents processing an older, stale request if the user has quickly
         submitted a new value for the same node.
@@ -260,8 +255,10 @@ class HdgSetValueWorker:
             node_id: The ID of the node being processed.
             value_str: The value string of the current item.
             entity_name: The entity name for logging.
+
         Returns:
             True if a newer value is pending (and this item should be skipped), False otherwise.
+
         """
         async with self._pending_set_values_lock:
             latest_pending_data = self._pending_set_values.get(node_id)
@@ -279,8 +276,7 @@ class HdgSetValueWorker:
     async def _acquire_lock_and_set_value(
         self, node_id: str, value_str: str, entity_name: str
     ) -> bool:
-        """
-        Acquire the API lock, check against coordinator cache, and make the API call.
+        """Acquire the API lock, check against coordinator cache, and make the API call.
 
         This method first acquires the shared API lock. It then checks if the value
         to be set already matches the value in the coordinator's data cache. If so,
@@ -291,11 +287,14 @@ class HdgSetValueWorker:
             node_id: The ID of the node to set.
             value_str: The string value to set.
             entity_name: The entity name for logging.
+
         Returns:
             True if the API call was made and reported success, False if the API call was
             skipped because the value already matched the cache.
+
         Raises:
             HdgApiError (and subtypes): If the API call itself fails.
+
         """
         log_prefix = make_log_prefix(node_id, entity_name)
         async with self._api_lock:  # Use the shared API lock from coordinator.
@@ -326,15 +325,14 @@ class HdgSetValueWorker:
     async def _handle_failed_set_operation(
         self, node_id: str, value_str: str, entity_name: str, api_err: Exception
     ) -> None:
-        """
-        Handles a failed API set operation, including retries.
+        """Handle a failed API set operation, including retries.
 
         This method is invoked when an API call to set a node value fails.
         It increments the retry count, calculates an exponential backoff delay,
         and re-queues the item for a later attempt, unless the maximum number
         of retries has been exceeded. It differentiates handling for connection errors,
-        which are retried more persistently (effectively indefinitely as long as the
-        boiler is offline), versus other API errors which have a fixed maximum retry count.
+        which are retried more persistently, versus other API errors which have a
+        fixed maximum retry count.
         The item is re-queued in `_pending_set_values` and its `_retry_state` is updated.
 
         Args:
@@ -342,6 +340,7 @@ class HdgSetValueWorker:
             value_str: The value string that was attempted.
             entity_name: The entity name for logging.
             api_err: The exception that occurred during the API call.
+
         """
         log_prefix = make_log_prefix(node_id, entity_name)
         retry_count, _ = self._retry_state.get(node_id, (0, 0.0))
@@ -413,8 +412,7 @@ class HdgSetValueWorker:
     async def _process_single_item(
         self, node_id: str, value_str: str, entity_name: str
     ) -> None:
-        """
-        Process a single 'set value' item.
+        """Process a single 'set value' item.
 
         This method orchestrates the processing of an individual item:
         1. Ensures the boiler is online.
@@ -426,6 +424,7 @@ class HdgSetValueWorker:
             node_id: The ID of the node to process.
             value_str: The value string for the item.
             entity_name: The entity name for logging.
+
         """
         # value_str and entity_name are passed from the items_to_process_now dictionary
         log_prefix_item = make_log_prefix(node_id, entity_name)
@@ -466,8 +465,7 @@ class HdgSetValueWorker:
     async def _process_collected_items(
         self, items_to_process: dict[str, tuple[str, str]]
     ) -> None:
-        """
-        Iterate through and process a batch of collected items.
+        """Iterate through and process a batch of collected items.
 
         For each item in the provided dictionary, this method attempts to process it
         using `_process_single_item`. It includes an item-level try-except block
@@ -476,6 +474,7 @@ class HdgSetValueWorker:
 
         Args:
             items_to_process: A dictionary of items to process in this batch.
+
         """
         if not items_to_process:
             if self._coordinator.enable_debug_logging:
@@ -516,8 +515,7 @@ class HdgSetValueWorker:
                 )
 
     async def run(self) -> None:
-        """
-        Main run loop for the set value worker task.
+        """Run the main loop for the set value worker task.
 
         This loop continuously executes processing cycles. Each cycle involves
         waiting for the boiler to be online (if necessary), waiting for new tasks
@@ -559,8 +557,7 @@ class HdgSetValueWorker:
     async def async_queue_set_value(
         self, node_id: str, new_value_str_for_api: str, entity_name_for_log: str
     ) -> None:
-        """
-        Queue a 'set value' request for asynchronous processing.
+        """Queue a 'set value' request for asynchronous processing.
 
         If a request for the same `node_id` is already in the pending queue
         (`_pending_set_values`), this new request will overwrite the previous one,
@@ -574,6 +571,7 @@ class HdgSetValueWorker:
             node_id: The ID of the node to set.
             new_value_str_for_api: The new value formatted as a string for the API.
             entity_name_for_log: The name of the entity requesting the change, for logging.
+
         """
         log_prefix = make_log_prefix(node_id, entity_name_for_log)
         async with self._pending_set_values_lock:

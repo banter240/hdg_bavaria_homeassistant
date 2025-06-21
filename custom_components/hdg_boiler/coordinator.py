@@ -1,5 +1,4 @@
-"""
-Manages data fetching, updates, and API interactions for the HDG Bavaria Boiler integration.
+"""Manage data fetching, updates, and API interactions for the HDG Bavaria Boiler integration.
 
 This module defines the `HdgDataUpdateCoordinator` class, which is central
 to the HDG Bavaria Boiler integration. It handles polling data from the
@@ -61,8 +60,7 @@ _LOGGER = logging.getLogger(DOMAIN)
 
 
 class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """
-    Manages fetching data from the HDG boiler and coordinates updates to entities.
+    """Manage fetching data from the HDG boiler and coordinate updates to entities.
 
     This coordinator handles different polling groups with varying update intervals,
     processes API responses using `HdgPollingResponseProcessor`, manages an API lock
@@ -78,8 +76,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         api_client: HdgApiClient,
         entry: ConfigEntry,
     ):
-        """
-        Initialize the HdgDataUpdateCoordinator.
+        """Initialize the HdgDataUpdateCoordinator.
 
         Args:
             hass: The HomeAssistant instance.
@@ -88,6 +85,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         Raises:
             ValueError: If there's a critical mismatch between POLLING_GROUP_ORDER and HDG_NODE_PAYLOADS.
+
         """
         # --- Start: Attributes for dynamic polling interval and boiler status ---
         self._consecutive_poll_failures: int = 0
@@ -201,11 +199,11 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @property
     def enable_debug_logging(self) -> bool:
-        """
-        Determine if detailed debug logging for polling cycles is enabled.
+        """Determine if detailed debug logging for polling cycles is enabled.
 
         Returns:
             True if debug logging is enabled in the integration's options, False otherwise.
+
         """
         current_options: Mapping[str, Any] = self.entry.options or {}
         debug_setting = current_options.get(
@@ -215,8 +213,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @property
     def last_update_times_public(self) -> dict[str, float]:
-        """
-        Return the dictionary of last successful update times for polling groups.
+        """Return the dictionary of last successful update times for polling groups.
 
         Keys are group keys, values are monotonic timestamps of the last successful poll.
         """
@@ -224,18 +221,17 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @property
     def boiler_is_online(self) -> bool:
-        """
-        Indicate whether the boiler is currently considered online.
+        """Indicate whether the boiler is currently considered online.
 
         The online status is determined by the success of recent polling attempts.
         Returns:
             True if the boiler is considered online, False otherwise.
+
         """
         return self._boiler_considered_online
 
     def _initialize_last_update_times_monotonic(self) -> None:
-        """
-        Set initial 'last update time' for all polling groups to 0.0.
+        """Set initial 'last update time' for all polling groups to 0.0.
 
         This ensures that all groups are considered due for an update on the
         first polling cycle.
@@ -251,14 +247,14 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _log_fetch_error_duration(
         self, group_key: str, error_type: str, start_time: float, error: Exception
     ) -> None:
-        """
-        Log error details and duration of a failed fetch attempt.
+        """Log error details and duration of a failed fetch attempt.
 
         Args:
             group_key: The key of the polling group that failed.
             error_type: A string describing the type of error (e.g., "Connection error").
             start_time: The monotonic time when the fetch attempt started.
             error: The exception that occurred.
+
         """
         if self.enable_debug_logging:
             duration = time.monotonic() - start_time
@@ -273,8 +269,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         payload_config: NodeGroupPayload,
         polling_cycle_start_time_for_log: float,
     ) -> list[dict[str, Any]] | None:
-        """
-        Fetch and process data for a single polling group.
+        """Fetch and process data for a single polling group.
 
         This method acquires the API lock, makes the API call to the HDG boiler,
         processes the response using `HdgPollingResponseProcessor`, and handles various exceptions.
@@ -290,21 +285,24 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Raises:
             HdgApiConnectionError: If a connection error (e.g., timeout, host unreachable)
                                    occurs during the API call.
+
         """
         # 'payload_str' is a required key in NodeGroupPayload
         payload_str: str = payload_config["payload_str"]
         try:
             # Attempt to acquire the API lock with a timeout.
-            async with async_timeout.timeout(POLLING_API_LOCK_TIMEOUT_S):
-                async with self._api_lock:
-                    start_time_group_fetch_actual = time.monotonic()
-                    if self.enable_debug_logging:
-                        _LOGGER.info(
-                            f"FETCHING (lock acquired) for group: {group_key} at {dt_util.as_local(dt_util.utcnow())}"
-                        )
-                    fetched_data_list = await self.api_client.async_get_nodes_data(
-                        payload_str
+            async with (
+                async_timeout.timeout(POLLING_API_LOCK_TIMEOUT_S),
+                self._api_lock,
+            ):
+                start_time_group_fetch_actual = time.monotonic()
+                if self.enable_debug_logging:
+                    _LOGGER.info(
+                        f"FETCHING (lock acquired) for group: {group_key} at {dt_util.as_local(dt_util.utcnow())}"
                     )
+                fetched_data_list = await self.api_client.async_get_nodes_data(
+                    payload_str
+                )
 
             # Process the fetched data if the API call was successful.
             if fetched_data_list is not None:
@@ -368,8 +366,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         groups_to_fetch: list[tuple[str, NodeGroupPayload]],
         polling_cycle_start_time: float,
     ) -> tuple[bool, bool]:
-        """
-        Fetch data for multiple polling groups sequentially.
+        """Fetch data for multiple polling groups sequentially.
 
         Iterates through the provided list of groups, fetching data for each one
         with a delay between groups to avoid overwhelming the API. Tracks whether
@@ -382,6 +379,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         Returns:
             A tuple: (any_group_fetched_successfully, any_connection_error_encountered).
+
         """
         any_group_fetched_successfully = False
         any_connection_error_encountered = False
@@ -413,8 +411,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return any_group_fetched_successfully, any_connection_error_encountered
 
     async def async_config_entry_first_refresh(self) -> None:
-        """
-        Perform initial sequential data refresh for all polling groups.
+        """Perform initial sequential data refresh for all polling groups.
 
         This is called once when the config entry is first set up. It fetches
         all defined polling groups sequentially to populate the initial data.
@@ -476,8 +473,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _get_due_polling_groups(
         self, current_time_monotonic: float
     ) -> list[tuple[str, NodeGroupPayload]]:
-        """
-        Identify polling groups that are currently due for an update.
+        """Identify polling groups that are currently due for an update.
 
         A group is considered due if the time elapsed since its last successful
         update exceeds its configured scan interval. This method iterates through
@@ -489,6 +485,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Returns:
             A list of tuples, each containing the group key and payload configuration
             for groups that are due for an update.
+
         """
         due_groups: list[tuple[str, NodeGroupPayload]] = []
         for group_key in POLLING_GROUP_ORDER:
@@ -518,8 +515,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _prepare_current_poll_cycle_groups(
         self, current_time_monotonic: float
     ) -> list[tuple[str, NodeGroupPayload]]:
-        """
-        Prepare the list of polling groups to be fetched in the current cycle.
+        """Prepare the list of polling groups to be fetched in the current cycle.
 
         This method combines two sets of groups:
         1. Groups that are due for polling based on their regular scan intervals.
@@ -527,6 +523,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         Args:
             current_time_monotonic: The current monotonic time.
+
         """
         # Get regularly scheduled groups.
         if self.enable_debug_logging:
@@ -559,8 +556,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         any_connection_error_encountered: bool,
         groups_in_cycle: list[tuple[str, NodeGroupPayload]],
     ) -> None:
-        """
-        Handle the logic when a polling cycle fails to fetch any group successfully.
+        """Handle the logic when a polling cycle fails to fetch any group successfully.
 
         Increments failure counters, updates boiler online status, adjusts update
         intervals on persistent failures (especially connection errors), and raises
@@ -569,6 +565,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Args:
             any_connection_error_encountered: True if any connection error occurred during the cycle.
             groups_in_cycle: The list of groups that were attempted in this cycle.
+
         """
         self._consecutive_poll_failures += 1
         if self._boiler_considered_online:
@@ -607,8 +604,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._failed_poll_groups_to_retry.add(group_key)
 
     def _process_successful_poll_cycle_recovery(self) -> None:
-        """
-        Handle the logic when a polling cycle has at least one successful group fetch.
+        """Handle the logic when a polling cycle has at least one successful group fetch.
 
         Updates boiler online status, resets failure counters, and restores
         the original update interval if it was previously changed to a fallback
@@ -646,8 +642,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         any_connection_error_encountered: bool,
         groups_in_cycle: list[tuple[str, NodeGroupPayload]],
     ) -> None:
-        """
-        Handle the outcome of a polling cycle.
+        """Handle the outcome of a polling cycle.
 
         This method updates the coordinator's state (e.g., boiler online status,
         failure counters) based on whether any groups were fetched successfully
@@ -672,8 +667,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._process_successful_poll_cycle_recovery()
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """
-        Fetch data for all polling groups that are currently due for an update.
+        """Fetch data for all polling groups that are currently due for an update.
 
         This is the main method called by Home Assistant to refresh data.
         It determines which polling groups are due based on their scan intervals
@@ -728,8 +722,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def async_update_internal_node_state(
         self, node_id: str, new_value: str
     ) -> None:
-        """
-        Update a node's value in the internal data store and notify listeners.
+        """Update a node's value in the internal data store and notify listeners.
 
         This method is typically called by the `HdgSetValueWorker` after a successful
         API 'set value' operation. It updates the local data cache and triggers an update
@@ -738,6 +731,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Args:
             node_id: The ID of the node to update.
             new_value: The new string value for the node.
+
         """
         if self.data.get(node_id) != new_value:
             self._last_set_times[node_id] = time.monotonic()
@@ -759,8 +753,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         new_value_str_for_api: str,
         entity_name_for_log: str = "Unknown Entity",
     ) -> bool:
-        """
-        Queue a node value to be set on the boiler via the API.
+        """Queue a node value to be set on the boiler via the API.
 
         This method is called by entities (e.g., `HdgBoilerNumber`) or services
         to request a value change. It validates the input type and then delegates
@@ -778,6 +771,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         Raises:
             TypeError: If `new_value_str_for_api` is not a string.
+
         """
         if not isinstance(new_value_str_for_api, str):
             _LOGGER.error(
@@ -813,8 +807,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return False
 
     async def async_stop_set_value_worker(self) -> None:
-        """
-        Gracefully stop the background `_set_value_worker` task.
+        """Gracefully stop the background `_set_value_worker` task.
 
         This method is called during integration unload to ensure a clean shutdown
         of the worker task, preventing orphaned tasks or errors during Home Assistant restart/shutdown.

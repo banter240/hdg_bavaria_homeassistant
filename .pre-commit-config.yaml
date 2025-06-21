@@ -1,30 +1,38 @@
-# .pre-commit-config.yaml
+# Final recommended configuration for pre-commit hooks, combining:
+# - Standard hooks for file integrity.
+# - Ruff for linting and formatting.
+# - mypy for static type analysis.
+# - Sourcery for AI-powered code refactoring suggestions.
+
 repos:
+  # Standard hooks for file integrity and basic checks.
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
-      - id: check-json
-      - id: check-merge-conflict
+
+  # Ruff hook for fast linting and formatting.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.11.13"
+    rev: v0.12.0
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
-  - repo: https://github.com/sourcery-ai/sourcery
-    rev: v1.37.0
-    hooks:
-      - id: sourcery
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.27.1
-    hooks:
-      - id: gitleaks
+
+  # mypy hook for static type checking.
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.16.0"
+    rev: "v1.16.1"
     hooks:
       - id: mypy
         args: [--ignore-missing-imports, --explicit-package-bases]
         additional_dependencies: []
+
+  # Sourcery hook for AI-powered refactoring.
+  - repo: https://github.com/sourcery-ai/sourcery
+    rev: "v1.37.0"
+    hooks:
+      - id: sourcery
+        # You might need to sign up for a Sourcery token for full functionality
+        # and add it to your environment if you use more advanced features.

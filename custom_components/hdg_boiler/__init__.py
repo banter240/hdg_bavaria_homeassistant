@@ -1,5 +1,4 @@
-"""
-Main entry point for the HDG Bavaria Boiler Home Assistant integration.
+"""Main entry point for the HDG Bavaria Boiler Home Assistant integration.
 
 This module handles the initialization of the integration when a config entry
 is added to Home Assistant. It sets up the API client, data update coordinator,
@@ -39,12 +38,12 @@ PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.NUMBER]
 def _register_services(
     hass: HomeAssistant, coordinator: HdgDataUpdateCoordinator
 ) -> None:
-    """
-    Register integration-specific services with Home Assistant.
+    """Register integration-specific services with Home Assistant.
 
     Args:
         hass: The Home Assistant instance.
         coordinator: The data update coordinator for the integration.
+
     """
     # Bind the coordinator instance to the service handlers.
     bound_set_node_value_handler = functools.partial(
@@ -65,8 +64,7 @@ def _register_services(
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """
-    Set up the HDG Bavaria Boiler integration from a config entry.
+    """Set up the HDG Bavaria Boiler integration from a config entry.
 
     This function is called by Home Assistant when a new config entry for this
     integration is added or when Home Assistant starts up with an existing entry.
@@ -79,6 +77,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     Returns:
         True if setup was successful, False otherwise.
+
     """
     hass.data.setdefault(DOMAIN, {})
 
@@ -132,8 +131,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """
-    Unload a config entry.
+    """Unload a config entry.
 
     This is called when an integration instance is removed from Home Assistant.
     It unloads associated platforms, stops background tasks, and cleans up resources,
@@ -145,6 +143,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     Returns:
         True if unload was successful, False otherwise.
+
     """
     _LOGGER.info(f"Unloading HDG Boiler integration for {entry.title}")
 
@@ -176,8 +175,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_options_update_listener(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> None:
-    """
-    Handle options update.
+    """Handle options update.
 
     This listener is called when the integration's options are changed via the UI.
     It triggers a reload of the config entry to apply the new options.
@@ -185,6 +183,7 @@ async def async_options_update_listener(
     Args:
         hass: The HomeAssistant instance.
         entry: The ConfigEntry instance whose options were updated.
+
     """
     _LOGGER.info(
         f"Configuration options for {entry.title} updated: {entry.options}. Reloading entry."

@@ -1,5 +1,4 @@
-"""
-General parsing utility functions for the HDG Bavaria Boiler integration.
+"""General parsing utility functions for the HDG Bavaria Boiler integration.
 
 This module provides helper functions for parsing numeric values from strings,
 handling locale-specific number formats, and formatting values for API communication.
@@ -40,9 +39,7 @@ KNOWN_LOCALE_SEPARATORS: Final[dict[str, dict[str, str]]] = {
 def _get_locale_separators_from_known_list(
     locale_str: str,
 ) -> tuple[str, str] | None:
-    """
-    Retrieve decimal and thousands separators for a given locale from a predefined list.
-    """
+    """Retrieve decimal and thousands separators for a given locale from a predefined list."""
     if locale_str in KNOWN_LOCALE_SEPARATORS:
         conv = KNOWN_LOCALE_SEPARATORS[locale_str]
         return conv["decimal_point"], conv["thousands_sep"]
@@ -52,9 +49,7 @@ def _get_locale_separators_from_known_list(
 def _normalize_string_by_locale(
     value_str: str, locale_str: str, log_prefix: str, raw_cleaned_value_for_log: str
 ) -> str | None:
-    """
-    Normalize a string using locale-specific decimal and thousands separators.
-    """
+    """Normalize a string using locale-specific decimal and thousands separators."""
     normalized_value = value_str
     if separators := _get_locale_separators_from_known_list(locale_str):
         decimal_sep, thousands_sep = separators
@@ -78,9 +73,7 @@ def _normalize_string_by_locale(
 def _normalize_string_by_heuristic(
     value_str: str, log_prefix: str, raw_cleaned_value_for_log: str
 ) -> str | None:
-    """
-    Normalize a string using a heuristic for mixed decimal/thousands separators.
-    """
+    """Normalize a string using a heuristic for mixed decimal/thousands separators."""
     if " " in value_str or "\u00a0" in value_str:
         original_for_space_log = value_str
         value_str = value_str.replace(" ", "").replace("\u00a0", "")
@@ -122,9 +115,7 @@ def extract_numeric_string(
     entity_id_for_log: str | None = None,
     locale: str | None = None,
 ) -> str | None:
-    """
-    Extract the numeric part of a string using regex after locale-aware normalization.
-    """
+    """Extract the numeric part of a string using regex after locale-aware normalization."""
     value_str = raw_cleaned_value
     log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
     normalized_value_str: str | None = None
@@ -162,9 +153,7 @@ def parse_percent_from_string(
     node_id_for_log: str | None = None,
     entity_id_for_log: str | None = None,
 ) -> int | None:
-    """
-    Parse percentage from a string using a regex pattern.
-    """
+    """Parse percentage from a string using a regex pattern."""
     log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
     if match := re.search(regex_pattern, cleaned_value):
         if match.lastindex is not None and match.lastindex >= 1:
@@ -192,9 +181,7 @@ def parse_percent_from_string(
 
 
 def format_value_for_api(numeric_value: int | float, setter_type: str) -> str:
-    """
-    Format a numeric value into the string representation expected by the HDG API.
-    """
+    """Format a numeric value into the string representation expected by the HDG API."""
     if setter_type == "int":
         return str(int(round(numeric_value)))
     elif setter_type == "float1":
@@ -212,9 +199,7 @@ def parse_int_from_string(
     node_id_for_log: str | None = None,
     entity_id_for_log: str | None = None,
 ) -> int | None:
-    """
-    Parse an integer from a string, robustly handling potential float representations.
-    """
+    """Parse an integer from a string, robustly handling potential float representations."""
     numeric_part_str = extract_numeric_string(
         raw_value, node_id_for_log, entity_id_for_log
     )
@@ -235,9 +220,7 @@ def parse_float_from_string(
     node_id_for_log: str | None = None,
     entity_id_for_log: str | None = None,
 ) -> float | None:
-    """
-    Parse a float from a string, extracting the numeric part first.
-    """
+    """Parse a float from a string, extracting the numeric part first."""
     numeric_part_str = extract_numeric_string(
         raw_value, node_id_for_log, entity_id_for_log
     )

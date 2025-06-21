@@ -1,5 +1,4 @@
-"""
-Constants for the HDG Bavaria Boiler integration.
+"""Constants for the HDG Bavaria Boiler integration.
 
 This module centralizes all constants used across the HDG Bavaria Boiler
 integration. Constants are grouped by their functional area, such as core

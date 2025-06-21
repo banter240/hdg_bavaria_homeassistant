@@ -1,5 +1,4 @@
-"""
-Entity Definitions for the HDG Bavaria Boiler integration.
+"""Entity Definitions for the HDG Bavaria Boiler integration.
 
 This module serves as the central repository for defining the structure and
 properties of all entities (sensors, numbers, etc.) that the HDG Bavaria Boiler

@@ -1,5 +1,4 @@
-"""
-Logging utility functions for the HDG Bavaria Boiler integration.
+"""Logging utility functions for the HDG Bavaria Boiler integration.
 
 This module provides simple helper functions to create standardized log message
 prefixes, incorporating node ID and/or entity ID for consistent and traceable logging.
@@ -16,8 +15,7 @@ __version__ = "0.1.1"
 def make_log_prefix(
     node_id_for_log: str | None = None, entity_id_for_log: str | None = None
 ) -> str:
-    """
-    Generate a standardized log prefix string based on node_id and/or entity_id.
+    """Generate a standardized log prefix string based on node_id and/or entity_id.
 
     Args:
         node_id_for_log: The HDG node ID to include in the prefix.
@@ -26,6 +24,7 @@ def make_log_prefix(
     Returns:
         A formatted string prefix for log messages, e.g., "Node 1234 (sensor.my_sensor): ",
         "Node 1234: ", or "Entity sensor.my_sensor: ".
+
     """
     if node_id_for_log:
         if entity_id_for_log:

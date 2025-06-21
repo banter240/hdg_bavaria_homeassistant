@@ -1,0 +1,35 @@
+# Reusable GitHub Actions workflow for validating the custom component
+# against Home Assistant (hassfest) and HACS standards.
+
+name: "Validate"
+
+on:
+  # This makes the workflow reusable.
+  workflow_call:
+
+jobs:
+  # Job 1: Run hassfest for Home Assistant core requirements.
+  hassfest:
+    name: "Hassfest Validation"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v4"
+
+      - name: "Run hassfest validation"
+        uses: "home-assistant/actions/hassfest@master"
+
+  # Job 2: Run HACS validation for community store requirements.
+  hacs:
+    name: "HACS Validation"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v4"
+
+      - name: "Run HACS validation"
+        uses: "hacs/action@main"
+        with:
+          category: "integration"
+          # Optional: uncomment the line below if you don't have brand images yet.
+          # ignore: "brands"

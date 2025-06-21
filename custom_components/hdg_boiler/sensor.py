@@ -1,5 +1,4 @@
-"""
-Sensor platform for the HDG Bavaria Boiler integration.
+"""Sensor platform for the HDG Bavaria Boiler integration.
 
 This module is responsible for creating and managing sensor entities that
 represent various data points read from an HDG Bavaria boiler system.
@@ -43,8 +42,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """
-    Set up HDG Bavaria sensor entities based on a configuration entry.
+    """Set up HDG Bavaria sensor entities based on a configuration entry.
 
     Iterates through SENSOR_DEFINITIONS, creating sensor entities for those
     defined with `ha_platform: "sensor"`.
@@ -53,6 +51,7 @@ async def async_setup_entry(
         hass: The HomeAssistant instance.
         entry: The ConfigEntry instance for this integration.
         async_add_entities: Callback function to add entities to Home Assistant.
+
     """
     coordinator: HdgDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
         "coordinator"
@@ -93,8 +92,7 @@ async def async_setup_entry(
 
 
 class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
-    """
-    Represents an HDG Bavaria Boiler sensor entity.
+    """Represents an HDG Bavaria Boiler sensor entity.
 
     This class derives from `HdgNodeEntity` and `SensorEntity`. It is responsible
     for taking the raw data provided by the `HdgDataUpdateCoordinator` and parsing
@@ -107,13 +105,13 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
         entity_description: SensorEntityDescription,
         entity_definition: SensorDefinition,
     ) -> None:
-        """
-        Initialize the HDG Boiler sensor entity.
+        """Initialize the HDG Boiler sensor entity.
 
         Args:
             coordinator: The HdgDataUpdateCoordinator for managing entity data.
             entity_description: Standard Home Assistant SensorEntityDescription.
             entity_definition: Custom entity definition from SENSOR_DEFINITIONS.
+
         """
         # The hdg_node_id from the definition might include a suffix (T, U, etc.)
         # which needs to be stripped for data lookup in the coordinator.

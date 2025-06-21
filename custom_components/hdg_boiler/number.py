@@ -1,5 +1,4 @@
-"""
-Provides number entities for the HDG Bavaria Boiler integration.
+"""Provides number entities for the HDG Bavaria Boiler integration.
 
 This module is responsible for creating and managing 'number' entities that
 allow users to view and modify numeric settings on their HDG Bavaria boiler.
@@ -52,8 +51,7 @@ _LOGGER = logging.getLogger(DOMAIN)
 
 
 class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
-    """
-    Represents a number entity for an HDG Bavaria Boiler.
+    """Represents a number entity for an HDG Bavaria Boiler.
 
     This entity allows users to interact with numeric settings of the boiler,
     such as temperature setpoints. It handles optimistic UI updates, debounces
@@ -67,14 +65,14 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         entity_description: NumberEntityDescription,
         entity_definition: SensorDefinition,
     ) -> None:
-        """
-        Initialize the HDG Boiler number entity.
+        """Initialize the HDG Boiler number entity.
 
         Args:
             coordinator: The data update coordinator.
             api_client: The API client for HDG communication (currently unused here, inherited).
             entity_description: The entity description for this number entity.
             entity_definition: The sensor definition dictionary for this entity.
+
         """
         hdg_api_node_id_from_def = entity_definition["hdg_node_id"]
         super().__init__(
@@ -113,8 +111,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
             )
 
     def _update_number_state(self) -> None:
-        """
-        Update the entity's internal state from coordinator data.
+        """Update the entity's internal state from coordinator data.
 
         This method implements logic to mitigate UI bouncing when a value is
         set optimistically and a poll with an older value arrives.
@@ -196,14 +193,14 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
                 )
 
     def _parse_value(self, raw_value_text: str | None) -> int | float | None:
-        """
-        Parse the raw string value from the API into an int or float.
+        """Parse the raw string value from the API into an int or float.
 
         Args:
             raw_value_text: The raw string value received from the API.
 
         Returns:
             The parsed numeric value (int or float), or None if parsing fails.
+
         """
         if raw_value_text is None:
             return None
@@ -229,8 +226,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         return parsed_float
 
     async def async_set_native_value(self, value: float) -> None:
-        """
-        Set the new native value and initiate a debounced API call.
+        """Set the new native value and initiate a debounced API call.
 
         This method is called by Home Assistant when the user changes the value
         in the UI. It performs pre-validation, optimistically updates the UI,
@@ -320,8 +316,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         scheduled_generation: int,
         value_from_ui_at_schedule_time: float,
     ) -> None:
-        """
-        Process the debounced value and queue it for an API call.
+        """Process the debounced value and queue it for an API call.
 
         This method is called by the timer set in `async_set_native_value`.
         It checks if the job is stale (i.e., if a newer value has been set in the meantime).
@@ -380,8 +375,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         # 3. The value is successfully confirmed by a poll in _update_number_state (BRANCH A).
 
     def _is_job_stale(self, scheduled_generation: int) -> bool:
-        """
-        Check if the scheduled job for setting a value is stale.
+        """Check if the scheduled job for setting a value is stale.
 
         A job is considered stale if its generation number does not match the
         current set generation for this entity. This indicates that a newer
@@ -395,9 +389,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         return False
 
     def _format_value_for_api_safely(self, value: float) -> str:
-        """
-        Format the numeric value into a string suitable for the HDG API.
-        """
+        """Format the numeric value into a string suitable for the HDG API."""
         setter_type = cast(str | None, self._entity_definition.get("setter_type"))
         if not setter_type:
             msg = f"HdgBoilerNumber {self.entity_id}: Missing 'setter_type'."
@@ -406,8 +398,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         return format_value_for_api(value, setter_type)
 
     async def _queue_set_value_via_coordinator(self, api_value_str: str) -> bool:
-        """
-        Queue the formatted value with the HdgDataUpdateCoordinator.
+        """Queue the formatted value with the HdgDataUpdateCoordinator.
 
         The coordinator manages a worker task that handles the actual API call,
         including retries and API lock management.
@@ -437,8 +428,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
     def _handle_set_value_error(
         self, err: Exception, value_to_process: float, api_value_str: str | None
     ) -> None:
-        """
-        Centralized error logging for the set value process.
+        """Centralized error logging for the set value process.
 
         This method logs errors that occur during the formatting or queuing
         of a value to be set via the API.
@@ -457,8 +447,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
             )
 
     async def async_will_remove_from_hass(self) -> None:
-        """
-        Handle entity being removed from Home Assistant.
+        """Handle entity being removed from Home Assistant.
 
         This method ensures that any pending API call timers are cancelled.
         """
@@ -476,8 +465,7 @@ def _determine_ha_number_step_val(
     translation_key: str,
     raw_hdg_node_id: str,
 ) -> float | None:
-    """
-    Determine the `native_step` for the Home Assistant NumberEntity.
+    """Determine the `native_step` for the Home Assistant NumberEntity.
 
     This function calculates the appropriate step value for the number entity's UI
     based on the 'setter_step' and 'setter_type' defined in the entity_definition.
@@ -530,8 +518,7 @@ def _create_number_entity_if_valid(
     coordinator: HdgDataUpdateCoordinator,
     api_client: HdgApiClient,
 ) -> HdgBoilerNumber | None:
-    """
-    Validate an entity definition and create an HdgBoilerNumber entity.
+    """Validate an entity definition and create an HdgBoilerNumber entity.
 
     This helper function checks if a given entity definition from `SENSOR_DEFINITIONS`
     is valid for creating an `HdgBoilerNumber` entity. It verifies the presence and
@@ -596,8 +583,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """
-    Set up HDG Bavaria Boiler number entities from a config entry.
+    """Set up HDG Bavaria Boiler number entities from a config entry.
 
     This function is called by Home Assistant during the setup of the integration.
     It iterates through `SENSOR_DEFINITIONS`, identifies entities configured for

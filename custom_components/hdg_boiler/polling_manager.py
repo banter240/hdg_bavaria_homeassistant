@@ -1,5 +1,4 @@
-"""
-Manages the dynamic creation of polling group structures from entity definitions.
+"""Manages the dynamic creation of polling group structures from entity definitions.
 
 This module contains the logic to read the `SENSOR_DEFINITIONS` from
 `definitions.py` and dynamically build the `HDG_NODE_PAYLOADS` and
@@ -32,8 +31,7 @@ POLLING_GROUP_ORDER: Final[list[str]] = []
 
 
 def _extract_node_base_for_payload(node_id: str) -> str:
-    """
-    Remove a single trailing 'T' if present, otherwise leave unchanged.
+    """Remove a single trailing 'T' if present, otherwise leave unchanged.
 
     Used for payload string generation.
     """
@@ -41,8 +39,7 @@ def _extract_node_base_for_payload(node_id: str) -> str:
 
 
 def build_polling_groups_from_definitions() -> None:
-    """
-    Build the HDG_NODE_PAYLOADS and POLLING_GROUP_ORDER structures dynamically.
+    """Build the HDG_NODE_PAYLOADS and POLLING_GROUP_ORDER structures dynamically.
 
     This function reads SENSOR_DEFINITIONS, groups nodes by their 'polling_group',
     and constructs the necessary dictionaries and lists for the coordinator.

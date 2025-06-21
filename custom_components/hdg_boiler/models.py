@@ -1,5 +1,4 @@
-"""
-Data models and type definitions for the HDG Bavaria Boiler integration.
+"""Data models and type definitions for the HDG Bavaria Boiler integration.
 
 This module centralizes `TypedDict` definitions used across the HDG Bavaria Boiler
 integration. These models provide type hinting and structure for entity definitions,
@@ -16,11 +15,11 @@ from homeassistant.helpers.entity import EntityCategory
 
 
 class SensorDefinition(TypedDict, total=False):
-    """
-    Defines the properties and Home Assistant platform configuration for an entity
-    derived from an HDG boiler data node. This dictionary structure is used within
-    `SENSOR_DEFINITIONS` (in `definitions.py`) to specify how raw data from a specific HDG node ID
-    should be represented and handled as a Home Assistant entity.
+    """Define the properties and HA platform configuration for an entity.
+
+    This dictionary structure is used within `SENSOR_DEFINITIONS` to specify how
+    raw data from a specific HDG node ID should be represented and handled
+    as a Home Assistant entity.
 
     Attributes:
         hdg_node_id: The raw HDG API node ID (e.g., "22003T").
@@ -44,6 +43,7 @@ class SensorDefinition(TypedDict, total=False):
         normalize_internal_whitespace: If True, internal whitespace in the raw string value
                                        will be normalized (multiple spaces to one) before parsing.
                                        Defaults to False if not specified.
+
     """
 
     hdg_node_id: str
@@ -68,8 +68,8 @@ class SensorDefinition(TypedDict, total=False):
 
 
 class NodeGroupPayload(TypedDict):
-    """
-    Structure for defining an HDG API node polling group and its configuration.
+    """Define the structure for an HDG API node polling group and its configuration.
+
     Used in `polling_groups.py` to define `HDG_NODE_PAYLOADS`.
 
     Attributes:
@@ -78,6 +78,7 @@ class NodeGroupPayload(TypedDict):
         nodes: A list of HDG node IDs (typically with 'T' suffix) belonging to this group.
         payload_str: The formatted string to be sent as the 'nodes' parameter in the API request
                      for this group.
+
     """
 
     # This TypedDict is now built dynamically by polling_manager.py and includes
@@ -96,8 +97,8 @@ class NodeGroupPayload(TypedDict):
 
 
 class PollingGroupStaticDefinition(TypedDict):
-    """
-    Structure for defining the static configuration of a polling group.
+    """Define the structure for the static configuration of a polling group.
+
     Used in `const.py` for the main list of polling group definitions.
     """
 
@@ -108,8 +109,8 @@ class PollingGroupStaticDefinition(TypedDict):
 
 
 class EnumOption(TypedDict):
-    """
-    Represents a single option within an enumeration, providing translations.
+    """Represent a single option within an enumeration, providing translations.
+
     Used in `enums.py` for `HDG_ENUM_MAPPINGS`.
     """
 

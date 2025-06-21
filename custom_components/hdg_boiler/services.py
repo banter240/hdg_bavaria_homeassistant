@@ -1,5 +1,4 @@
-"""
-Service handlers for the HDG Bavaria Boiler integration.
+"""Service handlers for the HDG Bavaria Boiler integration.
 
 This module implements the logic for custom Home Assistant services exposed by
 the HDG Bavaria Boiler integration. These services allow users to directly
@@ -43,8 +42,7 @@ _LOGGER = logging.getLogger(DOMAIN)
 
 
 def _build_sensor_definitions_by_base_node_id() -> dict[str, list[SensorDefinition]]:
-    """
-    Build an index of sensor definitions keyed by their base HDG node ID.
+    """Build an index of sensor definitions keyed by their base HDG node ID.
 
     This allows quick lookup of all definitions associated with a specific base node ID.
     The index is used by `_find_settable_sensor_definition` to efficiently locate
@@ -76,8 +74,7 @@ SENSOR_DEFINITIONS_BY_BASE_NODE_ID = _build_sensor_definitions_by_base_node_id()
 
 
 def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
-    """
-    Find and return the SensorDefinition for a settable 'number' node.
+    """Find and return the SensorDefinition for a settable 'number' node.
 
     Queries the cached `SENSOR_DEFINITIONS_BY_BASE_NODE_ID` index to find definitions
     matching the base node ID. It then filters for definitions where `ha_platform`
@@ -90,6 +87,7 @@ def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
 
     Args:
         node_id_str: The base HDG node ID to search for.
+
     """
     # Retrieve all definitions associated with the base node ID.
     definitions_for_base = SENSOR_DEFINITIONS_BY_BASE_NODE_ID.get(node_id_str, [])
@@ -133,8 +131,7 @@ async def async_handle_set_node_value(
     coordinator: HdgDataUpdateCoordinator,
     call: ServiceCall,
 ) -> None:
-    """
-    Handle the 'set_node_value' service call.
+    """Handle the 'set_node_value' service call.
 
     This function validates the provided `node_id` against SENSOR_DEFINITIONS
     to ensure it's a settable 'number' entity. It then coerces the `value`
@@ -150,6 +147,7 @@ async def async_handle_set_node_value(
     Raises:
         ServiceValidationError: If input validation fails or configuration is incorrect.
         HomeAssistantError: If the API call fails or the coordinator reports an error.
+
     """
     node_id_input = call.data.get(ATTR_NODE_ID)
     node_id_str, value_to_set_raw = validate_service_call_input(call)
@@ -184,7 +182,7 @@ async def async_handle_set_node_value(
 
     # 3. Format the validated numeric value into the string expected by the HDG API.
     try:
-        # node_type is confirmed to be non-None and valid by _find_settable_sensor_definition
+        # node_type is confirmed to be non and valid by _find_settable_sensor_definition
         api_value_to_send_str = format_value_for_api(
             coerced_numeric_value, cast(str, node_type)
         )
@@ -229,8 +227,7 @@ async def async_handle_set_node_value(
 async def async_handle_get_node_value(
     hass: HomeAssistant, coordinator: HdgDataUpdateCoordinator, call: ServiceCall
 ) -> dict[str, Any]:
-    """# sourcery skip: extract-method
-    Handle the 'get_node_value' service call.
+    """Handle the 'get_node_value' service call.
 
     Retrieves the current raw string value for a specified node ID from the
     coordinator's internal data cache and returns it.
@@ -244,6 +241,7 @@ async def async_handle_get_node_value(
     Returns:
         A dictionary containing the `node_id`, its `value` (or None),
         and a `status` string.
+
     """
     node_id_input = call.data.get(ATTR_NODE_ID)
     node_id_str = validate_get_node_service_call(call)

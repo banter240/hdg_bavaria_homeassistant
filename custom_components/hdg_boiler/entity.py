@@ -1,5 +1,4 @@
-"""
-Provides base entity classes for the HDG Bavaria Boiler integration.
+"""Provides base entity classes for the HDG Bavaria Boiler integration.
 
 This module defines `HdgBaseEntity`, which offers common properties like
 `device_info` and standardized unique ID generation. It also defines
@@ -32,8 +31,7 @@ _LOGGER = logging.getLogger(DOMAIN)
 
 
 class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
-    """
-    Base class for all HDG Bavaria Boiler integration entities.
+    """Base class for all HDG Bavaria Boiler integration entities.
 
     This class provides common properties such as `device_info` and standardized
     unique ID generation. It ensures that entities are correctly grouped under their
@@ -50,14 +48,14 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
         coordinator: HdgDataUpdateCoordinator,
         unique_id_suffix: str,  # Suffix to make the entity's unique_id distinct
     ) -> None:
-        """
-        Initialize the HDG base entity.
+        """Initialize the HDG base entity.
 
         Args:
             coordinator: The data update coordinator for the integration.
             unique_id_suffix: A string suffix used to create a unique ID for this
                               entity within the integration's domain and device.
                               Typically, this is the `translation_key` or a node ID.
+
         """
         _LOGGER.debug(
             f"HdgBaseEntity.__init__ for unique_id_suffix: '{unique_id_suffix}'"
@@ -138,8 +136,8 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
 
     @property
     def available(self) -> bool:
-        """
-        Return True if the entity is available.
+        """Return True if the entity is available.
+
         Availability is based on the coordinator's data fetching success and
         whether the coordinator's data store has been initialized.
         A warning is logged if data is None but last_update_success is True,
@@ -156,8 +154,7 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
 
 
 class HdgNodeEntity(HdgBaseEntity):
-    """
-    Base class for HDG entities directly corresponding to a specific data node.
+    """Base class for HDG entities directly corresponding to a specific data node.
 
     Extends `HdgBaseEntity` by adding node-specific logic, such as storing the
     HDG node ID and its definition (from `SENSOR_DEFINITIONS`). It also refines
@@ -170,14 +167,14 @@ class HdgNodeEntity(HdgBaseEntity):
         node_id: str,  # The base HDG node ID (without TUVWXY suffix)
         entity_definition: dict[str, Any],  # Full definition from SENSOR_DEFINITIONS
     ) -> None:
-        """
-        Initialize the node-specific HDG entity.
+        """Initialize the node-specific HDG entity.
 
         Args:
             coordinator: The data update coordinator.
             node_id: The base HDG node ID (e.g., "22003") for data retrieval.
                      Suffixes like 'T' are typically stripped before being passed here.
             entity_definition: The full `SensorDefinition` dictionary for this entity.
+
         """
         _LOGGER.debug(
             f"HdgNodeEntity.__init__ called. Node ID: '{node_id}', Entity Definition: {entity_definition}"
@@ -235,8 +232,7 @@ class HdgNodeEntity(HdgBaseEntity):
 
     @property
     def available(self) -> bool:
-        """
-        Determine if the entity is available.
+        """Determine if the entity is available.
 
         This method first checks the base availability (coordinator status and data store
         initialization) via `super().available`. If the base is available, it then
@@ -266,8 +262,7 @@ class HdgNodeEntity(HdgBaseEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """
-        Return entity-specific state attributes, primarily for diagnostic purposes.
+        """Return entity-specific state attributes, primarily for diagnostic purposes.
 
         Includes the HDG node ID, data type, formatter, enum type (if applicable),
         and a sample of the raw value from the coordinator. These attributes can
