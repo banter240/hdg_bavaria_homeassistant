@@ -42,16 +42,14 @@ if [ $# -ne 1 ]; then
 fi
 log_info "All checks passed."
 
-# --- Configuration Variables ---
+# --- Configuration Variables (IN CORRECT ORDER) ---
 readonly NEXT_RELEASE_VERSION="$1"
 readonly DOMAIN="hdg_boiler"
 readonly DIST_DIR="dist"
 readonly ZIP_FILENAME="${DOMAIN}_${NEXT_RELEASE_VERSION}.zip"
-readonly COMPONENT_MANIFEST_PATH="${SOURCE_DIR}/manifest.json" # Corrected this line in thought process
-readonly HACS_MANIFEST_PATH="hacs.json"
-# Correct definition of source dir
 readonly SOURCE_DIR="custom_components/${DOMAIN}"
-
+readonly COMPONENT_MANIFEST_PATH="${SOURCE_DIR}/manifest.json"
+readonly HACS_MANIFEST_PATH="hacs.json"
 
 log_info "Starting release asset preparation for version ${NEXT_RELEASE_VERSION}..."
 
@@ -88,6 +86,11 @@ if [ -f "$HACS_MANIFEST_PATH" ]; then
 else
   log_warn "'${HACS_MANIFEST_PATH}' not found. Skipping update."
 fi
+
+# --- DIAGNOSTIC STEP ---
+log_info "Running 'git status' to check for modified files before exiting script..."
+git status
+log_info "--- End of git status ---"
 
 echo
 log_success "Release asset preparation complete for version ${NEXT_RELEASE_VERSION}."

@@ -89,10 +89,7 @@
       "@semantic-release/github",
       {
         "assets": [
-          {
-            "path": "dist/*.zip",
-            "label": "HDG Boiler Component (install via HACS)"
-          }
+          "dist/*.zip"
         ]
       }
     ]
