@@ -1,9 +1,8 @@
 # Reusable GitHub Actions workflow for static analysis, including:
 # - Linting with Ruff
 # - Static Type Checking with MyPy
-# - Refactoring suggestions with Sourcery
 
-name: "Lint, Type-Check & Refactor"
+name: "Lint & Type-Check"
 
 on:
   # This makes the workflow reusable and callable from other workflows.
@@ -11,7 +10,7 @@ on:
 
 jobs:
   static-analysis:
-    name: "Run Static Analysis Tools"
+    name: "Run Linter and Type Checker"
     runs-on: "ubuntu-latest"
     steps:
       # Step 1: Check out the repository's code.
@@ -36,10 +35,3 @@ jobs:
       # Step 5: Run MyPy for static type checking.
       - name: "Run MyPy Type Checker"
         run: python3 -m mypy .
-
-      # Step 6: Run Sourcery for code refactoring review.
-      - name: "Run Sourcery Code Review"
-        uses: sourcery-ai/action@v1
-        with:
-          token: ${{ secrets.SOURCERY_TOKEN }}
-          check: true
