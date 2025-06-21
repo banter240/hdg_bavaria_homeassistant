@@ -1,0 +1,14 @@
+# This workflow runs automatically on every pull request targeting the 'dev' branch.
+# It ensures that code changes are linted before they can be merged.
+
+name: PR Tests
+
+on:
+  pull_request:
+    branches: ['dev']
+    paths: ['custom_components/hdg_boiler/**']
+
+jobs:
+  # This job calls the reusable linting workflow.
+  lint:
+    uses: ./.github/workflows/lint.yml

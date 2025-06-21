@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.pyc
+*.py[cod]
 *.pyo
 *.pyd
 
@@ -21,6 +22,7 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -28,7 +30,6 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-# Usually these files are written by a pyinstaller script:
 *.manifest
 *.spec
 
@@ -43,6 +44,7 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+pytest_cache/
 nosetests.xml
 coverage.xml
 *.cover
@@ -95,11 +97,11 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env/
-.venv/
+.env
+.venv
+env/
 venv/
 ENV/
-env/
 env.bak/
 venv.bak/
 
@@ -132,7 +134,18 @@ cython_debug/
 Thumbs.db
 
 # VS Code
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Ruff
+.ruff_cache/
+
+# Pytest
+.pytest_cache/
 
 # Home Assistant specific
 # Ignore the HA configuration directory used for testing the custom component
@@ -151,9 +164,11 @@ logs/
 *.db
 *.sqlite3
 
+# Build artifacts from your HACS config
+hdg_boiler.zip
+
 # prettier config
 .prettierrc.json
 
-# Temporary Excludes
-automations/
-dashboard/
+# Temporary files
+.old/*

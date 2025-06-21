@@ -1,303 +1,309 @@
-"""
-Config flow for HDG Bavaria Boiler integration.
+"""Configuration flow for the HDG Bavaria Boiler integration."""
 
-This module handles the configuration process for the HDG Bavaria Boiler integration,
-enabling users to establish a connection to their boiler through the Home Assistant UI.
-It encompasses initial setup steps (host IP, device alias) and an options flow
-for modifying settings such as scan intervals and debug logging after the initial setup.
-"""
+from __future__ import annotations
 
-__version__ = "0.9.0"
+__version__ = "0.9.35"
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
+from urllib.parse import urlparse
 
+import async_timeout
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries, core
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-import homeassistant.helpers.config_validation as cv
+from voluptuous.schema_builder import Marker
 
-from .const import (
-    DOMAIN,
-    DEFAULT_NAME,
-    CONF_HOST_IP,
-    CONF_SCAN_INTERVAL_GROUP1,
-    CONF_DEVICE_ALIAS,
-    CONF_SCAN_INTERVAL_GROUP2,
-    CONF_SCAN_INTERVAL_GROUP3,
-    CONF_SCAN_INTERVAL_GROUP4,
-    CONF_SCAN_INTERVAL_GROUP5,
-    DEFAULT_SCAN_INTERVAL_GROUP1,
-    DEFAULT_SCAN_INTERVAL_GROUP2,
-    DEFAULT_SCAN_INTERVAL_GROUP3,
-    DEFAULT_SCAN_INTERVAL_GROUP4,
-    DEFAULT_SCAN_INTERVAL_GROUP5,
-    CONF_ENABLE_DEBUG_LOGGING,
-    DEFAULT_ENABLE_DEBUG_LOGGING,
-    HDG_NODE_PAYLOADS,
+from .api import (
+    HdgApiClient,
+    HdgApiConnectionError,
+    HdgApiError,
 )
+from .const import (
+    CONF_DEVICE_ALIAS,
+    CONF_ENABLE_DEBUG_LOGGING,
+    CONF_HOST_IP,
+    CONF_SOURCE_TIMEZONE,
+    CONFIG_FLOW_API_TIMEOUT,
+    CONFIG_FLOW_TEST_PAYLOAD,
+    DEFAULT_ENABLE_DEBUG_LOGGING,
+    DEFAULT_SOURCE_TIMEZONE,
+    DOMAIN,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
+    POLLING_GROUP_DEFINITIONS,
+)
+from .helpers.network_utils import async_execute_icmp_ping
+
 
 _LOGGER = logging.getLogger(DOMAIN)
 
-# Schema for user input during the initial configuration step.
-USER_DATA_SCHEMA = vol.Schema(
-    {
-        # Host IP address or hostname of the HDG boiler device.
-        vol.Required(CONF_HOST_IP): str,
-        vol.Optional(CONF_DEVICE_ALIAS): str,  # User-defined alias for the device.
-    }
-)
 
+@config_entries.HANDLERS.register(DOMAIN)
+class HdgBoilerConfigFlow(config_entries.ConfigFlow):
+    """Handle a config flow for HDG Bavaria Boiler."""
 
-def _create_options_schema(options: Optional[Dict[str, Any]] = None) -> vol.Schema:
-    """
-    Generate schema for options flow, pre-filling with existing options.
-
-    Constructs the schema for the options configuration form, using existing
-    options (if any) as default values. This ensures a consistent user
-    experience when reconfiguring.
-    """
-    options = options or {}
-    return vol.Schema(
+    USER_DATA_SCHEMA = vol.Schema(
         {
-            # Scan interval for the "Realtime Core" data polling group.
-            vol.Optional(
-                CONF_SCAN_INTERVAL_GROUP1,
-                default=options.get(CONF_SCAN_INTERVAL_GROUP1, DEFAULT_SCAN_INTERVAL_GROUP1),
-            ): cv.positive_int,
-            # Scan interval for the "General Status" data polling group.
-            vol.Optional(
-                CONF_SCAN_INTERVAL_GROUP2,
-                default=options.get(CONF_SCAN_INTERVAL_GROUP2, DEFAULT_SCAN_INTERVAL_GROUP2),
-            ): cv.positive_int,
-            # Scan interval for the "Config/Counters 1" data polling group.
-            vol.Optional(
-                CONF_SCAN_INTERVAL_GROUP3,
-                default=options.get(CONF_SCAN_INTERVAL_GROUP3, DEFAULT_SCAN_INTERVAL_GROUP3),
-            ): cv.positive_int,
-            # Scan interval for the "Config/Counters 2" data polling group.
-            vol.Optional(
-                CONF_SCAN_INTERVAL_GROUP4,
-                default=options.get(CONF_SCAN_INTERVAL_GROUP4, DEFAULT_SCAN_INTERVAL_GROUP4),
-            ): cv.positive_int,
-            # Scan interval for the "Config/Counters 3" data polling group.
-            vol.Optional(
-                CONF_SCAN_INTERVAL_GROUP5,
-                default=options.get(CONF_SCAN_INTERVAL_GROUP5, DEFAULT_SCAN_INTERVAL_GROUP5),
-            ): cv.positive_int,
-            # Option to enable/disable detailed debug logging for coordinator's polling cycles.
-            vol.Optional(
-                CONF_ENABLE_DEBUG_LOGGING,
-                default=options.get(CONF_ENABLE_DEBUG_LOGGING, DEFAULT_ENABLE_DEBUG_LOGGING),
-            ): cv.boolean,
+            vol.Required(CONF_HOST_IP): str,
+            vol.Optional(CONF_DEVICE_ALIAS, default=""): cv.string,
         }
     )
 
+    def _create_options_schema(
+        self, options: config_entries.Mapping[str, Any] | None = None
+    ) -> vol.Schema:
+        """Generate the schema for the options flow."""
+        current_options = options or {}
+        options_schema_dict: dict[Marker, Any] = {}
 
-async def validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) -> bool:
-    """
-    Verify host reachability and HDG boiler response via a basic API call.
+        for group_def in POLLING_GROUP_DEFINITIONS:
+            config_key = group_def["config_key"]  # type: ignore[misc]
+            default_interval = group_def["default_interval"]  # type: ignore[misc]
 
-    Performs an API call to ascertain connectivity and device compatibility.
-    """
-    start_time_validation = hass.loop.time()
-    # Import HdgApiClient locally to prevent circular dependencies at the module level,
-    # as api.py might import from const.py which could be involved in config_flow.py.
-    from .api import (
-        HdgApiClient,
-        HdgApiError,
-    )
+            options_schema_dict[
+                vol.Optional(
+                    config_key,
+                    default=current_options.get(config_key, default_interval),
+                )
+            ] = vol.All(
+                cv.positive_int,
+                vol.Range(
+                    min=MIN_SCAN_INTERVAL,
+                    max=MAX_SCAN_INTERVAL,
+                    msg="scan_interval_invalid_range_min_max",
+                ),
+            )
 
-    _LOGGER.debug(f"validate_host_connectivity: Starting validation for host_ip: {host_ip}")
-    session = async_get_clientsession(hass)
-    # HdgApiClient formats the base_url (e.g., adds http://).
-    # Temporary instance for validation purposes only.
-    temp_api_client = HdgApiClient(session, host_ip)
+        options_schema_dict |= {
+            vol.Optional(
+                CONF_ENABLE_DEBUG_LOGGING,
+                default=current_options.get(
+                    CONF_ENABLE_DEBUG_LOGGING, DEFAULT_ENABLE_DEBUG_LOGGING
+                ),
+            ): cv.boolean,
+            vol.Optional(
+                CONF_SOURCE_TIMEZONE,
+                default=current_options.get(
+                    CONF_SOURCE_TIMEZONE, DEFAULT_SOURCE_TIMEZONE
+                ),
+            ): str,
+        }
+        return vol.Schema(options_schema_dict)
 
-    try:
-        _LOGGER.debug(
-            f"validate_host_connectivity: Attempting HdgApiClient.async_check_connectivity() to {host_ip}"
-        )
-        start_time_check_connectivity = hass.loop.time()
-        is_connected = await temp_api_client.async_check_connectivity()
-        end_time_check_connectivity = hass.loop.time()
-        duration_check_connectivity = end_time_check_connectivity - start_time_check_connectivity
-        _LOGGER.debug(
-            f"validate_host_connectivity: HdgApiClient.async_check_connectivity() to {host_ip} "
-            f"completed in {duration_check_connectivity:.2f}s. Result: {is_connected}"
-        )
+    def _get_description_placeholders(self) -> dict[str, str]:
+        """Return placeholders for the options form description."""
+        placeholders = {
+            "min_scan_interval": str(MIN_SCAN_INTERVAL),
+            "max_scan_interval": str(MAX_SCAN_INTERVAL),
+        }
+        # Dynamically create placeholders for default scan intervals
+        # based on POLLING_GROUP_DEFINITIONS.
+        # The placeholder keys in strings.json (e.g., "default_group_1_realtime_core")
+        # must match the config_key from POLLING_GROUP_DEFINITIONS with "default_" prefix.
+        for group_def in POLLING_GROUP_DEFINITIONS:
+            placeholder_key = f"default_{group_def['config_key']}"  # type: ignore[misc]
+            placeholders[placeholder_key] = str(group_def["default_interval"])  # type: ignore[misc]
+        return placeholders
 
-        if is_connected:
-            _LOGGER.debug(f"validate_host_connectivity: Connectivity test to {host_ip} successful.")
-            return True
-        # If not connected, HdgApiClient.async_check_connectivity() returns False,
-        # indicating host was reached but did not respond as an HDG boiler.
-        _LOGGER.warning(
-            f"validate_host_connectivity: Connectivity test to {host_ip} failed (HdgApiClient reported not connected)."
-        )
+    async def validate_host_connectivity(
+        self, hass: core.HomeAssistant, host_ip: str
+    ) -> bool:
+        """Validate connectivity to the HDG boiler."""
+
+        # Step 1: Perform an ICMP Ping to check basic host reachability.
+        # This requires extracting the hostname from the provided host_ip.
+        # HdgApiClient's constructor normalizes the host_ip.
+        # to reliably parse it and extract the hostname, while also validating
+        # the host_ip format early in the process.
+        try:
+            # Create a temporary client just to get the parsed base_url for hostname extraction.
+            # This also validates the host_ip format early.
+            temp_api_client_for_url = HdgApiClient(
+                async_get_clientsession(hass), host_ip
+            )
+            parsed_url = urlparse(temp_api_client_for_url.base_url)
+            host_to_ping = parsed_url.hostname
+        except HdgApiError as e:  # Catch errors from HdgApiClient constructor (e.g. invalid host_ip format)
+            _LOGGER.warning(
+                f"Invalid host_ip format '{host_ip}' for API client construction: {e}"
+            )
+            return False  # Cannot proceed if host_ip is fundamentally invalid for the API client.
+
+        if not host_to_ping:
+            _LOGGER.error(
+                f"Could not extract hostname from host_ip '{host_ip}' for ICMP ping."
+            )
+            return False
+
+        if not await async_execute_icmp_ping(host_to_ping, timeout_seconds=3):
+            _LOGGER.warning(f"ICMP ping to {host_to_ping} (from IP: {host_ip}) failed.")
+            return False
+        _LOGGER.debug(f"ICMP ping to {host_to_ping} (from IP: {host_ip}) successful.")
+
+        # Step 2: Attempt to fetch minimal known HDG nodes to verify it's an HDG device.
+        # This step confirms that the device at the given IP address not only responds
+        # to pings but also behaves like an HDG boiler by responding to a specific API request.
+        session = async_get_clientsession(hass)
+        temp_api_client = HdgApiClient(session, host_ip)
+
+        try:
+            async with async_timeout.timeout(CONFIG_FLOW_API_TIMEOUT):
+                test_payload_str = CONFIG_FLOW_TEST_PAYLOAD
+                _LOGGER.debug(
+                    f"Attempting to fetch test nodes ({test_payload_str}) from {host_ip}"
+                )
+                test_data = await temp_api_client.async_get_nodes_data(test_payload_str)
+
+                if test_data and isinstance(test_data, list) and len(test_data) >= 1:
+                    # Basic check: if we get a list with at least one item, assume it's an HDG device.
+                    # A more robust check could verify the structure of test_data[0].
+                    _LOGGER.debug(
+                        "Successfully fetched test nodes from %s. Device is likely an HDG boiler.",
+                        host_ip,
+                    )
+                    return True
+                _LOGGER.warning(
+                    "Failed to fetch test nodes or received empty/invalid data from %s. Device might not be an HDG boiler.",
+                    host_ip,
+                )
+                return False
+        except (HdgApiConnectionError, HdgApiError) as err:
+            _LOGGER.warning(
+                "API error during HDG device check for %s: %s", host_ip, err
+            )
+        except TimeoutError:  # Catches asyncio.TimeoutError from async_timeout
+            _LOGGER.warning("Timeout during HDG device check for %s.", host_ip)
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.exception(
+                "Unexpected error during HDG device check for %s: %s", host_ip, err
+            )
         return False
-    except HdgApiError as e:  # Catch specific API errors from HdgApiClient.
-        _LOGGER.warning(
-            f"validate_host_connectivity: API error during connectivity test to {host_ip}: {e}"
-        )  # Log as warning for config flow validation.
-        return False
-    except Exception as e:  # Catch any other unexpected errors.
-        _LOGGER.error(
-            f"validate_host_connectivity: Unexpected error during connectivity test to {host_ip}: {e}"
-        )
-        return False
-    finally:
-        end_time_validation = hass.loop.time()
-        duration_validation = end_time_validation - start_time_validation
-        _LOGGER.debug(
-            f"validate_host_connectivity: Finished validation for host_ip: {host_ip}. "
-            f"Total duration: {duration_validation:.2f}s"
-        )
 
+    VERSION = 1
 
-class HdgBoilerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for HDG Bavaria Boiler."""
-
-    VERSION = 1  # Config flow version for future migrations.
-
-    async def async_step_user(self, user_input: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Handle the initial user-initiated step of the configuration flow."""
-        errors: Dict[str, str] = {}
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Handle the initial user step."""
+        _LOGGER.debug("async_step_user called with user_input: %s", user_input)
+        errors: dict[str, str] = {}
 
         if user_input is not None:
-            # User has submitted the form; process input.
-            host_ip = user_input[CONF_HOST_IP].strip()
-            device_alias = user_input.get(CONF_DEVICE_ALIAS, "").strip()
+            host_ip = user_input.get(CONF_HOST_IP)
+            current_device_alias = user_input.get(CONF_DEVICE_ALIAS, "")
 
             if not host_ip:
-                # Host IP is required for setup.
                 errors["base"] = "host_ip_required"
             else:
-                # If alias provided, check for duplicates among existing HDG entries.
-                if device_alias:
-                    existing_entries = self.hass.config_entries.async_entries(DOMAIN)
-                    for entry in existing_entries:
-                        # Skip comparison if reconfiguring the current entry.
-                        if (
-                            self.handler == "options"
-                            and self.config_entry is not None
-                            and entry.entry_id == self.config_entry.entry_id
-                        ):
-                            continue
-                        if (
-                            entry.data.get(CONF_DEVICE_ALIAS, "").strip().lower()
-                            == device_alias.lower()
-                        ):
-                            errors[CONF_DEVICE_ALIAS] = "alias_already_exists"
-                            _LOGGER.warning(
-                                f"Device alias '{device_alias}' is already in use by another entry."
-                            )
-                            break
-
-            if (
-                not errors
-            ):  # Proceed if no input validation errors (missing host_ip, duplicate alias).
-                is_connected = await validate_host_connectivity(self.hass, host_ip)
-                if is_connected:
-                    # No prior errors and connectivity validation passed.
-
-                    # Set unique ID for config entry to prevent duplicates.
-                    # host_ip.lower() ensures case-insensitivity.
+                is_hdg_device_and_connected = await self.validate_host_connectivity(
+                    self.hass, host_ip
+                )
+                if is_hdg_device_and_connected:
+                    # At this point, the host is reachable and responded like an HDG device.
+                    _LOGGER.info(f"Successfully validated HDG device at {host_ip}.")
                     await self.async_set_unique_id(host_ip.lower())
-                    # Abort if config entry with this unique ID already exists.
+                    # If unique_id already exists, this will raise AbortFlow and stop here.
                     self._abort_if_unique_id_configured()
 
-                    # Prepare config data for storage.
-                    # Defaults for scan intervals and debug logging applied on initial setup.
-                    config_data: Dict[str, Any] = {
-                        CONF_HOST_IP: host_ip,
-                        CONF_SCAN_INTERVAL_GROUP1: DEFAULT_SCAN_INTERVAL_GROUP1,
-                        CONF_SCAN_INTERVAL_GROUP2: DEFAULT_SCAN_INTERVAL_GROUP2,
-                        CONF_SCAN_INTERVAL_GROUP3: DEFAULT_SCAN_INTERVAL_GROUP3,
-                        CONF_SCAN_INTERVAL_GROUP4: DEFAULT_SCAN_INTERVAL_GROUP4,
-                        CONF_SCAN_INTERVAL_GROUP5: DEFAULT_SCAN_INTERVAL_GROUP5,
-                        CONF_ENABLE_DEBUG_LOGGING: DEFAULT_ENABLE_DEBUG_LOGGING,
-                    }
-                    # Include device alias (even if empty) to ensure key exists.
-                    config_data[CONF_DEVICE_ALIAS] = device_alias
-
-                    # Create config entry. Title uses alias or host_ip for UI.
+                    _LOGGER.debug("Creating entry for host_ip: %s", host_ip)
                     return self.async_create_entry(
-                        title=f"{DEFAULT_NAME} ({device_alias or host_ip})",
-                        data=config_data,
+                        title=current_device_alias or f"HDG Boiler ({host_ip})",
+                        data=user_input,
                     )
-                else:  # Connectivity validation failed.
+                else:
+                    # This error covers both "cannot connect (ping failed)" and "not an HDG device (API test failed)".
+                    # For a more specific UI message, validate_host_connectivity could return different error types/codes.
+                    _LOGGER.warning(
+                        f"Validation failed for host {host_ip}. It's either not reachable or not a recognized HDG device."
+                    )
                     errors["base"] = "cannot_connect"
-            # Errors dictionary populated if initial errors or connectivity failed.
+        data_schema_user = self.USER_DATA_SCHEMA
+        # Pre-fill form with previous input if validation failed
+        if user_input:
+            data_schema_user = vol.Schema(
+                {
+                    vol.Required(
+                        CONF_HOST_IP, default=user_input.get(CONF_HOST_IP, "")
+                    ): str,
+                    vol.Optional(
+                        CONF_DEVICE_ALIAS,
+                        default=user_input.get(CONF_DEVICE_ALIAS, ""),
+                    ): str,
+                }
+            )
 
-        # Define schema for user input form.
-        # Defaults pre-fill form on error or for first display.
-        data_schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_HOST_IP,
-                    default=user_input.get(CONF_HOST_IP, "") if user_input is not None else "",
-                ): str,
-                vol.Optional(
-                    CONF_DEVICE_ALIAS,
-                    default=user_input.get(CONF_DEVICE_ALIAS, "") if user_input is not None else "",
-                ): str,
-            }
+        return self.async_show_form(
+            step_id="user",
+            data_schema=data_schema_user,
+            errors=errors,
         )
-        return self.async_show_form(step_id="user", data_schema=data_schema, errors=errors)
 
     @staticmethod
     @callback
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
-    ) -> config_entries.OptionsFlow:
-        """
-        Retrieve the options flow handler for this integration.
-
-        Called by HA to get an instance of the options flow handler.
-        OptionsFlowManager manages its lifecycle.
-        """
+    ) -> HdgBoilerOptionsFlowHandler:
+        """Get the options flow for this handler."""
+        _LOGGER.debug(
+            "async_get_options_flow called for entry: %s", config_entry.entry_id
+        )
         return HdgBoilerOptionsFlowHandler(config_entry)
 
 
 class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle an options flow for HDG Bavaria Boiler (scan intervals, debug logging)."""
+    """Handle an options flow for HDG Bavaria Boiler."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """
-        Initialize options flow.
-
-        Config_entry passed by HA; stored for access to existing config/options.
-        """
+        """Initialize options flow."""
+        super().__init__()
         self.config_entry = config_entry
+        _LOGGER.debug(
+            "HdgBoilerOptionsFlowHandler initialized for entry: %s",
+            config_entry.entry_id,
+        )
 
-    async def async_step_init(self, user_input: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Manage options for scan intervals and debug logging."""
-        errors: Dict[str, str] = {}
+    def _get_options_schema(self) -> vol.Schema:
+        """Get the options schema.
+
+        This creates a temporary instance of the main config flow to reuse its schema creation logic.
+        This is a workaround; a more robust solution might involve static methods or duplicated logic.
+        """
+        flow_instance = HdgBoilerConfigFlow()
+        # Access config_entry directly from self, provided by the base class
+        return flow_instance._create_options_schema(self.config_entry.options)
+
+    def _get_options_description_placeholders(self) -> dict[str, str]:
+        """Get description placeholders for the options form.
+
+        Similar to _get_options_schema, it reuses logic from the main config flow.
+        """
+        flow_instance = HdgBoilerConfigFlow()
+        return flow_instance._get_description_placeholders()
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Manage minimal options."""
+        _LOGGER.debug(
+            "OptionsFlow async_step_init called with user_input: %s", user_input
+        )
+        current_errors: dict[str, str] = {}
 
         if user_input is not None:
-            # Form submitted; create new entry with updated options for HA to store.
-            _LOGGER.debug(f"Updating options for {self.config_entry.title}: {user_input}")
+            # Options are directly saved without further validation in this simple flow.
+            _LOGGER.debug(
+                "Options flow: Creating entry with new options: %s", user_input
+            )
             return self.async_create_entry(title="", data=user_input)
 
-        # First time showing form; create schema using existing options to pre-fill.
-        # self.config_entry provided by base OptionsFlow class.
-        options_schema = _create_options_schema(self.config_entry.options)
-
-        # Prepare placeholders for form description, matching translation keys
-        # for dynamic content. Fallback names used if group not in HDG_NODE_PAYLOADS.
-        description_placeholders: Dict[str, str] = {
-            "default_realtime_core": str(DEFAULT_SCAN_INTERVAL_GROUP1),
-            "default_status_general": str(DEFAULT_SCAN_INTERVAL_GROUP2),
-            "default_config_counters_1": str(DEFAULT_SCAN_INTERVAL_GROUP3),
-            "default_config_counters_2": str(DEFAULT_SCAN_INTERVAL_GROUP4),
-            "default_config_counters_3": str(DEFAULT_SCAN_INTERVAL_GROUP5),
-        }
+        options_schema = self._get_options_schema()
 
         return self.async_show_form(
             step_id="init",
             data_schema=options_schema,
-            errors=errors,
-            description_placeholders=description_placeholders,
+            errors=current_errors,
+            description_placeholders=self._get_options_description_placeholders(),
         )

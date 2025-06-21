@@ -1,0 +1,108 @@
+{
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits",
+        "presetConfig": {
+          "types": [
+            {
+              "type": "feat",
+              "section": "✨ New Features"
+            },
+            {
+              "type": "fix",
+              "section": "🐛 Bug Fixes"
+            },
+            {
+              "type": "perf",
+              "section": "⚡ Performance Improvements"
+            },
+            {
+              "type": "revert",
+              "section": "Reverts",
+              "hidden": true
+            },
+            {
+              "type": "docs",
+              "section": "📚 Documentation"
+            },
+            {
+              "type": "style",
+              "section": "Styles",
+              "hidden": true
+            },
+            {
+              "type": "chore",
+              "section": "Miscellaneous",
+              "hidden": true
+            },
+            {
+              "type": "refactor",
+              "section": "Code Refactoring",
+              "hidden": true
+            },
+            {
+              "type": "test",
+              "section": "Tests",
+              "hidden": true
+            },
+            {
+              "type": "build",
+              "section": "Build System",
+              "hidden": true
+            },
+            {
+              "type": "ci",
+              "section": "Continuous Integration",
+              "hidden": true
+            }
+          ]
+        }
+      }
+    ],
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "./scripts/publish.sh ${nextRelease.version}"
+      }
+    ],
+    "@semantic-release/changelog",
+    [
+      "@semantic-release/git",
+      {
+        "message": "chore(release): 🚀 publish version ${nextRelease.version}\n\n${nextRelease.notes}",
+        "assets": [
+          "hacs.json",
+          "CHANGELOG.md",
+          "custom_components/hdg_boiler/manifest.json"
+        ]
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "dist/*.zip",
+            "label": "HDG Boiler Component (install via HACS)"
+          }
+        ]
+      }
+    ]
+  ],
+  "branches": [
+    "main",
+    "release-test",
+    {
+      "name": "dev",
+      "prerelease": true
+    }
+  ]
+}

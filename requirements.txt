@@ -1,0 +1,7 @@
+# This file lists the Python packages required for the Continuous Integration (CI)
+# environment, such as linters and formatters. It is used by the GitHub Actions
+# workflow to set up a consistent testing environment.
+
+ruff
+pre-commit
+black
