@@ -5,6 +5,7 @@
 ![GitHub](https://img.shields.io/github/license/banter240/hdg_bavaria_homeassistant)
 ![GitHub issues by-label](https://img.shields.io/github/issues/banter240/hdg_bavaria_homeassistant/bug?color=red)
 ![GitHub contributors](https://img.shields.io/github/contributors/banter240/hdg_bavaria_homeassistant)
+[![semantic-release: conventional commits](https://img.shields.io/badge/semantic--release-conventionalcommits-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
 
 <!-- Optional: Add more badges like community forum, buy me a coffee if you set them up -->
 
