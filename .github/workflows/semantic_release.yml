@@ -1,5 +1,5 @@
-# Main release workflow for the HDG Boiler project. This workflow orchestrates
-# quality checks and the automated release process using semantic-release.
+# Main release workflow. This orchestrates quality checks and the automated
+# release process using semantic-release.
 
 name: "CI & Release"
 
@@ -7,8 +7,8 @@ on:
   push:
     branches:
       - 'main'
-      - 'dev'
       - 'release-test'
+      # - 'dev'
 
 jobs:
   # -- Prerequisite Job: Linting --
@@ -37,7 +37,6 @@ jobs:
         uses: "actions/checkout@v4"
         with:
           fetch-depth: 0
-          # Use the new, more descriptive secret name
           token: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
 
       - name: "Setup Node.js environment"
@@ -52,7 +51,6 @@ jobs:
         id: semantic
         run: npx semantic-release
         env:
-          # Pass the token to the semantic-release process
           GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN }}
 
       - name: "Output release information"
