@@ -14,6 +14,7 @@
 #
 # ==============================================================================
 
+# Exit immediately if a command exits with a non-zero status.
 set -e
 
 # --- Color Definitions & Log Functions ---
@@ -44,40 +45,48 @@ log_info "All checks passed."
 # --- Configuration Variables ---
 readonly NEXT_RELEASE_VERSION="$1"
 readonly DOMAIN="hdg_boiler"
-readonly SOURCE_DIR="custom_components/${DOMAIN}"
 readonly DIST_DIR="dist"
 readonly ZIP_FILENAME="${DOMAIN}_${NEXT_RELEASE_VERSION}.zip"
-readonly HACS_MANIFEST="hacs.json"
-readonly COMPONENT_MANIFEST="${SOURCE_DIR}/manifest.json"
+readonly COMPONENT_MANIFEST_PATH="${SOURCE_DIR}/manifest.json" # Corrected this line in thought process
+readonly HACS_MANIFEST_PATH="hacs.json"
+# Correct definition of source dir
+readonly SOURCE_DIR="custom_components/${DOMAIN}"
+
 
 log_info "Starting release asset preparation for version ${NEXT_RELEASE_VERSION}..."
 
 # --- Main Execution ---
 
 # 1. Update component manifest.json version
-if [ -f "$COMPONENT_MANIFEST" ]; then
-  log_info "Updating version in '${COMPONENT_MANIFEST}'..."
-  jq ".version = \"${NEXT_RELEASE_VERSION}\"" "$COMPONENT_MANIFEST" > "${COMPONENT_MANIFEST}.tmp" && mv "${COMPONENT_MANIFEST}.tmp" "$COMPONENT_MANIFEST"
-  log_success "'${COMPONENT_MANIFEST}' updated to version ${NEXT_RELEASE_VERSION}."
+if [ -f "$COMPONENT_MANIFEST_PATH" ]; then
+  log_info "Updating version in '${COMPONENT_MANIFEST_PATH}'..."
+  jq ".version = \"${NEXT_RELEASE_VERSION}\"" "$COMPONENT_MANIFEST_PATH" > "${COMPONENT_MANIFEST_PATH}.tmp" && mv "${COMPONENT_MANIFEST_PATH}.tmp" "$COMPONENT_MANIFEST_PATH"
+  log_success "'${COMPONENT_MANIFEST_PATH}' updated to version ${NEXT_RELEASE_VERSION}."
 else
-  log_warn "'${COMPONENT_MANIFEST}' not found. Cannot update version."
+  log_warn "'${COMPONENT_MANIFEST_PATH}' not found. Cannot update version."
 fi
 
-# 2. Create the ZIP archive
+# 2. Create the distribution directory
+log_info "Ensuring distribution directory '${DIST_DIR}' exists..."
+mkdir -p "${DIST_DIR}"
+
+# 3. Create the ZIP archive
 log_info "Creating ZIP archive at '${DIST_DIR}/${ZIP_FILENAME}'..."
-(
-  cd "${SOURCE_DIR}" && \
-  zip -r "../../${DIST_DIR}/${ZIP_FILENAME}" . -x "*/__pycache__/*" "*.pyc" ".DS_Store"
-)
+# Change into the 'custom_components' directory to get the right structure
+cd custom_components
+zip -r "../${DIST_DIR}/${ZIP_FILENAME}" "${DOMAIN}" -x "*/__pycache__/*" "*.pyc" ".DS_Store"
+# Go back to the root directory
+cd ..
 log_success "ZIP archive created successfully."
 
-# 3. Update hacs.json
-if [ -f "$HACS_MANIFEST" ]; then
-  log_info "Updating filename in '${HACS_MANIFEST}'..."
-  jq ".filename = \"${ZIP_FILENAME}\"" "$HACS_MANIFEST" > "${HACS_MANIFEST}.tmp" && mv "${HACS_MANIFEST}.tmp" "$HACS_MANIFEST"
-  log_success "'${HACS_MANIFEST}' updated."
+
+# 4. Update hacs.json
+if [ -f "$HACS_MANIFEST_PATH" ]; then
+  log_info "Updating filename in '${HACS_MANIFEST_PATH}'..."
+  jq ".filename = \"${ZIP_FILENAME}\"" "$HACS_MANIFEST_PATH" > temp.json && mv temp.json "$HACS_MANIFEST_PATH"
+  log_success "'${HACS_MANIFEST_PATH}' updated."
 else
-  log_warn "'${HACS_MANIFEST}' not found. Skipping update."
+  log_warn "'${HACS_MANIFEST_PATH}' not found. Skipping update."
 fi
 
 echo
