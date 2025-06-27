@@ -25,11 +25,11 @@ from .definitions import (
     SensorDefinition,
 )
 from .exceptions import HdgApiError
-from .helpers.parsing_utils import (
+from .helpers.parsers import (
     format_value_for_api,
 )
 from .helpers.string_utils import (
-    extract_base_node_id,
+    strip_hdg_node_suffix,
 )
 from .helpers.validation_utils import (
     coerce_value_to_numeric_type,
@@ -37,6 +37,7 @@ from .helpers.validation_utils import (
     validate_service_call_input,
     validate_value_range_and_step,
 )
+from .helpers.logging_utils import format_for_log
 
 _LOGGER = logging.getLogger(DOMAIN)
 
@@ -52,19 +53,17 @@ def _build_sensor_definitions_by_base_node_id() -> dict[str, list[SensorDefiniti
 
     for definition_dict in SENSOR_DEFINITIONS.values():
         definition = cast(SensorDefinition, definition_dict)
-        # Ensure hdg_node_id exists and is a string before attempting to extract
-        # the base ID. This prevents errors if a definition is malformed.
         hdg_node_id_val = definition.get("hdg_node_id")
         if isinstance(hdg_node_id_val, str) and (
-            base_hdg_node_id_from_def := extract_base_node_id(hdg_node_id_val)
+            base_hdg_node_id_from_def := strip_hdg_node_suffix(hdg_node_id_val)
         ):
-            if base_hdg_node_id_from_def:  # Ensure base_id is not empty
-                if base_hdg_node_id_from_def not in index:
-                    index[base_hdg_node_id_from_def] = []
-                index[base_hdg_node_id_from_def].append(definition)
+            if base_hdg_node_id_from_def not in index:
+                index[base_hdg_node_id_from_def] = []
+            index[base_hdg_node_id_from_def].append(definition)
         else:
             _LOGGER.warning(
-                f"Skipping definition in _build_sensor_definitions_by_base_node_id due to missing or invalid 'hdg_node_id': {definition_dict.get('translation_key', 'Unknown Key')}"
+                "Skipping definition in _build_sensor_definitions_by_base_node_id due to missing or invalid 'hdg_node_id': %s",
+                format_for_log(definition_dict.get("translation_key", "Unknown Key")),
             )
     return index
 
@@ -89,7 +88,6 @@ def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
         node_id_str: The base HDG node ID to search for.
 
     """
-    # Retrieve all definitions associated with the base node ID.
     definitions_for_base = SENSOR_DEFINITIONS_BY_BASE_NODE_ID.get(node_id_str, [])
     settable_definitions = [
         d
@@ -97,7 +95,6 @@ def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
         if d.get("ha_platform") == "number" and d.get("setter_type")
     ]
 
-    # Handle cases where no suitable definition is found.
     if not settable_definitions:
         error_detail = "No SENSOR_DEFINITIONS entry found or not a settable 'number' platform with a 'setter_type'."
         if definitions_for_base:
@@ -107,18 +104,19 @@ def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
                 f"(ha_platform='number' and 'setter_type' defined)."
             )
         _LOGGER.error(
-            f"Node ID '{node_id_str}' not configured as settable 'number'. Details: {error_detail}"
+            "Node ID '%s' not configured as settable 'number'. Details: %s",
+            format_for_log(node_id_str),
+            error_detail,
         )
         raise ServiceValidationError(
             f"Node ID '{node_id_str}' not settable. Reason: {error_detail}"
         )
 
-    # Handle cases where multiple conflicting definitions are found.
     if len(settable_definitions) > 1:
         _LOGGER.error(
-            f"Multiple settable 'number' SensorDefinitions found for node_id '{node_id_str}': "
-            f"{[repr(d) for d in settable_definitions]}. "
-            "Please ensure only one settable definition exists per node to avoid ambiguity."
+            "Multiple settable 'number' SensorDefinitions found for node_id '%s': %s. Please ensure only one settable definition exists per node to avoid ambiguity.",
+            format_for_log(node_id_str),
+            format_for_log([repr(d) for d in settable_definitions]),
         )
         raise ServiceValidationError(
             f"Multiple settable 'number' definitions for node ID '{node_id_str}'. Conflicting definitions: {[repr(d) for d in settable_definitions]}"
@@ -156,7 +154,6 @@ async def async_handle_set_node_value(
     )
 
     sensor_def_for_node = _find_settable_sensor_definition(node_id_str)
-    # Use translation_key for logging if available, otherwise the raw node_id.
     entity_name_for_log = sensor_def_for_node.get("translation_key", node_id_str)
 
     node_type = sensor_def_for_node.get("setter_type")
@@ -164,12 +161,10 @@ async def async_handle_set_node_value(
     max_val_def = sensor_def_for_node.get("setter_max_val")
     node_step_def = sensor_def_for_node.get("setter_step")
 
-    # 1. Coerce the input value to the expected numeric type (int or float).
     coerced_numeric_value = coerce_value_to_numeric_type(
         value_to_set_raw, node_type, entity_name_for_log
     )
 
-    # 2. Validate the coerced numeric value against the defined range and step.
     validate_value_range_and_step(
         coerced_numeric_value=coerced_numeric_value,
         min_val_def=min_val_def,
@@ -180,9 +175,7 @@ async def async_handle_set_node_value(
         original_value_to_set_for_log=value_to_set_raw,
     )
 
-    # 3. Format the validated numeric value into the string expected by the HDG API.
     try:
-        # node_type is confirmed to be non and valid by _find_settable_sensor_definition
         api_value_to_send_str = format_value_for_api(
             coerced_numeric_value, cast(str, node_type)
         )
@@ -194,11 +187,10 @@ async def async_handle_set_node_value(
             f"Configuration error formatting value for API for node '{entity_name_for_log}': {e}"
         ) from e
 
-    # 4. Attempt to set the value via the coordinator.
     try:
         success = await coordinator.async_set_node_value_if_changed(
-            node_id=node_id_str,  # Base node ID.
-            new_value_str_for_api=api_value_to_send_str,  # Formatted string value for API.
+            node_id=node_id_str,
+            new_value_str_for_api=api_value_to_send_str,
             entity_name_for_log=entity_name_for_log,
         )
         if not success:
@@ -215,7 +207,7 @@ async def async_handle_set_node_value(
         raise HomeAssistantError(
             f"API error setting node '{entity_name_for_log}' (ID: {node_id_str}): {err}"
         ) from err
-    except Exception as err:  # Catch any other unexpected errors
+    except Exception as err:
         _LOGGER.exception(
             f"Unexpected error setting node '{entity_name_for_log}' (ID: {node_id_str}): {err}"
         )
@@ -253,12 +245,9 @@ async def async_handle_get_node_value(
         _LOGGER.warning(
             f"Coordinator data not initialized. Cannot get value for node '{node_id_str}'."
         )
-        return {
-            "node_id": node_id_str,
-            "value": None,
-            "status": "coordinator_data_unavailable",
-            "error": "Coordinator data store not initialized.",
-        }
+        raise ServiceValidationError(
+            f"Coordinator data store not initialized. Cannot get value for node '{node_id_str}'."
+        )
 
     if node_id_str in coordinator.data:
         value = coordinator.data[node_id_str]
@@ -271,9 +260,6 @@ async def async_handle_get_node_value(
         _LOGGER.debug(
             f"Attempted find '{node_id_str}'. Available keys (sample): {list(coordinator.data.keys())[:20]}"
         )
-        return {
-            "node_id": node_id_str,
-            "value": None,
-            "status": "not_found",
-            "error": f"Node ID '{node_id_str}' not found in coordinator's data.",
-        }
+        raise ServiceValidationError(
+            f"Node ID '{node_id_str}' not found in coordinator's data."
+        )

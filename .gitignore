@@ -170,5 +170,9 @@ hdg_boiler.zip
 # prettier config
 .prettierrc.json
 
+# gemini config
+.gemini/
+GEMINI.md
+
 # Temporary files
 .old/*

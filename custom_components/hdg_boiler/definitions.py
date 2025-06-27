@@ -30,9 +30,6 @@ from .const import (
 )
 from .models import SensorDefinition  # Import from new models.py
 
-# Extract the string keys for polling groups from POLLING_GROUP_DEFINITIONS
-# These will be used in the SENSOR_DEFINITIONS below.
-# Example: POLLING_GROUP_1_KEY = "group_1"
 POLLING_GROUP_KEYS: dict[str, str] = {
     f"POLLING_GROUP_{i + 1}": group["key"]  # type: ignore[misc]
     for i, group in enumerate(POLLING_GROUP_DEFINITIONS)
@@ -2055,14 +2052,14 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     "puffer_energie_aktuell": {
         "hdg_node_id": "24017T",
         "translation_key": "puffer_energie_aktuell",
-        "polling_group": POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+        "polling_group": POLLING_GROUP_KEYS["POLLING_GROUP_2"],
         "hdg_data_type": "2",
         "hdg_formatter": "iKWH",
         "ha_platform": "sensor",
         "ha_device_class": SensorDeviceClass.ENERGY,
         "ha_native_unit_of_measurement": UnitOfEnergy.KILO_WATT_HOUR,
-        "ha_state_class": SensorStateClass.MEASUREMENT,
-        "icon": "mdi:battery-charging",
+        "ha_state_class": SensorStateClass.TOTAL,
+        "icon": "mdi:lightning-bolt",
         "writable": False,
         "parse_as_type": "float",
     },

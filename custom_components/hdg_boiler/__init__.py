@@ -1,17 +1,10 @@
-"""Main entry point for the HDG Bavaria Boiler Home Assistant integration.
+"""The HDG Bavaria Boiler integration."""
 
-This module handles the initialization of the integration when a config entry
-is added to Home Assistant. It sets up the API client, data update coordinator,
-and forwards the setup to relevant platforms (e.g., sensor, number).
-Additionally, it registers custom services for interacting with the boiler and
-manages their lifecycle during config entry unload.
-"""
+from __future__ import annotations
 
 __version__ = "0.9.5"
 
-import functools
 import logging
-from typing import cast
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -21,171 +14,101 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import HdgApiClient
 from .const import (
+    CONF_API_TIMEOUT,
+    CONF_CONNECT_TIMEOUT,
     CONF_HOST_IP,
+    CONF_POLLING_PREEMPTION_TIMEOUT,
+    CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    DEFAULT_API_TIMEOUT,
+    DEFAULT_CONNECT_TIMEOUT,
+    DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    DEFAULT_POLLING_PREEMPTION_TIMEOUT,
     DOMAIN,
-    SERVICE_GET_NODE_VALUE,
-    SERVICE_SET_NODE_VALUE,
 )
-from .coordinator import HdgDataUpdateCoordinator
-from .helpers.network_utils import prepare_base_url
-from .services import async_handle_get_node_value, async_handle_set_node_value
+from .coordinator import async_create_and_refresh_coordinator
+from .helpers.api_access_manager import HdgApiAccessManager
+from .helpers.logging_utils import configure_loggers
+
 
 _LOGGER = logging.getLogger(DOMAIN)
+
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.NUMBER]
 
 
-def _register_services(
-    hass: HomeAssistant, coordinator: HdgDataUpdateCoordinator
+async def _async_options_update_listener(
+    hass: HomeAssistant, entry: ConfigEntry
 ) -> None:
-    """Register integration-specific services with Home Assistant.
-
-    Args:
-        hass: The Home Assistant instance.
-        coordinator: The data update coordinator for the integration.
-
-    """
-    # Bind the coordinator instance to the service handlers.
-    bound_set_node_value_handler = functools.partial(
-        async_handle_set_node_value, hass, coordinator
-    )
-    hass.services.async_register(
-        DOMAIN, SERVICE_SET_NODE_VALUE, bound_set_node_value_handler
-    )
-
-    bound_get_node_value_handler = functools.partial(
-        async_handle_get_node_value, hass, coordinator
-    )
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_GET_NODE_VALUE,
-        bound_get_node_value_handler,
-    )
+    """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up the HDG Bavaria Boiler integration from a config entry.
 
-    This function is called by Home Assistant when a new config entry for this
-    integration is added or when Home Assistant starts up with an existing entry.
-    It initializes the API client, data update coordinator, performs an initial
-    data refresh, sets up entity platforms, and registers services.
-
-    Args:
-        hass: The HomeAssistant instance.
-        entry: The ConfigEntry instance for this integration.
-
-    Returns:
-        True if setup was successful, False otherwise.
-
+    This function orchestrates the entire setup process for a single boiler instance,
+    including initializing logging, API clients, data coordinators, and platform setups.
     """
-    hass.data.setdefault(DOMAIN, {})
+    configure_loggers(entry)
+    _LOGGER.debug(f"Setting up HDG Bavaria Boiler from config entry: {entry.entry_id}")
 
-    host_ip_original = entry.data[CONF_HOST_IP]
-    base_url = prepare_base_url(host_ip_original)
-    if not base_url:
-        _LOGGER.error(
-            f"Failed to prepare base URL from host_ip '{host_ip_original}' for HDG Boiler. Please check configuration."
-        )
-        raise ConfigEntryNotReady(f"Invalid host/IP for HDG Boiler: {host_ip_original}")
+    host_ip = entry.data.get(CONF_HOST_IP)
+    if not host_ip:
+        _LOGGER.error(f"Host IP missing from config entry {entry.entry_id}.")
+        return False
 
     session = async_get_clientsession(hass)
-    api_client = HdgApiClient(session, base_url)
-    coordinator = HdgDataUpdateCoordinator(hass, api_client, entry)
+    api_timeout = entry.options.get(CONF_API_TIMEOUT, DEFAULT_API_TIMEOUT)
+    connect_timeout = entry.options.get(CONF_CONNECT_TIMEOUT, DEFAULT_CONNECT_TIMEOUT)
+    api_client = HdgApiClient(session, host_ip, api_timeout, connect_timeout)
 
-    # Perform the initial data refresh. This can raise ConfigEntryNotReady.
+    api_preemption_timeout = entry.options.get(
+        CONF_POLLING_PREEMPTION_TIMEOUT, DEFAULT_POLLING_PREEMPTION_TIMEOUT
+    )
+    api_access_manager = HdgApiAccessManager(
+        hass, api_client, polling_preemption_timeout=api_preemption_timeout
+    )
+    api_access_manager.start(entry)
+
+    log_level_threshold = entry.options.get(
+        CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+        DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    )
     try:
-        await coordinator.async_config_entry_first_refresh()
+        coordinator = await async_create_and_refresh_coordinator(
+            hass, api_access_manager, entry, log_level_threshold
+        )
     except ConfigEntryNotReady:
-        _LOGGER.error(
-            f"Initial data refresh failed for {entry.title} (ConfigEntryNotReady). Setup will be retried by Home Assistant."
-        )
-        raise  # Re-raise to allow HA to handle retry
-    except Exception as exc:
-        _LOGGER.exception(
-            f"Unexpected error during initial data refresh for {entry.title}: {exc}. Setup failed."
-        )
-        raise
+        await api_access_manager.stop()
+        return False
 
-    hass.data[DOMAIN][entry.entry_id] = {
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "coordinator": coordinator,
         "api_client": api_client,
+        "api_access_manager": api_access_manager,
     }
 
-    # Start the set_value worker as a background task tied to the config entry.
-    coordinator._set_value_worker_task = entry.async_create_background_task(
-        hass,
-        coordinator._set_value_worker_instance.run(),
-        name=f"{DOMAIN}_{entry.entry_id}_set_value_worker",  # Descriptive name for the task
+    await hass.config_entries.async_forward_entry_setups(
+        entry, [platform.value for platform in PLATFORMS]
     )
-    _LOGGER.info(
-        f"HDG set_value_worker background task created for entry {entry.title}."
-    )
+    _LOGGER.info(f"HDG Bavaria Boiler integration for {host_ip} setup complete.")
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    # Register custom services after platforms are set up.
-    _register_services(hass, coordinator)
-    entry.async_on_unload(entry.add_update_listener(async_options_update_listener))
+    entry.async_on_unload(entry.add_update_listener(_async_options_update_listener))
 
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry.
-
-    This is called when an integration instance is removed from Home Assistant.
-    It unloads associated platforms, stops background tasks, and cleans up resources,
-    including services if this is the last entry for the domain.
-
-    Args:
-        hass: The HomeAssistant instance.
-        entry: The ConfigEntry instance to unload.
-
-    Returns:
-        True if unload was successful, False otherwise.
-
-    """
-    _LOGGER.info(f"Unloading HDG Boiler integration for {entry.title}")
-
-    integration_data = hass.data[DOMAIN].get(entry.entry_id)
-    coordinator: HdgDataUpdateCoordinator | None = (
-        integration_data.get("coordinator") if integration_data else None
-    )
-    unload_ok = cast(  # type: ignore[no-untyped-call] # async_unload_platforms is typed elsewhere
-        bool, await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    )
-
+    """Unload a config entry, ensuring all background tasks are stopped."""
+    _LOGGER.debug(f"Unloading HDG Bavaria Boiler config entry: {entry.entry_id}")
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        if entry.entry_id in hass.data[DOMAIN]:
-            # Gracefully stop the set_value_worker if coordinator exists
-            if coordinator:
-                await coordinator.async_stop_set_value_worker()
-            hass.data[DOMAIN].pop(entry.entry_id)
-            _LOGGER.debug(f"Removed {entry.entry_id} data from hass.data.{DOMAIN}")
+        integration_data = hass.data[DOMAIN].pop(entry.entry_id)
+        api_access_manager: HdgApiAccessManager = integration_data["api_access_manager"]
 
-        # If this is the last entry for the domain, remove the services.
+        await api_access_manager.stop()
+
         if not hass.data[DOMAIN]:
-            _LOGGER.info(f"Last entry for {DOMAIN} unloaded, removing services.")
-            hass.services.async_remove(DOMAIN, SERVICE_SET_NODE_VALUE)
-            hass.services.async_remove(DOMAIN, SERVICE_GET_NODE_VALUE)
-
-    return unload_ok
-
-
-async def async_options_update_listener(
-    hass: HomeAssistant, entry: ConfigEntry
-) -> None:
-    """Handle options update.
-
-    This listener is called when the integration's options are changed via the UI.
-    It triggers a reload of the config entry to apply the new options.
-
-    Args:
-        hass: The HomeAssistant instance.
-        entry: The ConfigEntry instance whose options were updated.
-
-    """
-    _LOGGER.info(
-        f"Configuration options for {entry.title} updated: {entry.options}. Reloading entry."
-    )
-    await hass.config_entries.async_reload(entry.entry_id)
+            del hass.data[DOMAIN]
+        _LOGGER.info(f"HDG Bavaria Boiler integration for {entry.entry_id} unloaded.")
+    return bool(unload_ok)

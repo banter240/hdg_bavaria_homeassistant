@@ -3,11 +3,14 @@
     "step": {
       "user": {
         "title": "HDG Bavaria Kessel Einrichtung",
-        "description": "Geben Sie die IP-Adresse oder den Hostnamen Ihres HDG Kessels ein. Diese Integration fragt Daten in vordefinierten Gruppen mit spezifischen Scan-Intervallen ab.",
+        "description": "Konfigurieren Sie die Verbindung zu Ihrem HDG Bavaria Kessel.",
         "data": {
           "host_ip": "Host IP-Adresse oder Hostname des Kessels",
-          "device_alias": "Alias für den Kessel (optional, für Geräte- & Entitätsnamen)",
-          "language": "Bevorzugte Sprache (für zukünftige Nutzung)"
+          "device_alias": "Alias für den Kessel (optional, für Geräte- & Entitätsnamen)"
+        },
+        "data_description": {
+          "host_ip": "Die IP-Adresse oder der Hostname Ihres HDG-Kessels (z.B. '192.168.1.100' oder 'hdg-kessel.local').",
+          "device_alias": "Ein optionaler, benutzerfreundlicher Name für diesen Kessel in Home Assistant. Wenn leer, wird ein Standardname verwendet."
         }
       }
     },
@@ -25,20 +28,42 @@
     "step": {
       "init": {
         "title": "HDG Kessel Optionen",
-        "description": "Passen Sie Scan-Intervalle und andere Einstellungen an. Standard-Scan-Intervalle gewährleisten ein Gleichgewicht zwischen Datenaktualität und Systemlast.\n\nGruppe Echtzeit-Kernwerte: Standard {default_realtime_core}s\nGruppe Status-Werte Allgemein: Standard {default_status_general}s\nGruppe Konfig/Zähler Teil 1: Standard {default_config_counters_1}s\nGruppe Konfig/Zähler Teil 2: Standard {default_config_counters_2}s\nGruppe Konfig/Zähler Teil 3: Standard {default_config_counters_3}s\n\nQuell-Zeitzone: Geben Sie die IANA-Zeitzonenkennung für den Standort Ihres Kessels ein (z.B. 'Europe/Berlin', 'America/New_York'). Eine Liste finden Sie unter: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
+        "description": "Optionen für den HDG Kessel.",
         "data": {
-          "scan_interval_realtime_core": "Scan-Intervall: Echtzeit-Kernwerte (Sekunden)",
-          "scan_interval_status_general": "Scan-Intervall: Status-Werte Allgemein (Sekunden)",
-          "scan_interval_config_counters_1": "Scan-Intervall: Konfig/Zähler Teil 1 (Sekunden)",
-          "scan_interval_config_counters_2": "Scan-Intervall: Konfig/Zähler Teil 2 (Sekunden)",
-          "scan_interval_config_counters_3": "Scan-Intervall: Konfig/Zähler Teil 3 (Sekunden)",
-          "enable_debug_logging": "Detaillierte Zeitstempel-Protokollierung aktivieren (für Fehlersuche, erzeugt große Logs)",
-          "source_timezone": "Quell-Zeitzone (IANA-Format)"
+          "device_alias": "Geräte-Alias",
+          "scan_interval_group_1_realtime_core": "Scan-Intervall: Echtzeit-Kernwerte (Sekunden)",
+          "scan_interval_group_2_status_general": "Scan-Intervall: Status-Werte Allgemein (Sekunden)",
+          "scan_interval_group_3_config_counters_1": "Scan-Intervall: Konfig/Zähler Teil 1 (Sekunden)",
+          "scan_interval_group_4_config_counters_2": "Scan-Intervall: Konfig/Zähler Teil 2 (Sekunden)",
+          "scan_interval_group_5_config_counters_3": "Scan-Intervall: Konfig/Zähler Teil 3 (Sekunden)",
+          "log_level": "Protokollierungsstufe",
+          "advanced_logging": "Erweiterte Protokollierung aktivieren",
+          "source_timezone": "Quell-Zeitzone (IANA-Format)",
+          "api_timeout": "API-Timeout (Sekunden)",
+          "polling_preemption_timeout": "Polling-Vorrang-Timeout (Sekunden)",
+          "log_level_threshold_for_connection_errors": "Fehler-Schwellenwert für Verbindungsprobleme"
+        },
+        "data_description": {
+          "device_alias": "Ein optionaler, benutzerfreundlicher Name für diesen Kessel in Home Assistant. Wenn leer, wird ein Standardname verwendet.",
+          "log_level": "Legt die Detailtiefe der Protokolle für diese Integration fest. 'DEBUG' ist sehr ausführlich und nützlich für die Fehlersuche. 'INFO' ist der Standard für den normalen Betrieb.",
+          "advanced_logging": "Aktiviert zusätzliche INFO-Level-Protokolle für wichtige Aktionen (z.B. das Setzen von Werten), auch wenn die Protokollierungsstufe auf INFO steht. Nützlich, um Aktionen zu verfolgen, ohne die vollständige DEBUG-Protokollierung zu aktivieren.",
+          "source_timezone": "Die Zeitzone, in der der Kessel seine Zeitdaten liefert (z.B. 'Europe/Berlin'). Dies ist wichtig für die korrekte Interpretation von Datums-/Zeitwerten vom Kessel.",
+          "api_timeout": "Die maximale Wartezeit (in Sekunden) auf eine Antwort vom Kessel für jede API-Anfrage. Ein höherer Wert kann bei instabilen Netzwerken helfen, aber auch zu längeren Wartezeiten führen. Bereich: {min_api_timeout}-{max_api_timeout}s.",
+          "polling_preemption_timeout": "Die maximale Zeit (in Sekunden), die eine Abfrageanfrage niedriger Priorität ausgeführt werden darf, wenn eine höher priorisierte Anfrage (z.B. eine Einstellungsänderung) in die Warteschlange gestellt wird. Ein niedrigerer Wert sorgt für schnellere Reaktion auf Einstellungsänderungen, kann aber bei langsamen Kesselantworten zu häufigeren Abbrüchen führen. Bereich: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
+          "log_level_threshold_for_connection_errors": "Die Anzahl aufeinanderfolgender Verbindungsfehler, bevor die Protokollierung dieser Fehler von WARNUNG auf FEHLER eskaliert wird. Ein niedrigerer Wert führt zu schnelleren Fehlerprotokollen bei Verbindungsproblemen. Bereich: {min_log_level_threshold}-{max_log_level_threshold}.",
+          "scan_interval_group_1_realtime_core": "Das Intervall (in Sekunden) für die Abfrage der wichtigsten Echtzeitdaten des Kessels (z.B. Temperaturen, Betriebsstatus). Standard: {default_scan_interval_group_1_realtime_core}s.",
+          "scan_interval_group_2_status_general": "Das Intervall (in Sekunden) für die Abfrage allgemeiner Statusinformationen des Kessels. Standard: {default_scan_interval_group_2_status_general}s.",
+          "scan_interval_group_3_config_counters_1": "Das Intervall (in Sekunden) für die Abfrage von Konfigurations- und Zählerdaten des Kessels (Gruppe 1). Diese Daten ändern sich seltener. Standard: {default_scan_interval_group_3_config_counters_1}s.",
+          "scan_interval_group_4_config_counters_2": "Das Intervall (in Sekunden) für die Abfrage von Konfigurations- und Zählerdaten des Kessels (Gruppe 2). Standard: {default_scan_interval_group_4_config_counters_2}s.",
+          "scan_interval_group_5_config_counters_3": "Das Intervall (in Sekunden) für die Abfrage von Konfigurations- und Zählerdaten des Kessels (Gruppe 3). Standard: {default_scan_interval_group_5_config_counters_3}s."
         }
       }
     },
     "error": {
-      "scan_interval_invalid_range_min_max": "Scan-Intervall muss zwischen 15 und 86400 Sekunden liegen."
+      "scan_interval_invalid_range_min_max": "Scan-Intervall muss zwischen 15 und 86400 Sekunden liegen.",
+      "api_timeout_invalid_range_min_max": "API-Timeout muss zwischen {min_api_timeout} und {max_api_timeout} Sekunden liegen.",
+      "polling_preemption_timeout_invalid_range_min_max": "Polling-Vorrang-Timeout muss zwischen {min_polling_preemption_timeout} und {max_polling_preemption_timeout} Sekunden liegen.",
+      "log_level_threshold_invalid_range_min_max": "Der Fehler-Schwellenwert muss zwischen {min_log_level_threshold} und {max_log_level_threshold} liegen."
     },
     "abort": {}
   },
@@ -146,7 +171,7 @@
       "puffer_art": { "name": "Puffer Art" },
       "heizkreis_1_system": { "name": "Heizkreis 1 System" },
       "hk1_bezeichnung": { "name": "HK1 Bezeichnung" },
-      "hk1_soll_normal": { "name": "HK1 Soll Normal" },
+      "hk1_soll_normal": { "name": "Tagbetrieb Raumtemperatur Soll" },
       "hk1_parallelverschiebung": { "name": "HK1 Parallelverschiebung" },
       "hk1_raumeinflussfaktor": { "name": "HK1 Raumeinflussfaktor" },
       "hk1_vorlauftemperatur_minimum": { "name": "HK1 Vorlauftemperatur Minimum" },

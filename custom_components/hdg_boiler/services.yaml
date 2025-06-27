@@ -28,6 +28,7 @@ get_node_value:
     This cache is updated by polling the HDG boiler or after a successful 'set_node_value' call.
     The returned value is the raw string as received from the boiler, before any type conversion applied by sensor or number entities.
     This service can be used to query any node ID managed by the integration.
+    Raises `ServiceValidationError` if the required `node_id` is missing, or if the coordinator data is not initialized, or if the node is not found.
     Example Node IDs: '22003' (Kesseltemperatur Ist), '6022' (HK1 Soll Normal).
   fields:
     node_id:

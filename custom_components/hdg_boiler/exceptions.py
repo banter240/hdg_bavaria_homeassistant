@@ -5,7 +5,7 @@ the interaction with the HDG Bavaria boiler's API, allowing for more
 granular error handling and reporting within the integration.
 """
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 
 class HdgApiError(Exception):
@@ -26,3 +26,7 @@ class HdgApiConnectionError(HdgApiError):
 
 class HdgApiResponseError(HdgApiError):
     """Raised when the HDG API returns an unexpected or error response (e.g., non-JSON, bad HTTP status code)."""
+
+
+class HdgApiPreemptedError(HdgApiError):
+    """Raised when a lower-priority API request is preempted by a higher-priority request."""

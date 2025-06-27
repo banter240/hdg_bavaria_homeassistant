@@ -7,7 +7,7 @@ API polling group configurations, and enumeration options.
 
 from __future__ import annotations
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 from typing import TypedDict
 
@@ -78,34 +78,30 @@ class NodeGroupPayload(TypedDict):
         nodes: A list of HDG node IDs (typically with 'T' suffix) belonging to this group.
         payload_str: The formatted string to be sent as the 'nodes' parameter in the API request
                      for this group.
+        default_scan_interval: The default scan interval in seconds.
 
     """
 
-    # This TypedDict is now built dynamically by polling_manager.py and includes
-    # 'config_key_scan_interval' and 'default_scan_interval' from PollingGroupStaticDefinition.
-    # For static type checking where this structure is created, ensure all expected keys are present.
-    # However, the actual structure used by the coordinator will have more fields.
-    # Keeping it minimal here as its primary definition source is dynamic.
     key: str
     name: str
     nodes: list[str]
     payload_str: str
-    config_key_scan_interval: str  # Added from PollingGroupStaticDefinition.config_key
-    default_scan_interval: (
-        int  # Added from PollingGroupStaticDefinition.default_interval
-    )
+    default_scan_interval: int
 
 
 class PollingGroupStaticDefinition(TypedDict):
     """Define the structure for the static configuration of a polling group.
 
     Used in `const.py` for the main list of polling group definitions.
+
+    Attributes:
+        key: Unique key for the polling group (e.g., "group_1", "group_realtime").
+        default_interval: The default scan interval in seconds.
+
     """
 
-    key: str  # Unique key for the polling group (e.g., "group_1", "group_realtime")
-    name: str  # Human-readable name (e.g., "Realtime Core")
-    config_key: str  # The key used in Home Assistant configuration (options flow) for scan interval
-    default_interval: int  # The default scan interval in seconds
+    key: str
+    default_interval: int
 
 
 class EnumOption(TypedDict):

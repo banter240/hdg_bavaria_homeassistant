@@ -8,18 +8,22 @@ such as operating modes, status codes, or configuration options.
 
 from __future__ import annotations
 
-__version__ = "0.1.2"
 
-from typing import Final
+from typing import Final, TypedDict
 
 from .models import EnumOption
 
-# Mappings for HDG API enumeration values to human-readable text (German and English).
-# Each top-level key (e.g., "SPRACHE", "KESSELSTATUS") corresponds to an 'hdg_enum_type'
-# defined in SENSOR_DEFINITIONS. The inner dictionary maps the numeric value received
-# from the API to an EnumOption TypedDict, which contains 'de' (German) and 'en' (English)
-# translations. These translations are used by sensor entities to provide a
-# user-friendly representation of the enumerated state.
+
+class StringEnumOption(TypedDict):
+    """Represent a single option within a string-keyed enumeration, providing translations.
+
+    Used in `enums.py` for `HDG_STRING_ENUM_MAPPINGS`.
+    """
+
+    de: str
+    en: str
+
+
 HDG_ENUM_MAPPINGS: Final[dict[str, dict[int, EnumOption]]] = {
     "SPRACHE": {
         0: {"de": "Deutsch", "en": "Deutsch"},
@@ -47,10 +51,6 @@ HDG_ENUM_MAPPINGS: Final[dict[str, dict[int, EnumOption]]] = {
         22: {"de": "Griechisch", "en": "Greek"},
         23: {"de": "Portugiesisch", "en": "Portuguese"},
     },
-    "ON_OFF_RSI": {0: {"de": "Aus", "en": "Off"}, 1: {"de": "Ein", "en": "On"}},
-    "YES_NO_RSI": {0: {"de": "Nein", "en": "No"}, 1: {"de": "Ja", "en": "Yes"}},
-    "ON/OFF": {0: {"de": "Aus", "en": "Off"}, 1: {"de": "Ein", "en": "On"}},
-    "YES/NO": {0: {"de": "Nein", "en": "No"}, 1: {"de": "Ja", "en": "Yes"}},
     "KESSELSTATUS": {
         0: {"de": "Störung", "en": "Fault"},
         1: {"de": "Bereit", "en": "Ready"},
@@ -300,5 +300,23 @@ HDG_ENUM_MAPPINGS: Final[dict[str, dict[int, EnumOption]]] = {
         0: {"de": "Standard", "en": "Standard"},
         1: {"de": "Restsauerstoff", "en": "Residual Oxygen"},
         2: {"de": "Abgastemperatur", "en": "Flue Gas Temperature"},
+    },
+}
+
+HDG_STRING_ENUM_MAPPINGS: Final[dict[str, dict[str, StringEnumOption]]] = {
+    "KESSEL_BETRIEBSART_STRINGS": {
+        "Normal": {"de": "Normal", "en": "Normal"},
+        "Day mode": {"de": "Tagbetrieb", "en": "Day mode"},
+        "Night mode": {"de": "Nachtbetrieb", "en": "Night mode"},
+        "Party mode": {"de": "Partybetrieb", "en": "Party mode"},
+        "Holiday mode": {"de": "Urlaubsbetrieb", "en": "Holiday mode"},
+        "Summer mode": {"de": "Sommerbetrieb", "en": "Summer mode"},
+    },
+    "HK_BETRIEBSART_STRINGS": {
+        "NORMAL": {"de": "Normal", "en": "Normal"},
+        "TAG": {"de": "Tagbetrieb", "en": "Day mode"},
+        "NACHT": {"de": "Nachtbetrieb", "en": "Night mode"},
+        "PARTY": {"de": "Partybetrieb", "en": "Party mode"},
+        "SOMMER": {"de": "Sommerbetrieb", "en": "Summer mode"},
     },
 }

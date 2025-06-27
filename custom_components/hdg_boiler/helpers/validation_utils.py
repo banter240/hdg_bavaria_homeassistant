@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 import logging
 
-# Decimal is used for precise numeric validation, especially for step calculations,
-# to avoid floating-point inaccuracies that can occur with standard float arithmetic.
-# InvalidOperation is caught to handle cases where input values cannot be
-# converted to Decimal, indicating a malformed number string.
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -77,7 +73,6 @@ def safe_float_convert(
         A tuple: (success_flag, converted_float_value_or_None, error_message_string).
         `success_flag` is True if conversion was successful, False otherwise.
         `error_message_string` contains a descriptive error if conversion failed.
-    Safely convert a value to float.
 
     """
     log_prefix = f"Entity '{entity_name_for_log}': " if entity_name_for_log else ""
@@ -163,7 +158,7 @@ def _perform_decimal_step_validation(
 
     """
     if step_decimal < Decimal(0):
-        _LOGGER.critical(  # Critical configuration error
+        _LOGGER.critical(
             f"Config error: setter_step '{node_step_def_for_log}' in SENSOR_DEFINITIONS must be non-negative for node '{entity_name_for_log}'."
         )
         raise ServiceValidationError(
@@ -174,12 +169,10 @@ def _perform_decimal_step_validation(
             raise ServiceValidationError(
                 f"Value {val_decimal} not allowed for node '{entity_name_for_log}'. With step 0, only min_value {min_val_decimal} is valid."
             )
-    else:  # Positive step
-        # Epsilon for comparing Decimal remainders, accounting for potential precision issues.
+    else:
         decimal_epsilon = Decimal("1e-9")
         remainder = (val_decimal - min_val_decimal) % step_decimal
 
-        # Check if remainder is effectively zero or effectively equal to the step.
         is_close_to_zero = abs(remainder) < decimal_epsilon
         is_close_to_step = abs(remainder - step_decimal) < decimal_epsilon
 
@@ -218,40 +211,35 @@ def validate_value_range_and_step(
         ServiceValidationError: If the value is outside the range or does not match the step.
 
     """
-    is_valid_for_range = True
-    error_message = ""
     numeric_value_for_check = float(coerced_numeric_value)
-
     # Validate against 'setter_min_val' if defined.
     if min_val_def is not None:
         conversion_ok, min_val_float, conv_error_msg = safe_float_convert(
             min_val_def, "setter_min_val", entity_name_for_log
         )
-        if not conversion_ok or min_val_float is None:
-            is_valid_for_range = False
-            error_message = conv_error_msg
-        elif numeric_value_for_check < min_val_float:
-            is_valid_for_range = False
-            error_message = f"Value {numeric_value_for_check} < min {min_val_float}."
+        if not conversion_ok:
+            raise ServiceValidationError(
+                f"Configuration error for node '{entity_name_for_log}': {conv_error_msg}"
+            )
+        if min_val_float is not None and numeric_value_for_check < min_val_float:
+            raise ServiceValidationError(
+                f"Value {numeric_value_for_check} is below the minimum of {min_val_float} for node '{entity_name_for_log}'."
+            )
 
-    # Validate against 'setter_max_val' if defined and previous checks passed.
-    if is_valid_for_range and max_val_def is not None:
+    # Validate against 'setter_max_val' if defined.
+    if max_val_def is not None:
         conversion_ok, max_val_float, conv_error_msg = safe_float_convert(
             max_val_def, "setter_max_val", entity_name_for_log
         )
         if not conversion_ok:
-            is_valid_for_range = False
-            error_message = conv_error_msg
-        elif max_val_float is not None and numeric_value_for_check > max_val_float:
-            is_valid_for_range = False
-            error_message = f"Value {numeric_value_for_check} > max {max_val_float}."
+            raise ServiceValidationError(
+                f"Configuration error for node '{entity_name_for_log}': {conv_error_msg}"
+            )
+        if max_val_float is not None and numeric_value_for_check > max_val_float:
+            raise ServiceValidationError(
+                f"Value {numeric_value_for_check} is above the maximum of {max_val_float} for node '{entity_name_for_log}'."
+            )
 
-    if not is_valid_for_range:
-        raise ServiceValidationError(
-            f"Range validation failed for node '{entity_name_for_log}' (ID: {node_id_str_for_log}) with value '{original_value_to_set_for_log}'. Reason: {error_message}"
-        )
-
-    # Step validation using Decimal for precision, only if range validation passed.
     if node_step_def is not None and min_val_def is not None:
         try:
             val_decimal = Decimal(str(coerced_numeric_value))

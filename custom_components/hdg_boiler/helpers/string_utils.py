@@ -13,47 +13,34 @@ import logging
 import re
 from urllib.parse import quote
 
-from ..const import DOMAIN, KNOWN_HDG_API_SETTER_SUFFIXES
+from ..const import DOMAIN
 
 _LOGGER = logging.getLogger(DOMAIN)
 
 
-def strip_hdg_node_suffix(node_id_with_suffix: str) -> str:
-    """Remove a known HDG API setter suffix (T, U, V, W, X, Y, case-insensitive) if present.
+def strip_hdg_node_suffix(node_id_from_def: str) -> str:
+    """Extract the base numeric ID from a node ID string by stripping a known suffix.
+
+    This function robustly isolates the numeric part of a node ID string (e.g., "22003T")
+    by matching a leading numeric sequence followed by an optional known suffix
+    (from KNOWN_HDG_API_SETTER_SUFFIXES). This prevents incorrect stripping from
+    non-numeric node IDs.
 
     Args:
-        node_id_with_suffix: The node ID string which might have a suffix.
+        node_id_from_def: The node ID string as defined (e.g., "22003T", "4050").
 
     Returns:
-        The node ID string with the suffix removed, or the original string if no known suffix was found.
-
-    """
-    if (
-        node_id_with_suffix
-        and node_id_with_suffix[-1].upper() in KNOWN_HDG_API_SETTER_SUFFIXES
-    ):
-        return node_id_with_suffix[:-1]
-    return node_id_with_suffix
-
-
-def extract_base_node_id(node_id_from_def: str) -> str:
-    """Extract the base numeric ID from an 'hdg_node_id' string, typically from SENSOR_DEFINITIONS.
-
-    This function attempts to isolate the numeric part of a node ID string that might
-    include a trailing character (e.g., 'T', 'U') indicating its type or settability.
-
-    Args:
-        node_id_from_def: The node ID string as defined (e.g., "1234T", "5678").
-
-    Returns: The extracted base numeric ID (e.g., "1234", "5678"), or the original string if the format is unexpected.
+        The extracted base numeric ID (e.g., "22003", "4050"), or the original string
+        if the format is unexpected.
 
     """
     if not node_id_from_def:
         return node_id_from_def
-    if match := re.match(r"^(\d+)[TUVWXYtuvwxy]?$", node_id_from_def):
+    # This regex ensures we only strip a suffix if the preceding part is numeric.
+    if match := re.match(r"^(\d+)[TUVWXY]?$", node_id_from_def, re.IGNORECASE):
         return match[1]
     _LOGGER.warning(
-        "extract_base_node_id: Unexpected node_id format '%s'. Returning original.",
+        "strip_hdg_node_suffix: Unexpected node_id format '%s'. Returning original.",
         node_id_from_def,
     )
     return node_id_from_def

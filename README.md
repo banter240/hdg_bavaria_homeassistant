@@ -1,11 +1,12 @@
 # HDG Bavaria Boiler Integration for Home Assistant
 
+[![semantic-release: conventional commits](https://img.shields.io/badge/semantic--release-conventionalcommits-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/banter240/hdg_bavaria_homeassistant)](https://github.com/banter240/hdg_bavaria_homeassistant/releases/latest)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 ![GitHub all releases](https://img.shields.io/github/downloads/banter240/hdg_bavaria_homeassistant/total)
 ![GitHub](https://img.shields.io/github/license/banter240/hdg_bavaria_homeassistant)
 ![GitHub issues by-label](https://img.shields.io/github/issues/banter240/hdg_bavaria_homeassistant/bug?color=red)
 ![GitHub contributors](https://img.shields.io/github/contributors/banter240/hdg_bavaria_homeassistant)
-[![semantic-release: conventional commits](https://img.shields.io/badge/semantic--release-conventionalcommits-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
 
 <!-- Optional: Add more badges like community forum, buy me a coffee if you set them up -->
 
@@ -48,9 +49,19 @@ An unofficial Home Assistant integration to monitor and control HDG Bavaria heat
 
 This custom component allows you to integrate your HDG Bavaria boiler (e.g., HDG Euro, K-Series, Compact, etc., that support the web interface) into Home Assistant. It provides sensor entities to monitor various parameters of your heating system and number entities to control certain settings. The integration dynamically determines which data points to poll based on the defined entities and groups them for efficient fetching. You can configure the polling intervals for these groups to balance data freshness with the load on the boiler's controller.
 
-## Features ✨
+## Features
 
-- **Sensor Data**: Access a wide range of data points from your boiler, including:
+- **Enhanced Stability & Reliability**:
+  - **Centralized API Access Management**: All API requests (polling and setting values) are now routed through a dedicated `HdgApiAccessManager`. This manager prioritizes requests (e.g., `set_value` calls take precedence over routine polling), handles queuing, retries with exponential backoff, and ensures robust communication with the boiler. This replaces the previous `set_value` worker with a more comprehensive and resilient system.
+  - **Robust Startup**: Critical fixes ensure Home Assistant starts reliably without timeouts, even with background API tasks.
+  - **Accurate Device Information**: `config_url` and other device details are now consistently determined, eliminating previous warnings.
+- **Dynamic Polling Group Management**: Data is fetched in distinct groups (e.g., Realtime, Status, Config/Counters) with individually configurable scan intervals via the integration options. These groups are dynamically built based on entity definitions, making the integration more flexible and extensible.
+- **Intelligent Data Parsing**: Handles various data formats, including locale-specific numbers, enumerations, and datetimes, with specific logic for HDG API quirks.
+- **API Connection Management**: Includes ICMP ping pre-checks and API response validation to ensure reliable communication and detect boiler online/offline status.
+- **Custom Services**: Provides `set_node_value` to directly set values for specific HDG nodes and `get_node_value` to retrieve raw values from the integration's data cache.
+- **Dynamic Entity Creation**: Entities are created based on a comprehensive `SENSOR_DEFINITIONS` map in `definitions.py`, which also dictates their polling group assignment. This ensures that only relevant entities for your boiler model are exposed.
+- **Internationalization**: Supports multiple languages for entity names and states via Home Assistant's translation system.
+- **Comprehensive Sensor Data**: Access a wide range of data points from your boiler, including:
   - Temperatures (boiler, buffer, flue gas, outside, heating circuits, etc.)
   - Status information (boiler state, pump status, operating modes)
   - Operational values (oxygen levels, air flap positions, fan speeds)
@@ -59,14 +70,7 @@ This custom component allows you to integrate your HDG Bavaria boiler (e.g., HDG
   - Heating circuit target temperatures (e.g., day/night setpoints) via Number entities.
   - Parallel shift for heating curves via Number entities.
   - Other configurable parameters (depending on your boiler model and `SENSOR_DEFINITIONS`) via Number entities.
-- **Robust Write Operations**: A dedicated background worker handles 'set value' API calls, featuring queuing, retry logic with exponential backoff, and specific handling for connection errors.
-- **Configurable Polling Groups**: Data is fetched in distinct groups (e.g., Realtime, Status, Config/Counters) with individually configurable scan intervals via the integration options. These groups are dynamically built based on entity definitions.
-- **Intelligent Data Parsing**: Handles various data formats, including locale-specific numbers, enumerations, and datetimes, with specific logic for HDG API quirks.
-- **API Connection Management**: Includes ICMP ping pre-checks and API response validation to ensure reliable communication and detect boiler online/offline status.
-- **Custom Services**: Provides `set_node_value` to directly set values for specific HDG nodes and `get_node_value` to retrieve raw values from the integration's data cache.
-- **Device Diagnostics**: Access diagnostic information through Home Assistant to aid in troubleshooting.
-- **Dynamic Entity Creation**: Entities are created based on a comprehensive `SENSOR_DEFINITIONS` map in `definitions.py`, which also dictates their polling group assignment.
-- **Internationalization**: Supports multiple languages for entity names and states via Home Assistant's translation system.
+  - **Improved Writable Entity Handling**: Number entities now leverage `setter_type`, `setter_min_val`, `setter_max_val`, and `setter_step` from `SENSOR_DEFINITIONS` for precise validation and control, ensuring values sent to the boiler are always within expected ranges and formats.
 
 ## Prerequisites
 
@@ -124,13 +128,25 @@ Once the integration is added, you can adjust its settings:
 2.  Find the "HDG Bavaria Boiler" integration card.
 3.  Click on **CONFIGURE**.
 4.  You can adjust the following:
-    - **Scan Intervals**: Modify the polling frequency (in seconds) for different groups of data. These groups are defined internally based on entity types and their typical update frequency.
-      - Realtime Core Values
-      - General Status Values
-      - Config/Counters Part 1, 2, and 3
-        Shorter intervals provide more up-to-date data but increase the load on the boiler's controller. Longer intervals are suitable for less frequently changing data. The minimum allowed interval is 15 seconds, and the maximum is 86430 seconds (approx. 24 hours).
-    - **Source Timezone**: Specify the timezone configured on your HDG boiler's controller (e.g., `Europe/Berlin`). This is crucial for correctly interpreting datetime values received from the boiler.
-    - **Enable Debug Logging**: Activate verbose logging for polling cycles and set value operations, useful for troubleshooting. Be aware that this can generate large log files.
+    ### Configurable Options
+
+Once the integration is added, you can adjust its settings via **Settings** -> **Devices & Services** -> **HDG Bavaria Boiler** -> **CONFIGURE**.
+
+| Option                                                                                | Description                                                                                                                                                                                                                                                                      | Type     | Default         | Range/Options               |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------- | --------------------------- |
+| **Device Alias** (`device_alias`)                                                     | An optional, user-friendly name for this boiler in Home Assistant. If left empty, a default name will be used.                                                                                                                                                                   | Text     | Empty string    | Any text                    |
+| **Scan Interval: Realtime Core Values** (`scan_interval_group_1_realtime_core`)       | The interval (in seconds) for polling the most important real-time data from the boiler (e.g., temperatures, operating status).                                                                                                                                                  | Number   | 15              | 15-86430 seconds            |
+| **Scan Interval: General Status Values** (`scan_interval_group_2_status_general`)     | The interval (in seconds) for polling general status information from the boiler.                                                                                                                                                                                                | Number   | 304             | 15-86430 seconds            |
+| **Scan Interval: Config/Counters Part 1** (`scan_interval_group_3_config_counters_1`) | The interval (in seconds) for polling configuration and counter data from the boiler (Group 1). This data changes less frequently.                                                                                                                                               | Number   | 86410           | 15-86430 seconds            |
+| **Scan Interval: Config/Counters Part 2** (`scan_interval_group_4_config_counters_2`) | The interval (in seconds) for polling configuration and counter data from the boiler (Group 2).                                                                                                                                                                                  | Number   | 86420           | 15-86430 seconds            |
+| **Scan Interval: Config/Counters Part 3** (`scan_interval_group_5_config_counters_3`) | The interval (in seconds) for polling configuration and counter data from the boiler (Group 3).                                                                                                                                                                                  | Number   | 86430           | 15-86430 seconds            |
+| **Logging Level** (`log_level`)                                                       | Sets the verbosity of logs for this integration. 'DEBUG' is very verbose and useful for troubleshooting. 'INFO' is the standard for normal operation.                                                                                                                            | Dropdown | INFO            | DEBUG, INFO, WARNING, ERROR |
+| **Enable Advanced Logging** (`advanced_logging`)                                      | Enables additional INFO-level logs for important actions (e.g., setting values), even when the log level is set to INFO. Useful for tracking actions without enabling full DEBUG logging.                                                                                        | Toggle   | False           | True/False                  |
+| **Source Timezone** (`source_timezone`)                                               | The timezone in which the boiler provides its time data (e.g., 'Europe/Berlin'). This is important for correct interpretation of date/time values from the boiler.                                                                                                               | Text     | `Europe/Berlin` | IANA Timezone string        |
+| **API Timeout** (`api_timeout`)                                                       | The maximum time (in seconds) to wait for a response from the boiler for any API request. A higher value can help with unstable networks but may lead to longer waits.                                                                                                           | Number   | 15              | 5-120 seconds               |
+| **Connect Timeout** (`connect_timeout`)                                               | The timeout in seconds for establishing the TCP connection.                                                                                                                                                                                                                      | Number   | 5.0             | 3.0-20.0 seconds            |
+| **Polling Preemption Timeout** (`polling_preemption_timeout`)                         | The maximum time (in seconds) a low-priority polling request is allowed to run if a higher-priority request (e.g., a setting change) is queued. A lower value ensures faster response to setting changes but may lead to more frequent interruptions with slow boiler responses. | Number   | 5.0             | 1.0-20.0 seconds            |
+| **Connection Error Threshold** (`log_level_threshold_for_connection_errors`)          | The number of consecutive connection failures before the logging level for these errors escalates from WARNING to ERROR. A lower value leads to faster error logs for connection issues.                                                                                         | Number   | 5               | 1-60                        |
 
 ## Supported Entities
 
@@ -186,9 +202,9 @@ Allows you to set a specific value for a writable HDG node via the background wo
 
 **Service Data:**
 
-| Field | Description | Example | Required |
-| :-------- | :----------------------------------------------------------------aries/hdg_boiler/README.md | :-------- | :------- |
-| `node_id` | The base ID of the HDG Node to retrieve (e.g., '22003'). Numeric inputs will be treated as strings by HA. | `"22003"` | Yes |
+| Field     | Description                                                                                               | Example   | Required |
+| :-------- | :-------------------------------------------------------------------------------------------------------- | :-------- | :------- |
+| `node_id` | The base ID of the HDG Node to retrieve (e.g., '22003'). Numeric inputs will be treated as strings by HA. | `"22003"` | Yes      |
 
 **Return Value:**
 

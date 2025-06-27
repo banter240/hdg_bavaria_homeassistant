@@ -9,7 +9,7 @@ repos:
 
   # Ruff hook for fast linting and formatting.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.0
+    rev: v0.12.2
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -28,3 +28,11 @@ repos:
     rev: "v1.37.0"
     hooks:
       - id: sourcery
+        # Automatically apply fixes suggested by Sourcery
+        args: ["--fix"]
+
+  # Gitleaks hook for detecting secrets and sensitive information.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.27.2 # Use the latest stable version
+    hooks:
+      - id: gitleaks

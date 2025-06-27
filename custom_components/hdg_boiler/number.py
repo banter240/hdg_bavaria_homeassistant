@@ -6,20 +6,18 @@ It handles state updates from the data coordinator and implements debouncing for
 """
 
 from __future__ import annotations
+import time
 
-__version__ = "0.8.68"
+__version__ = "0.8.69"
 
 import functools
 import logging
-import time  # Import time for monotonic
 from datetime import datetime
 from typing import Any, cast
 
 from homeassistant.components.number import (
-    NumberDeviceClass,
     NumberEntity,
     NumberEntityDescription,
-    NumberMode,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant, callback
@@ -27,17 +25,21 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later
 
-from .api import HdgApiClient
 from .const import (
     DOMAIN,
     NUMBER_SET_VALUE_DEBOUNCE_DELAY_S,
-    RECENTLY_SET_POLL_IGNORE_WINDOW_S,  # Import for use
+    CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+    DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+    ENTITY_DETAIL_LOGGER_NAME,
+    LIFECYCLE_LOGGER_NAME,
+    USER_ACTION_LOGGER_NAME,
 )
 from .coordinator import HdgDataUpdateCoordinator
 from .definitions import SENSOR_DEFINITIONS
 from .entity import HdgNodeEntity
 from .exceptions import HdgApiError
-from .helpers.parsing_utils import (
+from .helpers.entity_utils import create_entity_description
+from .helpers.parsers import (
     format_value_for_api,
     parse_float_from_string,
 )
@@ -48,6 +50,9 @@ from .helpers.validation_utils import (
 from .models import SensorDefinition
 
 _LOGGER = logging.getLogger(DOMAIN)
+_ENTITY_DETAIL_LOGGER = logging.getLogger(ENTITY_DETAIL_LOGGER_NAME)
+_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
+_USER_ACTION_LOGGER = logging.getLogger(USER_ACTION_LOGGER_NAME)
 
 
 class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
@@ -61,7 +66,6 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
     def __init__(
         self,
         coordinator: HdgDataUpdateCoordinator,
-        api_client: HdgApiClient,
         entity_description: NumberEntityDescription,
         entity_definition: SensorDefinition,
     ) -> None:
@@ -69,29 +73,32 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
 
         Args:
             coordinator: The data update coordinator.
-            api_client: The API client for HDG communication (currently unused here, inherited).
             entity_description: The entity description for this number entity.
             entity_definition: The sensor definition dictionary for this entity.
 
         """
+        self.entity_description = entity_description
         hdg_api_node_id_from_def = entity_definition["hdg_node_id"]
         super().__init__(
             coordinator=coordinator,
             node_id=strip_hdg_node_suffix(hdg_api_node_id_from_def),
             entity_definition=cast(dict[str, Any], entity_definition),
         )
-        self.entity_description = entity_description
         self._current_set_generation: int = 0
         self._pending_api_call_timer: CALLBACK_TYPE | None = None
         self._value_for_current_generation: float | None = None
+        self._optimistic_set_time: float | None = None
         self._attr_native_value: int | float | None = None
         self._update_number_state()
-        if self.coordinator.enable_debug_logging:
-            _LOGGER.debug(
-                # Use entity_description.key as self.entity_id might not be fully available at this stage.
-                f"HdgBoilerNumber {self.entity_description.key or self._node_id}: Initialized. "
-                f"Node ID: {self._node_id}, Min: {self.native_min_value}, Max: {self.native_max_value}, Step: {self.native_step}"
-            )
+        _LIFECYCLE_LOGGER.debug(
+            # Use entity_description.key as self.entity_id might not be fully available at this stage.
+            "HdgBoilerNumber %s: Initialized. Node ID: %s, Min: %s, Max: %s, Step: %s",
+            self.entity_description.key or self._node_id,
+            self._node_id,
+            self.native_min_value,
+            self.native_max_value,
+            self.native_step,
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -99,16 +106,14 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         # This method is called when the coordinator has new data.
         # It updates the entity's state and then calls the superclass's
         # _handle_coordinator_update, which in turn calls async_write_ha_state.
-        if self.coordinator.enable_debug_logging:
-            _LOGGER.debug(
-                f"HdgBoilerNumber {self.entity_id}: _handle_coordinator_update called."
-            )
+        _ENTITY_DETAIL_LOGGER.debug(
+            f"HdgBoilerNumber {self.entity_id}: _handle_coordinator_update called."
+        )
         self._update_number_state()
         super()._handle_coordinator_update()
-        if self.coordinator.enable_debug_logging:
-            _LOGGER.debug(
-                f"HdgBoilerNumber {self.entity_id}: _handle_coordinator_update finished. New native_value: {self._attr_native_value}"
-            )
+        _ENTITY_DETAIL_LOGGER.debug(
+            f"HdgBoilerNumber {self.entity_id}: _handle_coordinator_update finished. New native_value: {self._attr_native_value}"
+        )
 
     def _update_number_state(self) -> None:
         """Update the entity's internal state from coordinator data.
@@ -119,78 +124,50 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         self._attr_available = super().available
         if not self._attr_available:
             self._attr_native_value = None
-            if self.coordinator.enable_debug_logging:
-                _LOGGER.debug(
-                    f"HdgBoilerNumber {self.entity_id}: Not available, native_value set to None."
-                )
+            _ENTITY_DETAIL_LOGGER.debug(
+                f"HdgBoilerNumber {self.entity_id}: Not available, native_value set to None."
+            )
             return
 
         raw_value_text = self.coordinator.data.get(self._node_id)
         parsed_value = self._parse_value(raw_value_text)
-        current_ui_value = (
-            self._attr_native_value
-        )  # Value currently displayed in the UI.
 
-        if self.coordinator.enable_debug_logging:
-            _LOGGER.debug(
-                f"HdgBoilerNumber {self.entity_id}: _update_number_state: Node ID: {self._node_id}. "
-                f"Optimistic (gen): {self._value_for_current_generation}, Parsed (poll): {parsed_value}, "
-                f"Current UI: {current_ui_value}, Raw Coord: '{raw_value_text}'"
-            )
-
-        last_set_time = self.coordinator._last_set_times.get(
-            self._node_id, 0.0
-        )  # Accessing protected member for specific logic
-        time_since_last_set = time.monotonic() - last_set_time
-        is_recently_set_by_api = (
-            last_set_time > 0.0
-            and time_since_last_set < RECENTLY_SET_POLL_IGNORE_WINDOW_S
+        _ENTITY_DETAIL_LOGGER.debug(
+            f"HdgBoilerNumber {self.entity_id}: _update_number_state: Node ID: {self._node_id}. "
+            f"Optimistic (gen): {self._value_for_current_generation}, Parsed (poll): {parsed_value}, "
+            f"Current UI: {self._attr_native_value}, Raw Coord: '{raw_value_text}'"
         )
 
+        timeout_duration = self.coordinator.entry.options.get(
+            CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+            DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+        )
+
+        # Handle optimistic state: either confirm, time out, or keep.
         if self._value_for_current_generation is not None:
-            # An optimistic value is active (i.e., user just changed it in the UI).
+            # If the polled value confirms the optimistic one, clear the optimistic state.
             if parsed_value == self._value_for_current_generation:
-                # Polled value matches the optimistic value.
-                # This means the set operation was successful and confirmed by this poll.
-                self._attr_native_value = parsed_value
-                self._value_for_current_generation = (
-                    None  # Clear optimistic state as it's confirmed by poll.
+                _ENTITY_DETAIL_LOGGER.debug(
+                    f"HdgBoilerNumber {self.entity_id}: Polled value {parsed_value} confirms optimistic state. Clearing."
                 )
-                if self.coordinator.enable_debug_logging:
-                    _LOGGER.debug(
-                        f"HdgBoilerNumber {self.entity_id}: _update_number_state: BRANCH A (Optimistic matches Poll). "
-                        f"UI updated to {parsed_value}. Optimistic state cleared."
-                    )
-            # Polled value differs from optimistic. Keep optimistic UI.
-            # self._attr_native_value already holds the optimistic value set in
-            # async_set_native_value, so no change is needed here.
-            elif self.coordinator.enable_debug_logging:
-                _LOGGER.debug(
-                    f"HdgBoilerNumber {self.entity_id}: _update_number_state: BRANCH B (Optimistic differs from Poll). "
-                    f"Keeping optimistic UI value {self._attr_native_value}. Polled was {parsed_value}."
+                self._value_for_current_generation = None
+                self._optimistic_set_time = None
+            # If the polled value does NOT match, check for timeout.
+            elif (
+                self._optimistic_set_time is not None
+                and (time.monotonic() - self._optimistic_set_time) > timeout_duration
+            ):
+                _LOGGER.warning(
+                    f"HdgBoilerNumber {self.entity_id}: Optimistic state for value {self._value_for_current_generation} "
+                    f"timed out after {timeout_duration}s. Reverting to polled value: {parsed_value}."
                 )
-        elif is_recently_set_by_api:
-            # No optimistic value active from UI, but API set this node recently.
-            # The HdgPollingResponseProcessor should have already handled ignoring this poll
-            # if the polled value differed from what the worker set.
-            # If we reach here, it means the PollingResponseProcessor allowed this polled value.
-            # This typically means the polled value matches what was set by the worker,
-            # or the ignore window passed.
-            # We trust the PollingResponseProcessor's decision and update from the poll.
-            self._attr_native_value = parsed_value  # Update UI from the polled value.
-            if self.coordinator.enable_debug_logging:
-                _LOGGER.debug(
-                    f"HdgBoilerNumber {self.entity_id}: _update_number_state: BRANCH C (No optimistic, but recently set by API). "
-                    f"UI updated from poll to {parsed_value}. PollingResponseProcessor should have filtered if needed."
-                )
-        else:
-            # No optimistic value, and not recently set by API. Standard update from poll.
-            self._attr_native_value = parsed_value
-            if self.coordinator.enable_debug_logging:
-                _LOGGER.debug(
-                    f"HdgBoilerNumber {self.entity_id}: _update_number_state: BRANCH D (Standard poll update). "
-                    f"UI updated from poll to {parsed_value}."
-                )
+                self._value_for_current_generation = None
+                self._optimistic_set_time = None
+            # If no match and no timeout, keep the optimistic value by returning early.
+            else:
+                return
+        # If optimistic state is cleared (or was never set), update with the polled value.
+        self._attr_native_value = parsed_value
 
     def _parse_value(self, raw_value_text: str | None) -> int | float | None:
         """Parse the raw string value from the API into an int or float.
@@ -208,8 +185,9 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         if not cleaned_value:
             return None
 
-        parsed_float = parse_float_from_string(
-            cleaned_value, self._node_id, self.entity_id
+        parsed_float = cast(
+            float | None,
+            parse_float_from_string(cleaned_value, self._node_id, self.entity_id),
         )
         if parsed_float is None:
             _LOGGER.warning(
@@ -233,10 +211,9 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         and schedules a debounced call to `_process_debounced_value` to
         handle the actual API communication.
         """
-        if self.coordinator.enable_debug_logging:
-            _LOGGER.debug(
-                f"HdgBoilerNumber {self.entity_id}: async_set_native_value called with UI value: {value} (type: {type(value)})"
-            )
+        _USER_ACTION_LOGGER.debug(
+            f"HdgBoilerNumber {self.entity_id}: async_set_native_value called with UI value: {value} (type: {type(value)})"
+        )
 
         # --- BEGIN Pre-validation ---
         try:
@@ -273,6 +250,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         self._value_for_current_generation = (
             value  # Store the value for optimistic state tracking.
         )
+        self._optimistic_set_time = time.monotonic()
 
         self._attr_native_value = (
             int(value)
@@ -282,19 +260,17 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
             else value
         )
         self.async_write_ha_state()
-        if self.coordinator.enable_debug_logging:
-            _LOGGER.debug(
-                f"HdgBoilerNumber {self.entity_id}: Optimistically set native_value to {self._attr_native_value}. Generation: {local_generation_for_job}."
-            )
+        _USER_ACTION_LOGGER.debug(
+            f"HdgBoilerNumber {self.entity_id}: Optimistically set native_value to {self._attr_native_value}. Generation: {local_generation_for_job}."
+        )
 
         if self._pending_api_call_timer:
             self._pending_api_call_timer()
             self._pending_api_call_timer = None
 
-        if self.coordinator.enable_debug_logging:
-            _LOGGER.debug(
-                f"HdgBoilerNumber {self.entity_id}: Scheduling _process_debounced_value (Gen: {local_generation_for_job}, UI Value: {value})."
-            )
+        _USER_ACTION_LOGGER.debug(
+            f"HdgBoilerNumber {self.entity_id}: Scheduling _process_debounced_value (Gen: {local_generation_for_job}, UI Value: {value})."
+        )
         job_target = functools.partial(
             self._process_debounced_value,
             scheduled_generation=local_generation_for_job,
@@ -310,7 +286,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
             ),  # type: ignore
         )
 
-    async def _process_debounced_value(  # sourcery skip: extract-method
+    async def _process_debounced_value(
         self,
         _now: datetime,
         scheduled_generation: int,
@@ -325,24 +301,13 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         is managed based on the outcome.
         """
         # _now parameter is provided by async_call_later, but not directly used here.
-        if self.coordinator.enable_debug_logging:
-            _LOGGER.debug(
-                f"HdgBoilerNumber {self.entity_id}: _process_debounced_value START. "
-                f"Scheduled Gen={scheduled_generation}, UI Value={value_from_ui_at_schedule_time}, "
-                f"Current Gen={self._current_set_generation}, OptimisticVal={self._value_for_current_generation}"
-            )
+        _USER_ACTION_LOGGER.debug(
+            f"HdgBoilerNumber {self.entity_id}: _process_debounced_value START. "
+            f"Scheduled Gen={scheduled_generation}, UI Value={value_from_ui_at_schedule_time}, "
+            f"Current Gen={self._current_set_generation}, OptimisticVal={self._value_for_current_generation}"
+        )
 
         if self._is_job_stale(scheduled_generation):
-            # If stale, but this was the generation that set the optimistic value, clear it.
-            # This ensures that if the UI was showing an optimistic value from this stale job,
-            # it can revert to a polled value.
-            if (
-                self._value_for_current_generation == value_from_ui_at_schedule_time
-            ):  # Check if this job was the one that set the current optimistic value
-                self._value_for_current_generation = None
-                _LOGGER.warning(
-                    f"HdgBoilerNumber {self.entity_id}: Stale job for {value_from_ui_at_schedule_time} was current optimistic. Cleared optimistic state."
-                )
             return
 
         api_value_str: str | None = None
@@ -362,8 +327,9 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
                 and self._value_for_current_generation == value_from_ui_at_schedule_time
             ):
                 self._value_for_current_generation = (
-                    None  # Clear optimistic state on error.
+                    None  # Clear optimistic state on error
                 )
+                self._optimistic_set_time = None
                 _LOGGER.warning(
                     f"HdgBoilerNumber {self.entity_id}: Cleared optimistic state for "
                     f"{value_from_ui_at_schedule_time} due to error in _process_debounced_value."
@@ -382,7 +348,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         value has been set by the user in the meantime.
         """
         if scheduled_generation != self._current_set_generation:
-            _LOGGER.warning(
+            _USER_ACTION_LOGGER.debug(
                 f"HdgBoilerNumber {self.entity_id}: Job for gen {scheduled_generation} is STALE (current: {self._current_set_generation}). Skipping."
             )
             return True
@@ -395,7 +361,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
             msg = f"HdgBoilerNumber {self.entity_id}: Missing 'setter_type'."
             _LOGGER.error(msg)
             raise ValueError(msg)
-        return format_value_for_api(value, setter_type)
+        return cast(str, format_value_for_api(value, setter_type))
 
     async def _queue_set_value_via_coordinator(self, api_value_str: str) -> bool:
         """Queue the formatted value with the HdgDataUpdateCoordinator.
@@ -403,10 +369,9 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         The coordinator manages a worker task that handles the actual API call,
         including retries and API lock management.
         """
-        if self.coordinator.enable_debug_logging:
-            _LOGGER.debug(
-                f"HdgBoilerNumber {self.entity_id}: Queuing API value: '{api_value_str}'."
-            )
+        _USER_ACTION_LOGGER.debug(
+            f"HdgBoilerNumber {self.entity_id}: Queuing API value: '{api_value_str}'."
+        )
         success = await self.coordinator.async_set_node_value_if_changed(
             node_id=self._node_id,
             # Pass entity_name_for_log to the coordinator method for its logging.
@@ -419,8 +384,8 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
             _LOGGER.error(
                 f"HdgBoilerNumber {self.entity_id}: Failed to queue API value: '{api_value_str}'."
             )
-        elif self.coordinator.enable_debug_logging:  # Only log success if debug is on
-            _LOGGER.debug(
+        else:
+            _USER_ACTION_LOGGER.debug(
                 f"HdgBoilerNumber {self.entity_id}: Successfully queued API value: '{api_value_str}'."
             )
         return bool(success)  # Return boolean success status.
@@ -457,9 +422,6 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         await super().async_will_remove_from_hass()
 
 
-# (Rest of the file: _determine_ha_number_step_val, _create_number_entity_if_valid, async_setup_entry)
-# These helper functions remain unchanged from version 0.8.60
-# ... (Code from version 0.8.60 for these functions)
 def _determine_ha_number_step_val(
     entity_def: SensorDefinition,
     translation_key: str,
@@ -480,14 +442,15 @@ def _determine_ha_number_step_val(
 
     if raw_step_val_config is None:
         step_val = 0.1 if setter_type_for_step_default in {"float1", "float2"} else 1.0
-        _LOGGER.debug(  # Unconditional debug in module-level helper
+        _ENTITY_DETAIL_LOGGER.debug(
             f"'setter_step' not defined for translation_key '{translation_key}' (Node {raw_hdg_node_id}). "
             f"Detected setter_type '{setter_type_for_step_default}', defaulting HA NumberEntity step to {step_val}."
         )
         return step_val
 
     try:
-        parsed_step_val_config = float(raw_step_val_config)
+        # Cast to Any first to satisfy mypy when raw_step_val_config is not None
+        parsed_step_val_config = float(cast(Any, raw_step_val_config))
     except (ValueError, TypeError):
         _LOGGER.error(  # Keep as error
             f"Invalid 'setter_step' value '{raw_step_val_config}' in SENSOR_DEFINITIONS for translation_key '{translation_key}' (Node {raw_hdg_node_id}). "
@@ -516,7 +479,6 @@ def _create_number_entity_if_valid(
     translation_key: str,
     entity_def: SensorDefinition,
     coordinator: HdgDataUpdateCoordinator,
-    api_client: HdgApiClient,
 ) -> HdgBoilerNumber | None:
     """Validate an entity definition and create an HdgBoilerNumber entity.
 
@@ -546,8 +508,8 @@ def _create_number_entity_if_valid(
     min_val_def = entity_def.get("setter_min_val")
     max_val_def = entity_def.get("setter_max_val")
     try:
-        min_val = float(cast(float, min_val_def))
-        max_val = float(cast(float, max_val_def))
+        float(cast(float, min_val_def))
+        float(cast(float, max_val_def))
     except (ValueError, TypeError) as e:
         _LOGGER.error(  # Keep as error
             f"Invalid 'setter_min_val' ('{min_val_def}') or 'setter_max_val' ('{max_val_def}') "
@@ -562,20 +524,13 @@ def _create_number_entity_if_valid(
     if ha_native_step_val is None:
         return None
 
-    description = NumberEntityDescription(
-        key=translation_key,
-        name=None,
+    description = create_entity_description(
+        description_class=NumberEntityDescription,
         translation_key=translation_key,
-        icon=entity_def.get("icon"),  # type: ignore[arg-type]
-        device_class=cast(NumberDeviceClass | None, entity_def.get("ha_device_class")),
-        native_unit_of_measurement=entity_def.get("ha_native_unit_of_measurement"),
-        entity_category=entity_def.get("entity_category"),
-        native_min_value=min_val,
-        native_max_value=max_val,
+        entity_definition=entity_def,
         native_step=ha_native_step_val,
-        mode=NumberMode.BOX,
     )
-    return HdgBoilerNumber(coordinator, api_client, description, entity_def)
+    return HdgBoilerNumber(coordinator, description, entity_def)
 
 
 async def async_setup_entry(
@@ -592,14 +547,13 @@ async def async_setup_entry(
     """
     integration_data = hass.data[DOMAIN][entry.entry_id]
     coordinator: HdgDataUpdateCoordinator = integration_data["coordinator"]
-    api_client: HdgApiClient = integration_data["api_client"]
     number_entities: list[HdgBoilerNumber] = []
 
     for translation_key, entity_definition_dict in SENSOR_DEFINITIONS.items():
         entity_def = cast(SensorDefinition, entity_definition_dict)
         if entity_def.get("ha_platform") == "number":
             if entity := _create_number_entity_if_valid(
-                translation_key, entity_def, coordinator, api_client
+                translation_key, entity_def, coordinator
             ):
                 number_entities.append(entity)
 

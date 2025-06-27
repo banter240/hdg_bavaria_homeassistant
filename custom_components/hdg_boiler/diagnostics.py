@@ -29,6 +29,7 @@ from .const import (
 )
 from .coordinator import HdgDataUpdateCoordinator
 from .helpers.string_utils import normalize_unique_id_component
+from .helpers.logging_utils import format_for_log
 
 _LOGGER = logging.getLogger(DOMAIN)
 
@@ -106,41 +107,15 @@ def _get_redacted_unique_id(
         return unique_id or ""
 
     normalized_sensitive_component = normalize_unique_id_component(sensitive_raw_value)
+    normalized_unique_id = normalize_unique_id_component(unique_id)
 
-    # Case 1: The entire unique_id (when normalized) matches the sensitive component.
-    # This is common for the config entry's own unique_id if it's just the host_ip.
-    if normalize_unique_id_component(unique_id) == normalized_sensitive_component:
+    if normalized_sensitive_component in normalized_unique_id:
         _LOGGER.debug(
-            f"Redacting full unique_id '{unique_id}' as it matches sensitive value '{sensitive_raw_value}'."
-        )
-        return placeholder
-
-    # Case 2: The sensitive component is a distinct part, typically delimited by "::".
-    # Assumes unique_id parts are already normalized if they represent the host.
-    parts = unique_id.split("::")
-    redacted_parts = []
-    was_redacted_in_parts = False
-    for part in parts:
-        if part == normalized_sensitive_component:
-            redacted_parts.append(placeholder)
-            was_redacted_in_parts = True
-        else:
-            redacted_parts.append(part)
-
-    if was_redacted_in_parts:
-        _LOGGER.debug(
-            f"Redacted sensitive component '{sensitive_raw_value}' (normalized: '{normalized_sensitive_component}') "
-            f"within unique_id '{unique_id}' using part-based matching."
-        )
-        return "::".join(redacted_parts)
-
-    # Fallback: If the normalized sensitive component is found as a substring.
-    # This is broader and used if specific structural matches above didn't apply.
-    # This helps catch cases where the sensitive value might be embedded differently.
-    if normalized_sensitive_component in unique_id:
-        _LOGGER.debug(
-            f"Performing fallback redaction of '{sensitive_raw_value}' (normalized: '{normalized_sensitive_component}') "
-            f"in unique_id '{unique_id}' as it was found as a substring."
+            "Redacting sensitive component '%s' (normalized: '%s') "
+            "within unique_id '%s'.",
+            format_for_log(sensitive_raw_value),
+            format_for_log(normalized_sensitive_component),
+            format_for_log(unique_id),
         )
         return unique_id.replace(normalized_sensitive_component, placeholder)
 
@@ -188,7 +163,7 @@ def _get_coordinator_diagnostics(
 
     """
     if coordinator:
-        coordinator_diag: dict[str, Any] = {  # type: ignore[attr-defined]
+        coordinator_diag: dict[str, Any] = {
             "last_update_success": coordinator.last_update_success,
             "last_update_time_successful": (
                 coordinator.last_update_success_time.isoformat()
@@ -200,10 +175,22 @@ def _get_coordinator_diagnostics(
             "scan_intervals_used": {
                 str(k): v.total_seconds() for k, v in coordinator.scan_intervals.items()
             },
-            "last_update_times": {
+            "last_update_times_per_group": {
                 group_key: dt_util.utc_from_timestamp(timestamp).isoformat()
                 for group_key, timestamp in coordinator.last_update_times_public.items()
-                if isinstance(timestamp, int | float)
+            },
+            "consecutive_poll_failures": coordinator._consecutive_poll_failures,
+            "boiler_considered_online": coordinator._boiler_considered_online,
+            "failed_poll_group_retry_info": {
+                k: {
+                    "attempts": v["attempts"],
+                    "next_retry_time_utc": dt_util.utc_from_timestamp(
+                        v["next_retry_time"]
+                    ).isoformat()
+                    if v["next_retry_time"] > 0
+                    else None,
+                }
+                for k, v in coordinator._failed_poll_group_retry_info.items()
             },
         }
         if coordinator.data:
@@ -243,14 +230,12 @@ def _build_redacted_netloc(
 
     """
     netloc_parts = []
-    # Redact userinfo (username:password@)
     if parsed_url.username:
         netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)
         if parsed_url.password:
             netloc_parts.append(f":{DIAGNOSTICS_REDACTED_PLACEHOLDER}")
         netloc_parts.append("@")
 
-    # Redact host/IP
     if host_to_check := parsed_url.hostname:
         if (
             sensitive_host_ip and host_to_check.lower() == sensitive_host_ip.lower()
@@ -259,9 +244,7 @@ def _build_redacted_netloc(
         else:
             netloc_parts.append(host_to_check)
     else:
-        netloc_parts.append(
-            DIAGNOSTICS_REDACTED_PLACEHOLDER  # This case implies an invalid or unexpected URL structure.
-        )
+        netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)
     if parsed_url.port:
         netloc_parts.append(f":{parsed_url.port}")
     return "".join(netloc_parts)
@@ -287,7 +270,6 @@ def _redact_api_client_base_url(
         parsed = urlparse(base_url)
         redacted_netloc = _build_redacted_netloc(parsed, sensitive_host_ip)
 
-        # Redact path and query as they might contain sensitive info, though less common for base URLs.
         redacted_path = (
             DIAGNOSTICS_REDACTED_PLACEHOLDER
             if parsed.path and parsed.path != "/"
@@ -295,7 +277,6 @@ def _redact_api_client_base_url(
         )
         redacted_query = DIAGNOSTICS_REDACTED_PLACEHOLDER if parsed.query else ""
 
-        # Correctly cast the result of urlunparse to str
         return cast(
             str,
             urlunparse(
@@ -303,14 +284,13 @@ def _redact_api_client_base_url(
                     netloc=redacted_netloc,
                     path=redacted_path,
                     query=redacted_query,
-                    params="",  # Parameters are typically not part of a base URL.
-                    fragment="",  # Fragments are typically not part of a base URL.
+                    params="",
+                    fragment="",
                 )
             ),
         )
     except Exception as e:
         _LOGGER.warning(f"Error redacting API client base_url '{base_url}': {e}")
-        # Ensure the fallback return is also cast to str
         return cast(str, DIAGNOSTICS_REDACTED_PLACEHOLDER)
 
 
