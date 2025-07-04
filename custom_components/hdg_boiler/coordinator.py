@@ -55,7 +55,7 @@ from .exceptions import (
 )
 from .models import NodeGroupPayload
 from .helpers.api_access_manager import ApiPriority, HdgApiAccessManager
-from .polling_manager import HDG_NODE_PAYLOADS, POLLING_GROUP_ORDER
+from .registry import HdgEntityRegistry
 
 
 _LOGGER = logging.getLogger(DOMAIN)
@@ -80,8 +80,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         api_access_manager: HdgApiAccessManager,
         entry: ConfigEntry,
         log_level_threshold_for_connection_errors: int,
-        polling_group_order: list[str],
-        hdg_node_payloads: dict[str, NodeGroupPayload],
+        hdg_entity_registry: HdgEntityRegistry,
     ):
         """Initialize the HdgDataUpdateCoordinator.
 
@@ -90,8 +89,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             api_access_manager: An instance of HdgApiAccessManager for communication with the boiler.
             entry: The ConfigEntry associated with this coordinator instance.
             log_level_threshold_for_connection_errors: Threshold for escalating connection error log level.
-            polling_group_order: Ordered list of polling group keys.
-            hdg_node_payloads: Dictionary of polling group payloads.
+            hdg_entity_registry: The HdgEntityRegistry instance providing entity and polling group definitions.
 
         """
         self._consecutive_poll_failures: int = 0
@@ -113,8 +111,8 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._log_level_threshold_for_connection_errors = (
             log_level_threshold_for_connection_errors
         )
-        self._polling_group_order = polling_group_order
-        self._hdg_node_payloads = hdg_node_payloads
+        self._polling_group_order = hdg_entity_registry.get_polling_group_order()
+        self._hdg_node_payloads = hdg_entity_registry.get_polling_group_payloads()
         self.scan_intervals: dict[str, timedelta] = {}
 
         self._validate_polling_config()
@@ -851,6 +849,7 @@ async def async_create_and_refresh_coordinator(
     api_access_manager: HdgApiAccessManager,
     entry: ConfigEntry,
     log_level_threshold_for_connection_errors: int,
+    hdg_entity_registry: HdgEntityRegistry,
 ) -> HdgDataUpdateCoordinator:
     """Create, initialize, and perform the first data refresh for the coordinator.
 
@@ -863,8 +862,7 @@ async def async_create_and_refresh_coordinator(
         api_access_manager,
         entry,
         log_level_threshold_for_connection_errors,
-        POLLING_GROUP_ORDER,
-        HDG_NODE_PAYLOADS,
+        hdg_entity_registry,
     )
     api_access_manager.start(entry)
     await coordinator.async_config_entry_first_refresh()
