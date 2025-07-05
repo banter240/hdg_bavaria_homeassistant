@@ -13,6 +13,8 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import HdgApiClient
+from .definitions import POLLING_GROUP_DEFINITIONS, SENSOR_DEFINITIONS
+from .registry import HdgEntityRegistry
 from .const import (
     CONF_API_TIMEOUT,
     CONF_CONNECT_TIMEOUT,
@@ -70,13 +72,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     api_access_manager.start(entry)
 
+    hdg_entity_registry = HdgEntityRegistry(
+        SENSOR_DEFINITIONS, POLLING_GROUP_DEFINITIONS
+    )
+
     log_level_threshold = entry.options.get(
         CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
         DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     )
     try:
         coordinator = await async_create_and_refresh_coordinator(
-            hass, api_access_manager, entry, log_level_threshold
+            hass, api_access_manager, entry, log_level_threshold, hdg_entity_registry
         )
     except ConfigEntryNotReady:
         await api_access_manager.stop()
