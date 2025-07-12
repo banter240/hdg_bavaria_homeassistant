@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-__version__ = "0.9.35"
+__version__ = "0.9.38"
 
-import logging
 from typing import Any
 from urllib.parse import urlparse
 
@@ -65,15 +64,10 @@ from .const import (
     LOG_LEVELS,
     MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     POLLING_GROUP_DEFINITIONS,
-    LIFECYCLE_LOGGER_NAME,
-    ENTITY_DETAIL_LOGGER_NAME,
+    CONF_MAINTENANCE_MODE,
 )
 from .helpers.network_utils import async_execute_icmp_ping, prepare_base_url
-
-
-_LOGGER = logging.getLogger(DOMAIN)
-_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
-_ENTITY_DETAIL_LOGGER = logging.getLogger(ENTITY_DETAIL_LOGGER_NAME)
+from .helpers.logging_utils import _LOGGER, _LIFECYCLE_LOGGER, _ENTITY_DETAIL_LOGGER
 
 
 async def _validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) -> bool:
@@ -280,43 +274,47 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow):
                     "unit_of_measurement": "s",
                 }
             ),
+            vol.Optional(
+                CONF_MAINTENANCE_MODE,
+                default=current_options.get(CONF_MAINTENANCE_MODE, False),
+            ): BooleanSelector(),
         }
         return vol.Schema(options_schema_dict)
 
     @staticmethod
-    def _get_description_placeholders(step_id: str) -> dict[str, str]:
-        """Return placeholders for the form description text.
+    def _create_options_description_placeholders() -> dict[str, str]:
+        """Generate placeholders for the options flow description text."""
+        placeholders: dict[str, str] = {
+            "min_scan_interval": str(MIN_SCAN_INTERVAL),
+            "max_scan_interval": str(MAX_SCAN_INTERVAL),
+            "min_api_timeout": str(MIN_API_TIMEOUT),
+            "max_api_timeout": str(MAX_API_TIMEOUT),
+            "min_polling_preemption_timeout": str(MIN_POLLING_PREEMPTION_TIMEOUT),
+            "max_polling_preemption_timeout": str(MAX_POLLING_PREEMPTION_TIMEOUT),
+            "min_log_level_threshold": str(
+                MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS
+            ),
+            "max_log_level_threshold": str(
+                MAX_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS
+            ),
+            "min_ignore_window": str(MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S),
+            "max_ignore_window": str(MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S),
+            "default_ignore_window": str(DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S),
+        }
+        # Dynamically create placeholders for default scan intervals
+        for group_def in POLLING_GROUP_DEFINITIONS:
+            group_key = group_def["key"]
+            config_key = f"scan_interval_{group_key}"
+            placeholder_key = f"default_{config_key}"
+            placeholders[placeholder_key] = str(group_def["default_interval"])
+        return placeholders
 
-        This method provides dynamic values that can be inserted into the
-        description fields of the configuration or options form, such as
-        min/max values for validation or default scan intervals.
-        """
-        placeholders: dict[str, str] = {}
+    @staticmethod
+    def _get_description_placeholders(step_id: str) -> dict[str, str]:
+        """Return placeholders for the form description text."""
         if step_id == "options_init":
-            placeholders = {
-                "min_scan_interval": str(MIN_SCAN_INTERVAL),
-                "max_scan_interval": str(MAX_SCAN_INTERVAL),
-                "min_api_timeout": str(MIN_API_TIMEOUT),
-                "max_api_timeout": str(MAX_API_TIMEOUT),
-                "min_polling_preemption_timeout": str(MIN_POLLING_PREEMPTION_TIMEOUT),
-                "max_polling_preemption_timeout": str(MAX_POLLING_PREEMPTION_TIMEOUT),
-                "min_log_level_threshold": str(
-                    MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS
-                ),
-                "max_log_level_threshold": str(
-                    MAX_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS
-                ),
-                "min_ignore_window": str(MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S),
-                "max_ignore_window": str(MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S),
-                "default_ignore_window": str(DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S),
-            }
-            # Dynamically create placeholders for default scan intervals
-            for group_def in POLLING_GROUP_DEFINITIONS:
-                group_key = group_def["key"]
-                # Dynamically generate config_key, consistent with polling_group_manager.py
-                config_key = f"scan_interval_{group_key}"
-                placeholder_key = f"default_{config_key}"  # Use dynamically generated config_key for placeholder name
-                placeholders[placeholder_key] = str(group_def["default_interval"])
+            return HdgBoilerConfigFlow._create_options_description_placeholders()
+        placeholders: dict[str, str] = {}
         return placeholders
 
     VERSION = 1

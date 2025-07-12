@@ -7,16 +7,17 @@ It aims to robustly extract and convert data from potentially varied string inpu
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.3.2"
 
 import logging
 import re
+import html
+
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any, Final, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from homeassistant.util import dt as dt_util
 
 from ..const import (
     DEFAULT_SOURCE_TIMEZONE,
@@ -25,14 +26,14 @@ from ..const import (
     HEURISTICS_LOGGER_NAME,
 )
 from .logging_utils import make_log_prefix
+from .enum_mappings import HDG_ENUM_TEXT_TO_KEY_MAPPINGS
+
 
 _LOGGER = logging.getLogger(DOMAIN)
 _HEURISTICS_LOGGER = logging.getLogger(HEURISTICS_LOGGER_NAME)
 
 NUMERIC_PART_REGEX: Final = re.compile(r"([-+]?\d*\.?\d+)")
-DEFAULT_PERCENT_REGEX_PATTERN: Final = r"(\d+)\s*%?[\s-]*Schritte"
 
-DEFAULT_PERCENT_REGEX: Final = re.compile(DEFAULT_PERCENT_REGEX_PATTERN, re.IGNORECASE)
 
 KNOWN_LOCALE_SEPARATORS: Final[dict[str, dict[str, str]]] = {
     "en_US": {"decimal_point": ".", "thousands_sep": ","},
@@ -45,6 +46,39 @@ KNOWN_LOCALE_SEPARATORS: Final[dict[str, dict[str, str]]] = {
     "it_IT": {"decimal_point": ",", "thousands_sep": "."},
     "es_ES": {"decimal_point": ",", "thousands_sep": "."},
 }
+
+
+def _convert_enum_text_to_key(
+    raw_value: str,
+    entity_definition: dict[str, Any],
+    node_id_for_log: str | None = None,
+    entity_id_for_log: str | None = None,
+) -> str:
+    """Convert a raw enum text value from the boiler to its canonical key.
+
+    This function uses the `HDG_ENUM_TEXT_TO_KEY_MAPPINGS` to find the
+    corresponding canonical key for a given raw text value. If a direct
+    mapping is not found, it logs a warning and returns the raw value.
+    """
+    log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
+    translation_key = entity_definition.get("translation_key")
+
+    if translation_key and translation_key in HDG_ENUM_TEXT_TO_KEY_MAPPINGS:
+        enum_map = HDG_ENUM_TEXT_TO_KEY_MAPPINGS[translation_key]
+        _LOGGER.debug(
+            f"{log_prefix}Attempting to map raw enum value '{raw_value}' for translation key '{translation_key}'."
+        )
+        for human_readable_text, canonical_key in enum_map.items():
+            if human_readable_text == raw_value:
+                _LOGGER.debug(
+                    f"{log_prefix}Mapped raw enum '{raw_value}' to key '{canonical_key}'."
+                )
+                return canonical_key
+        _LOGGER.warning(
+            f"{log_prefix}Raw enum value '{raw_value}' not found in mapping for '{translation_key}'. "
+            "Returning raw value. Please update enum_mappings.py if this is a new valid value."
+        )
+    return raw_value
 
 
 def _get_locale_separators_from_known_list(
@@ -146,16 +180,30 @@ def _normalize_value_string(
     return normalized_value_str
 
 
+COMMON_UNITS_REGEX: Final = re.compile(
+    r"\s*(°C|K|%|Std|min|s|pa|kw|kWh|MWh|l|l/h|m3/h|bar|rpm|A|V|Hz|ppm|pH|µS/cm|mS/cm|mg/l|g/l|kg/l|m3|m|mm|cm|km|g|kg|t|Wh|MWh|kJ|MJ|kcal|Mcal|l/min|m3/min|m/s|km/h|m/h|°F|psi|mbar|hPa|kPa|MPa|GW|MW|VA|kVA|MVA|VAR|kVAR|MVAR|PF|cosΦ|lux|lm|cd|lx|W/m2|J/m2|kWh/m2|ppm|ppb|mg/m3|g/m3|kg/m3|m3/m3|l/l|g/g|kg/kg|t/t|Wh/Wh|J/J|kcal/kcal|l/min/m2|m3/min/m2|m/s/m2|km/h/m2|m/h/m2|°F/min|psi/min|mbar/min|hPa/min|kPa/min|MPa/min|GW/min|MW/min|VA/min|kVA/min|MVA/min|VAR|kVAR|MVAR|PF/min|cosΦ/min|lux/min|lm/min|cd/min|lx/min|W/m2/min|J/m2/min|kWh/m2/min|ppm/min|ppb/min|mg/m3/min|g/m3/min|kg/m3/min|t/t/min|Wh/Wh/min|J/J/min|kcal/kcal/min|Schritte)",
+    re.IGNORECASE,
+)
+
+
 def extract_numeric_string(
     raw_cleaned_value: str,
     node_id_for_log: str | None = None,
     entity_id_for_log: str | None = None,
     locale: str | None = None,
 ) -> str | None:
-    """Extract the numeric part of a string using regex after locale-aware normalization."""
+    """Extract the numeric part of a string after stripping units and locale-aware normalization."""
     log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
+
+    # Remove common units first
+    value_without_units = COMMON_UNITS_REGEX.sub("", raw_cleaned_value).strip()
+    if value_without_units != raw_cleaned_value:
+        _HEURISTICS_LOGGER.debug(
+            f"{log_prefix}Stripped units from '{raw_cleaned_value}' to '{value_without_units}'."
+        )
+
     normalized_value_str = _normalize_value_string(
-        raw_cleaned_value, locale, log_prefix, raw_cleaned_value
+        value_without_units, locale, log_prefix, value_without_units
     )
 
     if normalized_value_str is None:
@@ -165,39 +213,6 @@ def extract_numeric_string(
         return match.group(0)
     _LOGGER.debug(
         f"{log_prefix}No numeric part found in '{normalized_value_str}' (original: '{raw_cleaned_value}') during numeric extraction."
-    )
-    return None
-
-
-def parse_percent_from_string(
-    cleaned_value: str,
-    regex_pattern: re.Pattern[str] = DEFAULT_PERCENT_REGEX,
-    node_id_for_log: str | None = None,
-    entity_id_for_log: str | None = None,
-) -> int | None:
-    """Parse percentage from a string using a regex pattern."""
-    log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
-    if match := re.search(regex_pattern, cleaned_value):
-        if match.lastindex is not None and match.lastindex >= 1:
-            try:
-                return int(match[1])
-            except ValueError:
-                _LOGGER.warning(
-                    f"{log_prefix}Could not parse numeric part from regex group 1 ('{match[1]}') in '{cleaned_value}' for percent regex."
-                )
-                return None
-            except IndexError:
-                _LOGGER.error(
-                    f"{log_prefix}Regex pattern '{regex_pattern}' did not capture group 1 as expected from '{cleaned_value}'."
-                )
-                return None
-        else:
-            _LOGGER.warning(
-                f"{log_prefix}Regex pattern '{regex_pattern}' did not find expected capturing group in '{cleaned_value}'."
-            )
-            return None
-    _LOGGER.warning(
-        f"{log_prefix}Regex did not find percentage in '{cleaned_value}' for percent regex."
     )
     return None
 
@@ -268,25 +283,50 @@ def parse_datetime_value(
     cleaned_value_dt = cleaned_value.strip().replace("&nbsp;", " ")
     if HDG_DATETIME_SPECIAL_TEXT in cleaned_value_dt.lower():
         return cleaned_value_dt
+
+    log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
+
+    # Attempt to parse with the primary format (DD.MM.YYYY HH:MM)
     try:
         dt_object_naive = datetime.strptime(cleaned_value_dt, "%d.%m.%Y %H:%M")
+    except ValueError:
+        # If primary format fails, try the alternative format (YYYY-MM-DD HH:MM:SS+HH:MM)
+        # First, remove colon from timezone offset if present, as %z does not support it
+        if (
+            "+" in cleaned_value_dt
+            and ":" in cleaned_value_dt[cleaned_value_dt.rfind("+") :]
+        ):
+            cleaned_value_dt = (
+                cleaned_value_dt[: cleaned_value_dt.rfind(":")]
+                + cleaned_value_dt[cleaned_value_dt.rfind(":") + 1 :]
+            )
+        elif (
+            "-" in cleaned_value_dt
+            and ":" in cleaned_value_dt[cleaned_value_dt.rfind("-") :]
+        ):
+            cleaned_value_dt = (
+                cleaned_value_dt[: cleaned_value_dt.rfind(":")]
+                + cleaned_value_dt[cleaned_value_dt.rfind(":") + 1 :]
+            )
         try:
-            source_tz = ZoneInfo(source_timezone_str)
-        except ZoneInfoNotFoundError:
-            _LOGGER.error(
-                f"Invalid source timezone '{source_timezone_str}' for sensor "
-                f"(node {node_id_for_log or 'Unknown'}, entity {entity_id_for_log or 'Unknown'}). "
-                f"Cannot parse datetime value '{cleaned_value_dt}'. Correct timezone in options."
+            dt_object_naive = datetime.strptime(cleaned_value_dt, "%Y-%m-%d %H:%M:%S%z")
+        except ValueError as e:
+            _LOGGER.warning(
+                f"{log_prefix}Could not parse '{cleaned_value_dt}' as datetime with either format. Error: {e}"
             )
             return None
 
-        dt_object_source_aware = dt_object_naive.replace(tzinfo=source_tz)
-        return cast(datetime, dt_util.as_utc(dt_object_source_aware))
-    except ValueError:
-        _LOGGER.warning(
-            f"Node {node_id_for_log} (entity {entity_id_for_log}): Could not parse '{cleaned_value_dt}' as datetime."
+    try:
+        source_tz = ZoneInfo(source_timezone_str)
+    except ZoneInfoNotFoundError:
+        _LOGGER.error(
+            f"{log_prefix}Invalid source timezone '{source_timezone_str}'. "
+            f"Cannot parse datetime value '{cleaned_value_dt}'. Correct timezone in options."
         )
         return None
+
+    dt_object_source_aware = dt_object_naive.replace(tzinfo=source_tz)
+    return cast(datetime, dt_object_source_aware)
 
 
 def parse_as_float_type(
@@ -316,19 +356,13 @@ def parse_as_float_type(
     return val_float
 
 
-_PARSERS: dict[str, Callable[[str, str | None, str | None, Any], Any | None]] = {
-    "percent_from_string_regex": lambda cv,
-    node_id,
-    entity_id,
-    _: parse_percent_from_string(
-        cv, node_id_for_log=node_id, entity_id_for_log=entity_id
-    ),
+_PARSERS: dict[str, Callable[..., Any]] = {
     "int": lambda cv, node_id, entity_id, _: parse_int_from_string(
         cv, node_id_for_log=node_id, entity_id_for_log=entity_id
     ),
-    "enum_text": lambda cv, *_: cv,
-    "text": lambda cv, *_: cv,
-    "allow_empty_string": lambda cv, *_: cv,
+    "enum_text": lambda cv, *args: cv,
+    "text": lambda cv, *args: cv,
+    "allow_empty_string": lambda cv, *args: cv,
     "hdg_datetime_or_text": lambda cv, node_id, entity_id, tz: parse_datetime_value(
         cv, tz, node_id_for_log=node_id, entity_id_for_log=entity_id
     ),
@@ -349,66 +383,44 @@ def parse_sensor_value(
     if raw_value_text is None:
         return None
 
-    # Centralized dispatch table for parsing logic
-    parser_map: dict[str, Callable[..., Any]] = {
-        "percent_from_string_regex": parse_percent_from_string,
-        "int": parse_int_from_string,
-        "enum_text": lambda val, *args, **kwargs: val,
-        "text": lambda val, *args, **kwargs: val,
-        "allow_empty_string": lambda val, *args, **kwargs: val,
-        "hdg_datetime_or_text": parse_datetime_value,
-        "float": parse_as_float_type,
-    }
-
     parse_as_type = entity_definition.get("parse_as_type")
-    formatter = entity_definition.get("hdg_formatter")
-    data_type = entity_definition.get("hdg_data_type")
+    hdg_formatter = entity_definition.get("hdg_formatter")
 
-    # Pre-process the raw value
-    cleaned_value = (
-        re.sub(r"\s+", " ", raw_value_text).strip()
-        if entity_definition.get("normalize_internal_whitespace", False)
-        else raw_value_text.strip()
-    )
+    log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
 
-    if not cleaned_value:
-        return "" if parse_as_type == "allow_empty_string" else None
+    # Clean the raw value by unescaping HTML entities and stripping whitespace
+    cleaned_value = html.unescape(str(raw_value_text)).strip()
 
-    # Primary parsing using `parse_as_type`
-    if isinstance(parse_as_type, str) and parse_as_type in parser_map:
-        parser_func = parser_map[parse_as_type]
-        # Prepare arguments for the specific parser
-        if parse_as_type == "hdg_datetime_or_text":
-            return parser_func(
-                cleaned_value,
-                configured_timezone,
-                node_id_for_log,
-                entity_id_for_log,
-            )
-        elif parse_as_type == "float":
-            return parser_func(
-                cleaned_value, formatter, node_id_for_log, entity_id_for_log
-            )
-        else:
-            return parser_func(
-                cleaned_value,
-                node_id_for_log=node_id_for_log,
-                entity_id_for_log=entity_id_for_log,
-            )
-
-    # Fallback parsing using `hdg_data_type` and `hdg_formatter`
-    if data_type == "10" or formatter in ["iVERSION", "iREVISION"]:
-        return cleaned_value
-    if data_type == "4":  # Often text despite being numeric type
-        return cleaned_value
-    if data_type == "2":  # Generic float type
-        return parse_as_float_type(
-            cleaned_value, formatter, node_id_for_log, entity_id_for_log
+    # For enums, the state should be the raw internal key from the boiler.
+    # Home Assistant's frontend will handle the translation based on the
+    # entity's translation_key and the corresponding state map in the translation files.
+    if parse_as_type == "enum_text":
+        return _convert_enum_text_to_key(
+            cleaned_value, entity_definition, node_id_for_log, entity_id_for_log
         )
 
-    _LOGGER.warning(
-        f"Node {node_id_for_log or 'Unknown'} (entity {entity_id_for_log or 'Unknown'}): "
-        f"Unhandled value parsing. Raw: '{raw_value_text}', "
-        f"ParseAs: {parse_as_type}, HDG Type: {data_type}, Formatter: {formatter}. Parsed: None."
-    )
-    return None
+    if isinstance(parse_as_type, str) and (parser := _PARSERS.get(parse_as_type)):
+        try:
+            if parse_as_type == "hdg_datetime_or_text":
+                return parser(
+                    cleaned_value,
+                    node_id_for_log,
+                    entity_id_for_log,
+                    configured_timezone,
+                )
+            elif parse_as_type == "float":
+                return parser(
+                    cleaned_value, node_id_for_log, entity_id_for_log, hdg_formatter
+                )
+            else:
+                return parser(cleaned_value, node_id_for_log, entity_id_for_log, None)
+        except Exception as e:
+            _LOGGER.warning(
+                f"{log_prefix}Error parsing value '{cleaned_value}' as {parse_as_type}: {e}. Returning raw."
+            )
+            return raw_value_text
+    else:
+        _LOGGER.warning(
+            f"{log_prefix}Unknown or invalid parse_as_type '{parse_as_type}'. Returning raw value '{raw_value_text}'."
+        )
+        return raw_value_text

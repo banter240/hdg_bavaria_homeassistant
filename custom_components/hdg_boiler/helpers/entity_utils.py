@@ -7,7 +7,7 @@ across different platforms (sensor, number, etc.).
 
 from __future__ import annotations
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 import logging
 
@@ -47,16 +47,16 @@ def create_entity_description[T: (SensorEntityDescription, NumberEntityDescripti
         "name": None,  # Use translation key for localization
         "translation_key": translation_key,
         "icon": entity_definition.get("icon"),
-        "device_class": entity_definition.get("device_class"),
+        "device_class": entity_definition.get("ha_device_class"),
         "native_unit_of_measurement": entity_definition.get(
-            "native_unit_of_measurement"
+            "ha_native_unit_of_measurement"
         ),
         "entity_category": entity_definition.get("entity_category"),
     }
 
     # Platform-specific attributes
     if description_class is SensorEntityDescription:
-        description_kwargs["state_class"] = entity_definition.get("state_class")
+        description_kwargs["state_class"] = entity_definition.get("ha_state_class")
     elif description_class is NumberEntityDescription:
         min_val = cast(float, entity_definition.get("setter_min_val"))
         max_val = cast(float, entity_definition.get("setter_max_val"))

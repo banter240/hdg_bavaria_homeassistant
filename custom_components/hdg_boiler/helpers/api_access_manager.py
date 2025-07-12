@@ -32,7 +32,7 @@ from ..const import (
     SET_VALUE_RETRY_DELAY_S,
 )
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 _LOGGER = logging.getLogger(DOMAIN)
 _LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
@@ -108,8 +108,17 @@ class HdgApiAccessManager:
 
         _LIFECYCLE_LOGGER.debug("HdgApiAccessManager initialized.")
 
-    def start(self, entry: ConfigEntry) -> None:
-        """Start the background worker task."""
+    def start(self, entry: ConfigEntry, maintenance_mode: bool = False) -> None:
+        """Start the background worker task.
+
+        Args:
+            entry: The ConfigEntry associated with this manager instance.
+            maintenance_mode: If True, the underlying API client will suppress communication.
+
+        """
+        # Update the API client's maintenance mode setting
+        self._api_client._maintenance_mode = maintenance_mode
+
         if self._worker_task is None or self._worker_task.done():
             self._worker_task = entry.async_create_background_task(
                 self.hass, self._worker_loop(), name="hdg_api_access_manager_worker"

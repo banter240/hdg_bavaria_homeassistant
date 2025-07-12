@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 import logging
 from typing import Any
@@ -22,6 +22,15 @@ from ..const import (
     PROCESSOR_LOGGER_NAME,
     USER_ACTION_LOGGER_NAME,
 )
+
+_LOGGER = logging.getLogger(DOMAIN)
+_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
+_ENTITY_DETAIL_LOGGER = logging.getLogger(ENTITY_DETAIL_LOGGER_NAME)
+_API_LOGGER = logging.getLogger(API_LOGGER_NAME)
+_HEURISTICS_LOGGER = logging.getLogger(HEURISTICS_LOGGER_NAME)
+_PROCESSOR_LOGGER = logging.getLogger(PROCESSOR_LOGGER_NAME)
+_USER_ACTION_LOGGER = logging.getLogger(USER_ACTION_LOGGER_NAME)
+
 
 SPAMMY_LOGGERS = [
     ENTITY_DETAIL_LOGGER_NAME,
@@ -90,10 +99,9 @@ def configure_loggers(entry: ConfigEntry) -> None:
     # unless advanced logging is explicitly enabled by the user.
     advanced_filter = AdvancedLoggingFilter(entry)
 
-    # The main logger is configured directly and does not need the advanced filter.
-    domain_logger = logging.getLogger(DOMAIN)
-    domain_logger.setLevel(log_level)
-    domain_logger.filters = []
+    # Configure the main logger.
+    _LOGGER.setLevel(log_level)
+    _LOGGER.filters = []
 
     # Configure spammy loggers to be filtered at the source.
     for logger_name in SPAMMY_LOGGERS:
@@ -102,7 +110,7 @@ def configure_loggers(entry: ConfigEntry) -> None:
         logger.filters = [advanced_filter]
         logger.propagate = True
 
-    domain_logger.info(
+    _LOGGER.info(
         "HDG Bavaria Boiler integration log level set to '%s'. Advanced logging is %s.",
         log_level_str,
         "ON" if is_advanced else "OFF",

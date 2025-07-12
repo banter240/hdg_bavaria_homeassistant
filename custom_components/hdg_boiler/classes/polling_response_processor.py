@@ -8,25 +8,28 @@ and ignoring polled values that were recently set via API to prevent race condit
 
 from __future__ import annotations
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from ..const import (
     CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
     DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
     PROCESSOR_LOGGER_NAME,
+    DOMAIN,
 )
 from ..helpers.string_utils import strip_hdg_node_suffix
 from ..helpers.logging_utils import format_for_log
+from ..helpers.parsers import parse_sensor_value
 
 if TYPE_CHECKING:
     from ..coordinator import HdgDataUpdateCoordinator
 
 
 _PROCESSOR_LOGGER = logging.getLogger(PROCESSOR_LOGGER_NAME)
+_LOGGER = logging.getLogger(DOMAIN)
 
 
 class HdgPollingResponseProcessor:
@@ -85,31 +88,22 @@ class HdgPollingResponseProcessor:
             )
             return node_id_with_suffix, None
 
-        if parser := self._get_text_value_parser(item_text_value):
-            parsed_text = parser(item_text_value)
-            return node_id_with_suffix, parsed_text
-        else:
+        # Ensure item_text_value is always treated as a string for consistency
+        # The API is expected to return values that can be stringified.
+        try:
+            parsed_text = str(item_text_value)
+        except Exception as e:
             _PROCESSOR_LOGGER.warning(
-                "API item text for node '%s' has unhandled type '%s'. Value: %s. Skipping.",
+                "API item text for node '%s' could not be converted to string. Value: %s, Error: %s. Skipping.",
                 node_id_with_suffix,
-                type(item_text_value).__name__,
                 format_for_log(item_text_value),
+                e,
             )
             return node_id_with_suffix, None
-
-    def _get_text_value_parser(self, value: Any) -> Any | None:
-        """Return a parsing function based on the value's type."""
-        # Dispatch table for parsing different types of 'text' values
-        type_parsers = {
-            str: lambda v: v,
-            int: lambda v: str(v),
-            float: lambda v: str(v),
-            bool: lambda v: str(v).lower(),
-        }
-        return type_parsers.get(type(value))
+        return node_id_with_suffix, parsed_text
 
     def _should_ignore_polled_item(
-        self, node_id_clean: str, item_text_value: str, group_key_for_log: str
+        self, node_id_clean: str, item_text_value: Any, group_key_for_log: str
     ) -> bool:
         """Determine if a polled API item should be ignored due to a recent set operation.
 
@@ -135,35 +129,50 @@ class HdgPollingResponseProcessor:
         )
         current_time_monotonic = time.monotonic()
 
-        was_recently_set = (
+        if was_recently_set := (
             last_set_time_for_node > 0.0
             and (current_time_monotonic - last_set_time_for_node) < timeout_duration
-        )
-
-        if was_recently_set:
+        ):
             current_coordinator_value = self._coordinator.data.get(node_id_clean)
-            if current_coordinator_value != item_text_value:
-                _PROCESSOR_LOGGER.debug(
+            # Ensure both values are strings for comparison, handling None
+            str_current_coordinator_value = (
+                str(current_coordinator_value)
+                if current_coordinator_value is not None
+                else None
+            )
+            str_item_text_value = (
+                str(item_text_value) if item_text_value is not None else None
+            )
+
+            _LOGGER.debug(
+                "Processor: _should_ignore_polled_item check for node '%s'. Recently set: %s. Polled value: '%s', Coordinator value: '%s'.",
+                node_id_clean,
+                was_recently_set,
+                item_text_value,
+                current_coordinator_value,
+            )
+
+            if str_current_coordinator_value != str_item_text_value:
+                _LOGGER.warning(
                     "Processor: Ignoring polled value '%s' for node '%s' (group '%s'). Node was recently set via API (at %.2f, current time %.2f, window: %ss). Coordinator currently holds '%s'. Polled value ignored.",
-                    format_for_log(item_text_value),
+                    item_text_value,
                     node_id_clean,
                     group_key_for_log,
                     last_set_time_for_node,
                     current_time_monotonic,
                     timeout_duration,
-                    format_for_log(current_coordinator_value),
+                    current_coordinator_value,
                 )
                 return True
-            _PROCESSOR_LOGGER.debug(
+            _LOGGER.debug(
                 "Processor: Polled value '%s' for node '%s' matches coordinator value '%s'. Node was recently set, but values match. Proceeding with polled value.",
-                format_for_log(item_text_value),
+                item_text_value,
                 node_id_clean,
-                format_for_log(current_coordinator_value),
+                current_coordinator_value,
             )
             return False
-        _PROCESSOR_LOGGER.debug(
-            "Processor: Processing polled value '%s' for node '%s'. Not recently set OR ignore window passed (last_set: %.2f, current_time: %.2f, window: %ss).",
-            format_for_log(item_text_value),
+        _LOGGER.debug(
+            "Processor: _should_ignore_polled_item check for node '%s'. Not recently set OR ignore window passed (last_set: %.2f, current_time: %.2f, window: %ss). Proceeding.",
             node_id_clean,
             last_set_time_for_node,
             current_time_monotonic,
@@ -211,19 +220,54 @@ class HdgPollingResponseProcessor:
         raw_ids_seen.add(node_id_with_suffix)
 
         node_id_clean = strip_hdg_node_suffix(node_id_with_suffix)
-        if self._should_ignore_polled_item(node_id_clean, item_text_value, group_key):
+
+        # Retrieve the entity definition to pass to the parser
+        # Ensure the node_id used for lookup in the registry has the 'T' suffix
+        # as the registry stores them with the suffix.
+        node_id_for_registry_lookup = node_id_with_suffix
+        if not node_id_for_registry_lookup.endswith("T"):
+            node_id_for_registry_lookup += "T"
+
+        # Retrieve the entity definition to pass to the parser
+        entity_definition = (
+            self._coordinator.hdg_entity_registry.get_entity_definition_by_node_id(
+                node_id_for_registry_lookup
+            )
+        )
+        if not entity_definition:
+            _PROCESSOR_LOGGER.warning(
+                "Processor: No entity definition found for node ID '%s'. Skipping parsing.",
+                node_id_for_registry_lookup,
+            )
+            return None
+
+        # Parse the raw value using the dedicated parser
+        parsed_value = parse_sensor_value(
+            item_text_value,
+            cast(dict[str, Any], entity_definition),
+            node_id_for_log=node_id_clean,
+            entity_id_for_log=entity_definition.get("translation_key"),
+        )
+        _LOGGER.debug(
+            "Processor: Node %s (Raw: '%s', Parsed: '%s')",
+            node_id_clean,
+            item_text_value,
+            parsed_value,
+        )
+
+        if self._should_ignore_polled_item(node_id_clean, parsed_value, group_key):
             return None
 
         if node_id_clean in cleaned_node_ids_processed:
             existing_value = self._coordinator.data.get(node_id_clean)
-            if existing_value != item_text_value:
+            if existing_value != parsed_value:
                 _PROCESSOR_LOGGER.error(
                     "Processor: Duplicate base node ID '%s' (from API ID '%s') in API response for group '%s' WITH CONFLICTING VALUES. Existing: '%s', New (skipped): '%s'.",
                     node_id_clean,
                     node_id_with_suffix,
                     group_key,
                     format_for_log(existing_value),
-                    format_for_log(item_text_value),
+                    format_for_log(parsed_value),
                 )
             else:
                 _PROCESSOR_LOGGER.debug(
@@ -232,11 +276,11 @@ class HdgPollingResponseProcessor:
                     node_id_with_suffix,
                     group_key,
                     format_for_log(existing_value),
-                    format_for_log(item_text_value),
+                    format_for_log(parsed_value),
                 )
             return None
 
-        self._coordinator.data[node_id_clean] = item_text_value
+        self._coordinator.data[node_id_clean] = parsed_value
         cleaned_node_ids_processed.add(node_id_clean)
         return item
 

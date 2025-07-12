@@ -12,18 +12,20 @@ to the HDG Bavaria Boiler integration. Its responsibilities include:
 
 from __future__ import annotations
 
-__version__ = "0.11.0"
+__version__ = "0.11.13"
 
 import asyncio
 import logging
 import time
 from datetime import timedelta
-from typing import (
-    Any,
-)
+from datetime import datetime
+from typing import Any
+
+from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant
+from homeassistant.helpers.event import async_call_later
+
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -43,9 +45,8 @@ from .const import (
     POLLING_RETRY_MAX_DELAY_S,
     POLLING_RETRY_BACKOFF_FACTOR,
     POLLING_RETRY_MAX_ATTEMPTS,
-    LIFECYCLE_LOGGER_NAME,
-    ENTITY_DETAIL_LOGGER_NAME,
-    API_LOGGER_NAME,
+    DEFAULT_SET_VALUE_DEBOUNCE_DELAY_S,
+    CONF_MAINTENANCE_MODE,
 )
 from .exceptions import (
     HdgApiConnectionError,
@@ -54,14 +55,16 @@ from .exceptions import (
     HdgApiPreemptedError,
 )
 from .models import NodeGroupPayload
+from .registry import HdgEntityRegistry
+import functools
 from .helpers.api_access_manager import ApiPriority, HdgApiAccessManager
-from .polling_manager import HDG_NODE_PAYLOADS, POLLING_GROUP_ORDER
-
-
-_LOGGER = logging.getLogger(DOMAIN)
-_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
-_ENTITY_DETAIL_LOGGER = logging.getLogger(ENTITY_DETAIL_LOGGER_NAME)
-_API_LOGGER = logging.getLogger(API_LOGGER_NAME)
+from .helpers.logging_utils import (
+    _LOGGER,
+    _LIFECYCLE_LOGGER,
+    _ENTITY_DETAIL_LOGGER,
+    _API_LOGGER,
+    _USER_ACTION_LOGGER,
+)
 
 
 class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -80,8 +83,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         api_access_manager: HdgApiAccessManager,
         entry: ConfigEntry,
         log_level_threshold_for_connection_errors: int,
-        polling_group_order: list[str],
-        hdg_node_payloads: dict[str, NodeGroupPayload],
+        hdg_entity_registry: HdgEntityRegistry,
     ):
         """Initialize the HdgDataUpdateCoordinator.
 
@@ -90,8 +92,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             api_access_manager: An instance of HdgApiAccessManager for communication with the boiler.
             entry: The ConfigEntry associated with this coordinator instance.
             log_level_threshold_for_connection_errors: Threshold for escalating connection error log level.
-            polling_group_order: Ordered list of polling group keys.
-            hdg_node_payloads: Dictionary of polling group payloads.
+            hdg_entity_registry: The HdgEntityRegistry instance providing entity and polling group definitions.
 
         """
         self._consecutive_poll_failures: int = 0
@@ -113,8 +114,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._log_level_threshold_for_connection_errors = (
             log_level_threshold_for_connection_errors
         )
-        self._polling_group_order = polling_group_order
-        self._hdg_node_payloads = hdg_node_payloads
+        self.hdg_entity_registry = hdg_entity_registry
         self.scan_intervals: dict[str, timedelta] = {}
 
         self._validate_polling_config()
@@ -136,19 +136,29 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.data: dict[str, Any] = {}
         self._last_set_times: dict[str, float] = {}
+        self._pending_set_value_timers: dict[str, CALLBACK_TYPE] = {}
+        self._optimistic_set_values: dict[str, Any] = {}
+        self._optimistic_set_times: dict[str, float] = {}
+        self._current_set_generations: dict[str, int] = {}
+        self._set_value_locks: dict[str, asyncio.Lock] = {}
+
         self._polling_response_processor = HdgPollingResponseProcessor(self)
+        self._maintenance_mode = self.entry.options.get(CONF_MAINTENANCE_MODE, False)
 
         _LOGGER.debug(
-            "HdgDataUpdateCoordinator for '%s' initialized. Update interval: %s.",
+            "HdgDataUpdateCoordinator for '%s' initialized. Update interval: %s, Maintenance Mode: %s.",
             self.entry.title,
             shortest_interval,
+            self._maintenance_mode,
         )
 
     def _initialize_scan_intervals(self) -> None:
         """Initialize scan intervals for each polling group from config or defaults."""
         current_config = self.entry.options or self.entry.data
-        for group_key in self._polling_group_order:
-            payload_details = self._hdg_node_payloads.get(group_key)
+        for group_key in self.hdg_entity_registry.get_polling_group_order():
+            payload_details = self.hdg_entity_registry.get_polling_group_payloads().get(
+                group_key
+            )
             if not payload_details:
                 _ENTITY_DETAIL_LOGGER.error(
                     "Payload details missing for group '%s'. Skipping.", group_key
@@ -182,8 +192,10 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _validate_polling_config(self) -> None:
         """Validate consistency between dynamically built polling configurations."""
-        polling_group_set = set(self._polling_group_order)
-        payloads_key_set = set(self._hdg_node_payloads.keys())
+        polling_group_set = set(self.hdg_entity_registry.get_polling_group_order())
+        payloads_key_set = set(
+            self.hdg_entity_registry.get_polling_group_payloads().keys()
+        )
         if polling_group_set != payloads_key_set:
             missing_in_payloads = polling_group_set - payloads_key_set
             missing_in_order = payloads_key_set - polling_group_set
@@ -229,7 +241,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         This ensures that all groups are considered due for an update on the
         first polling cycle.
         """
-        for group_key in self._polling_group_order:
+        for group_key in self.hdg_entity_registry.get_polling_group_order():
             self._last_update_times[group_key] = 0.0
 
     def _log_fetch_error_duration(
@@ -296,9 +308,10 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
 
                 _ENTITY_DETAIL_LOGGER.debug(
-                    "Processed data for HDG group: %s. %s valid items.",
+                    "Processed data for HDG group: %s. %s valid items. Data: %s",
                     group_key,
                     len(processed_items),
+                    processed_items,
                 )
                 return processed_items
             _API_LOGGER.debug(
@@ -445,9 +458,9 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
 
         all_groups_to_fetch = [
-            (gk, self._hdg_node_payloads[gk])
-            for gk in self._polling_group_order
-            if gk in self._hdg_node_payloads
+            (gk, self.hdg_entity_registry.get_polling_group_payloads()[gk])
+            for gk in self.hdg_entity_registry.get_polling_group_order()
+            if gk in self.hdg_entity_registry.get_polling_group_payloads()
         ]
 
         (
@@ -469,6 +482,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             len(self.data or []),
         )
         self.async_set_updated_data(self.data)
+
         _ENTITY_DETAIL_LOGGER.debug(
             "Initial refresh complete. Current data size: %s.", len(self.data)
         )
@@ -487,8 +501,10 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         need to be polled in the current cycle.
         """
         due_groups: list[tuple[str, NodeGroupPayload]] = []
-        for group_key in self._polling_group_order:
-            payload_config = self._hdg_node_payloads.get(group_key)
+        for group_key in self.hdg_entity_registry.get_polling_group_order():
+            payload_config = self.hdg_entity_registry.get_polling_group_payloads().get(
+                group_key
+            )
             if not payload_config or group_key not in self.scan_intervals:
                 _ENTITY_DETAIL_LOGGER.debug(
                     "Skipping group '%s' in due check: not defined or no scan_interval.",
@@ -635,13 +651,13 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if is_connection_error
             else "Non-connection API error for group '%s'. Attempt %s, next retry in %.0fs."
         )
-        log_level = (
-            logging.ERROR
-            if is_connection_error
-            and self._consecutive_poll_failures
-            >= self._log_level_threshold_for_connection_errors
-            else logging.WARNING
-        )
+        if (
+            self._consecutive_poll_failures
+            < self._log_level_threshold_for_connection_errors
+        ):
+            log_level = logging.INFO
+        else:
+            log_level = logging.ERROR if is_connection_error else logging.WARNING
         _LOGGER.log(
             log_level, log_msg, group_key, retry_info["attempts"], next_retry_delay
         )
@@ -716,6 +732,12 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             dt_util.as_local(dt_util.utcnow()),
         )
 
+        if self._maintenance_mode:
+            _LIFECYCLE_LOGGER.info(
+                "Coordinator: Maintenance mode is active. Skipping data update."
+            )
+            return self.data
+
         due_groups_to_fetch = self._prepare_current_poll_cycle_groups(
             polling_cycle_start_time
         )
@@ -770,9 +792,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         for all listening entities that depend on this coordinator.
         """
         if self.data.get(node_id) != new_value:
-            self._last_set_times[node_id] = time.monotonic()
-            self.data[node_id] = new_value
-            _LOGGER.debug(
+            _LOGGER.info(
                 "Manually updated node '%s' to '%s'.",
                 node_id,
                 new_value,
@@ -790,37 +810,134 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 new_value,
             )
 
-    async def async_set_node_value_if_changed(
+    async def async_set_node_value(
         self,
         node_id: str,
-        new_value_str_for_api: str,
+        value: str,
         entity_name_for_log: str = "Unknown Entity",
+        debounce_delay: float = DEFAULT_SET_VALUE_DEBOUNCE_DELAY_S,
     ) -> bool:
-        """Queue a node value to be set on the boiler via the API.
+        """Queue a node value to be set on the boiler via the API with debouncing.
 
-        This method is called by entities (e.g., `HdgBoilerNumber`) or services to request a value change.
-        It submits the request to the HdgApiAccessManager, which handles queuing, prioritization (HIGH),
-        and retry logic, ensuring robust and responsive write operations. A check for whether the value
-        has actually changed against the coordinator's current data is intentionally omitted to
-        prevent race conditions with optimistic UI updates.
+        This method is called by entities (e.g., `HdgBoilerNumber`, `HdgBoilerSelect`)
+        or services to request a value change. It implements debouncing to prevent
+        overwhelming the boiler with rapid requests and optimistically updates the UI.
+
+        Args:
+            node_id: The ID of the node to set.
+            value: The value to set.
+            entity_name_for_log: The name of the entity for logging purposes.
+            debounce_delay: The delay in seconds before the value is actually sent.
 
         Returns:
-            True if the value was successfully set (after potential retries), False otherwise.
+            True if the value was successfully queued (and eventually set), False otherwise.
 
         """
-        if not isinstance(new_value_str_for_api, str):
-            _LOGGER.error(
-                "Invalid type for new_value_str_for_api: %s for node '%s'. Expected str.",
-                type(new_value_str_for_api).__name__,
+        if self._maintenance_mode:
+            _USER_ACTION_LOGGER.info(
+                "Coordinator: Maintenance mode is active. Skipping set request for node '%s'.",
                 entity_name_for_log,
             )
-            raise TypeError("new_value_str_for_api must be a string.")
+            return False
 
-        _ENTITY_DETAIL_LOGGER.debug(
-            "Coordinator: Queuing set request for node '%s' (ID: %s) to value '%s'.",
+        if not isinstance(value, str):
+            _LOGGER.error(
+                "Invalid type for value: %s for node '%s'. Expected str.",
+                type(value).__name__,
+                entity_name_for_log,
+            )
+            raise TypeError("Value must be a string.")
+
+        # Increment generation for this node to track stale jobs
+        current_generation = self._current_set_generations.get(node_id, 0) + 1
+        self._current_set_generations[node_id] = current_generation
+
+        # Store optimistic state
+        self._optimistic_set_values[node_id] = value
+        self._optimistic_set_times[node_id] = time.monotonic()
+
+        _USER_ACTION_LOGGER.debug(
+            "Coordinator: Queuing set request for node '%s' (ID: %s) to value '%s'. "
+            "Generation: %s. Debounce delay: %ss.",
             entity_name_for_log,
             node_id,
-            new_value_str_for_api,
+            value,
+            current_generation,
+            debounce_delay,
+        )
+
+        # Cancel any existing pending calls for this node
+        if node_id in self._pending_set_value_timers:
+            self._pending_set_value_timers[node_id]()  # Cancel the old timer
+            del self._pending_set_value_timers[node_id]
+
+        # Schedule the actual API call
+        job_target = functools.partial(
+            self._process_debounced_set_value,
+            node_id=node_id,
+            value=value,
+            entity_name_for_log=entity_name_for_log,
+            scheduled_generation=current_generation,
+        )
+        self._pending_set_value_timers[node_id] = async_call_later(
+            self.hass,
+            debounce_delay,
+            HassJob(
+                job_target,
+                name=f"HdgSetValDebounce_{node_id}",
+                cancel_on_shutdown=True,
+            ),  # type: ignore
+        )
+        return True  # Indicate that the request was successfully queued
+
+    async def _process_debounced_set_value(
+        self,
+        _now: datetime,  # Provided by async_call_later, but not used
+        node_id: str,
+        value: str,
+        entity_name_for_log: str,
+        scheduled_generation: int,
+    ) -> None:
+        """Process the debounced set value and send it to the API.
+
+        This method is called after the debounce delay. It checks if the request
+        is still current (not stale) and then attempts to send the value to the boiler.
+        """
+        # Remove the timer from pending list as it's now being processed
+        if node_id in self._pending_set_value_timers:
+            del self._pending_set_value_timers[node_id]
+
+        # Acquire a lock for this node to prevent concurrent API calls for the same node
+        if node_id not in self._set_value_locks:
+            self._set_value_locks[node_id] = asyncio.Lock()
+
+        async with self._set_value_locks[node_id]:
+            # Re-check if this job is stale AFTER acquiring the lock
+            if scheduled_generation != self._current_set_generations.get(node_id):
+                _USER_ACTION_LOGGER.debug(
+                    "Coordinator: Skipping stale set request for node '%s' (ID: %s) after acquiring lock. "
+                    "Scheduled generation: %s, Current generation: %s.",
+                    entity_name_for_log,
+                    node_id,
+                    scheduled_generation,
+                    self._current_set_generations.get(node_id),
+                )
+                return
+
+            _USER_ACTION_LOGGER.info(
+                "Coordinator: Sending set request for node '%s' (ID: %s) to value '%s'.",
+                entity_name_for_log,
+                node_id,
+                value,
+            )
+
+        current_value_in_coordinator = self.data.get(node_id)
+
+        _ENTITY_DETAIL_LOGGER.debug(
+            "Coordinator: _process_debounced_set_value: Node ID: %s. Optimistic value: %s, Current coordinator value: %s",
+            node_id,
+            value,
+            current_value_in_coordinator,
         )
 
         try:
@@ -830,16 +947,46 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 request_type=API_REQUEST_TYPE_SET_NODE_VALUE,
                 context_key=node_id,
                 node_id=node_id,
-                value=new_value_str_for_api,
+                value=value,
+                current_value=current_value_in_coordinator,
             )
             if success:
-                await self.async_update_internal_node_state(
-                    node_id, new_value_str_for_api
+                # Update internal state and notify entities immediately after successful API call
+                self.data[node_id] = value
+                self._last_set_times[node_id] = time.monotonic()
+                _LOGGER.info(
+                    "Successfully set node '%s' to '%s' via API. Internal state updated.",
+                    node_id,
+                    value,
                 )
-            return bool(success)
+                self.async_set_updated_data(self.data)
+            else:
+                _LOGGER.error(
+                    "Failed to set node '%s' to '%s' via API. API call returned False.",
+                    node_id,
+                    value,
+                )
         except HdgApiError as e:
-            _LOGGER.error("Failed to set node value via API Access Manager: %s", e)
-            return False
+            _LOGGER.error(
+                "Failed to set node '%s' to '%s' via API due to API error: %s",
+                node_id,
+                value,
+                e,
+            )
+        except Exception as e:
+            _LOGGER.exception(
+                "An unexpected error occurred while setting node '%s' to '%s': %s",
+                node_id,
+                value,
+                e,
+            )
+        finally:
+            # Clear optimistic state after processing, regardless of success or failure
+            # This ensures the next poll will update the UI to the actual state
+            if node_id in self._optimistic_set_values:
+                del self._optimistic_set_values[node_id]
+            if node_id in self._optimistic_set_times:
+                del self._optimistic_set_times[node_id]
 
     async def async_stop_api_access_manager(self) -> None:
         """Gracefully stop the background `HdgApiAccessManager` task."""
@@ -851,6 +998,7 @@ async def async_create_and_refresh_coordinator(
     api_access_manager: HdgApiAccessManager,
     entry: ConfigEntry,
     log_level_threshold_for_connection_errors: int,
+    hdg_entity_registry: HdgEntityRegistry,
 ) -> HdgDataUpdateCoordinator:
     """Create, initialize, and perform the first data refresh for the coordinator.
 
@@ -863,9 +1011,8 @@ async def async_create_and_refresh_coordinator(
         api_access_manager,
         entry,
         log_level_threshold_for_connection_errors,
-        POLLING_GROUP_ORDER,
-        HDG_NODE_PAYLOADS,
+        hdg_entity_registry,
     )
-    api_access_manager.start(entry)
+    api_access_manager.start(entry, coordinator._maintenance_mode)
     await coordinator.async_config_entry_first_refresh()
     return coordinator

@@ -6,10 +6,13 @@ formatting requests, parsing responses, managing errors, and providing
 methods to fetch data and set values on the boiler.
 """
 
+from __future__ import annotations
+
+__version__ = "0.9.2"
+
 import functools
-import logging
 import time
-from typing import Any, Concatenate
+from typing import Any, Concatenate, cast
 from collections.abc import Awaitable, Callable
 
 import aiohttp
@@ -17,9 +20,6 @@ import aiohttp
 from .const import (
     API_ENDPOINT_DATA_REFRESH,
     API_ENDPOINT_SET_VALUE,
-    DOMAIN,
-    LIFECYCLE_LOGGER_NAME,
-    API_LOGGER_NAME,
 )
 from .exceptions import (
     HdgApiConnectionError,
@@ -27,21 +27,29 @@ from .exceptions import (
     HdgApiResponseError,
 )
 from .helpers.network_utils import prepare_base_url
-from .helpers.logging_utils import format_for_log
-
-_LOGGER = logging.getLogger(DOMAIN)
-_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
-_API_LOGGER = logging.getLogger(API_LOGGER_NAME)
+from .helpers.logging_utils import (
+    format_for_log,
+    _LOGGER,
+    _API_LOGGER,
+    _LIFECYCLE_LOGGER,
+)
 
 
 def handle_api_errors[T, **P](
-    func: Callable[Concatenate["HdgApiClient", P], Awaitable[T]],
-) -> Callable[Concatenate["HdgApiClient", P], Awaitable[T]]:
+    func: Callable[Concatenate[HdgApiClient, P], Awaitable[T]],
+) -> Callable[Concatenate[HdgApiClient, P], Awaitable[T]]:
     """Decorate API methods to handle common exceptions and re-raise as HdgApiErrors."""
 
     @functools.wraps(func)
-    async def wrapper(self: "HdgApiClient", *args: P.args, **kwargs: P.kwargs) -> T:
+    async def wrapper(self: HdgApiClient, *args: P.args, **kwargs: P.kwargs) -> T:
         """Wrap the API call with error handling."""
+        if self._maintenance_mode:
+            _API_LOGGER.info(
+                "API Client: Maintenance mode is active. Skipping API call to %s.",
+                func.__name__,
+            )
+            return cast(T, None)  # Return None or appropriate default for T
+
         start_time = time.monotonic()
         try:
             return await func(self, *args, **kwargs)
@@ -112,6 +120,7 @@ class HdgApiClient:
         host_address: str,
         api_timeout: float,
         connect_timeout: float,
+        maintenance_mode: bool = False,
     ) -> None:
         """Initialize the API client.
 
@@ -122,6 +131,7 @@ class HdgApiClient:
                           if no scheme is provided.
             api_timeout: The total timeout for API requests in seconds.
             connect_timeout: The timeout for establishing a connection in seconds.
+            maintenance_mode: If True, the API client will suppress communication.
 
         Raises:
             HdgApiError: If the `host_address` is invalid (e.g., results in an empty netloc).
@@ -130,10 +140,12 @@ class HdgApiClient:
         self._session = session
         self._api_timeout = api_timeout
         self._connect_timeout = connect_timeout
+        self._maintenance_mode = maintenance_mode
         _LIFECYCLE_LOGGER.debug(
-            "HdgApiClient initialized with api_timeout: %ss, connect_timeout: %ss",
+            "HdgApiClient initialized with api_timeout: %ss, connect_timeout: %ss, maintenance_mode: %s",
             self._api_timeout,
             self._connect_timeout,
+            self._maintenance_mode,
         )
         self._aiohttp_timeout_obj = aiohttp.ClientTimeout(
             total=self._api_timeout, connect=self._connect_timeout
@@ -250,8 +262,26 @@ class HdgApiClient:
             ]
 
     @handle_api_errors
-    async def async_set_node_value(self, node_id: str, value: str) -> bool:
-        """Set a specific node value on the HDG boiler."""
+    async def async_set_node_value(
+        self, node_id: str, value: str, current_value: str | None
+    ) -> bool:
+        """Set a specific node value on the HDG boiler, avoiding redundant calls."""
+        _API_LOGGER.debug(
+            "Comparing new value '%s' (type: %s) with current value '%s' (type: %s) for node '%s'.",
+            value,
+            type(value),
+            current_value,
+            type(current_value),
+            node_id,
+        )
+        if value == str(current_value):
+            _API_LOGGER.debug(
+                "Skipping set for node '%s' because new value ('%s') is same as current value.",
+                node_id,
+                value,
+            )
+            return True
+
         _API_LOGGER.debug("Setting node '%s' to '%s' via GET.", node_id, value)
 
         params = {"i": node_id, "v": value}

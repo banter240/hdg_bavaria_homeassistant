@@ -7,7 +7,7 @@ API polling group configurations, and enumeration options.
 
 from __future__ import annotations
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 from typing import TypedDict
 
@@ -40,6 +40,7 @@ class SensorDefinition(TypedDict, total=False):
         setter_min_val: Minimum allowed value for writable entities.
         setter_max_val: Maximum allowed value for writable entities.
         setter_step: Step value for writable entities.
+        options: A list of valid string options for a `select` entity.
         normalize_internal_whitespace: If True, internal whitespace in the raw string value
                                        will be normalized (multiple spaces to one) before parsing.
                                        Defaults to False if not specified.
@@ -64,6 +65,7 @@ class SensorDefinition(TypedDict, total=False):
     setter_min_val: float | None
     setter_max_val: float | None
     setter_step: float | None
+    options: list[str] | None
     normalize_internal_whitespace: bool | None
 
 

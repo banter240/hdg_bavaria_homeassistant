@@ -6,7 +6,7 @@ interact with the boiler by setting specific node values (e.g., temperature setp
 and retrieving current raw values for any monitored node.
 """
 
-__version__ = "0.8.5"
+__version__ = "0.8.6"
 import logging
 from typing import Any, cast
 
@@ -20,16 +20,10 @@ from .const import (
     SERVICE_SET_NODE_VALUE,
 )
 from .coordinator import HdgDataUpdateCoordinator
-from .definitions import (
-    SENSOR_DEFINITIONS,
-    SensorDefinition,
-)
+from .registry import HdgEntityRegistry
 from .exceptions import HdgApiError
 from .helpers.parsers import (
     format_value_for_api,
-)
-from .helpers.string_utils import (
-    strip_hdg_node_suffix,
 )
 from .helpers.validation_utils import (
     coerce_value_to_numeric_type,
@@ -37,96 +31,14 @@ from .helpers.validation_utils import (
     validate_service_call_input,
     validate_value_range_and_step,
 )
-from .helpers.logging_utils import format_for_log
 
 _LOGGER = logging.getLogger(DOMAIN)
-
-
-def _build_sensor_definitions_by_base_node_id() -> dict[str, list[SensorDefinition]]:
-    """Build an index of sensor definitions keyed by their base HDG node ID.
-
-    This allows quick lookup of all definitions associated with a specific base node ID.
-    The index is used by `_find_settable_sensor_definition` to efficiently locate
-    the correct definition for a `set_node_value` service call.
-    """
-    index: dict[str, list[SensorDefinition]] = {}
-
-    for definition_dict in SENSOR_DEFINITIONS.values():
-        definition = cast(SensorDefinition, definition_dict)
-        hdg_node_id_val = definition.get("hdg_node_id")
-        if isinstance(hdg_node_id_val, str) and (
-            base_hdg_node_id_from_def := strip_hdg_node_suffix(hdg_node_id_val)
-        ):
-            if base_hdg_node_id_from_def not in index:
-                index[base_hdg_node_id_from_def] = []
-            index[base_hdg_node_id_from_def].append(definition)
-        else:
-            _LOGGER.warning(
-                "Skipping definition in _build_sensor_definitions_by_base_node_id due to missing or invalid 'hdg_node_id': %s",
-                format_for_log(definition_dict.get("translation_key", "Unknown Key")),
-            )
-    return index
-
-
-# Pre-build the index at module load time for efficiency.
-SENSOR_DEFINITIONS_BY_BASE_NODE_ID = _build_sensor_definitions_by_base_node_id()
-
-
-def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
-    """Find and return the SensorDefinition for a settable 'number' node.
-
-    Queries the cached `SENSOR_DEFINITIONS_BY_BASE_NODE_ID` index to find definitions
-    matching the base node ID. It then filters for definitions where `ha_platform`
-    is "number" and `setter_type` is defined, returning the single matching definition.
-
-    Raises:
-        ServiceValidationError: If no matching settable 'number' definition is found,
-                                or if multiple conflicting definitions are found for the
-                                same base node ID.
-
-    Args:
-        node_id_str: The base HDG node ID to search for.
-
-    """
-    definitions_for_base = SENSOR_DEFINITIONS_BY_BASE_NODE_ID.get(node_id_str, [])
-    settable_definitions = [
-        d
-        for d in definitions_for_base
-        if d.get("ha_platform") == "number" and d.get("setter_type")
-    ]
-
-    if not settable_definitions:
-        error_detail = "No SENSOR_DEFINITIONS entry found or not a settable 'number' platform with a 'setter_type'."
-        if definitions_for_base:
-            error_detail = (
-                f"Node ID found, but no valid settable 'number' definition. "
-                f"Found {len(definitions_for_base)} definition(s), but none matched criteria "
-                f"(ha_platform='number' and 'setter_type' defined)."
-            )
-        _LOGGER.error(
-            "Node ID '%s' not configured as settable 'number'. Details: %s",
-            format_for_log(node_id_str),
-            error_detail,
-        )
-        raise ServiceValidationError(
-            f"Node ID '{node_id_str}' not settable. Reason: {error_detail}"
-        )
-
-    if len(settable_definitions) > 1:
-        _LOGGER.error(
-            "Multiple settable 'number' SensorDefinitions found for node_id '%s': %s. Please ensure only one settable definition exists per node to avoid ambiguity.",
-            format_for_log(node_id_str),
-            format_for_log([repr(d) for d in settable_definitions]),
-        )
-        raise ServiceValidationError(
-            f"Multiple settable 'number' definitions for node ID '{node_id_str}'. Conflicting definitions: {[repr(d) for d in settable_definitions]}"
-        )
-    return settable_definitions[0]
 
 
 async def async_handle_set_node_value(
     hass: HomeAssistant,
     coordinator: HdgDataUpdateCoordinator,
+    hdg_entity_registry: HdgEntityRegistry,
     call: ServiceCall,
 ) -> None:
     """Handle the 'set_node_value' service call.
@@ -140,6 +52,7 @@ async def async_handle_set_node_value(
     Args:
         hass: The HomeAssistant instance.
         coordinator: The HdgDataUpdateCoordinator instance.
+        hdg_entity_registry: The HdgEntityRegistry instance for accessing entity definitions.
         call: The ServiceCall object containing `node_id` and `value`.
 
     Raises:
@@ -153,7 +66,13 @@ async def async_handle_set_node_value(
         f"Service '{SERVICE_SET_NODE_VALUE}': node_id='{node_id_input}' (base='{node_id_str}'), value='{value_to_set_raw}'"
     )
 
-    sensor_def_for_node = _find_settable_sensor_definition(node_id_str)
+    sensor_def_for_node = (
+        hdg_entity_registry.get_settable_number_definition_by_base_node_id(node_id_str)
+    )
+    if not sensor_def_for_node:
+        raise ServiceValidationError(
+            f"Node ID '{node_id_str}' not settable. No valid settable 'number' definition found."
+        )
     entity_name_for_log = sensor_def_for_node.get("translation_key", node_id_str)
 
     node_type = sensor_def_for_node.get("setter_type")
@@ -188,9 +107,9 @@ async def async_handle_set_node_value(
         ) from e
 
     try:
-        success = await coordinator.async_set_node_value_if_changed(
+        success = await coordinator.async_set_node_value(
             node_id=node_id_str,
-            new_value_str_for_api=api_value_to_send_str,
+            value=api_value_to_send_str,
             entity_name_for_log=entity_name_for_log,
         )
         if not success:
@@ -217,7 +136,10 @@ async def async_handle_set_node_value(
 
 
 async def async_handle_get_node_value(
-    hass: HomeAssistant, coordinator: HdgDataUpdateCoordinator, call: ServiceCall
+    hass: HomeAssistant,
+    coordinator: HdgDataUpdateCoordinator,
+    hdg_entity_registry: HdgEntityRegistry,
+    call: ServiceCall,
 ) -> dict[str, Any]:
     """Handle the 'get_node_value' service call.
 
@@ -228,6 +150,7 @@ async def async_handle_get_node_value(
     Args:
         hass: The HomeAssistant instance.
         coordinator: The HdgDataUpdateCoordinator instance.
+        hdg_entity_registry: The HdgEntityRegistry instance for accessing entity definitions.
         call: The ServiceCall object containing `node_id`.
 
     Returns:

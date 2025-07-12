@@ -8,7 +8,7 @@ entity definitions specified in `definitions.py` to configure each sensor.
 
 from __future__ import annotations
 
-__version__ = "0.8.28"
+__version__ = "0.8.31"
 
 import logging
 from typing import Any, cast
@@ -29,11 +29,10 @@ from .const import (
     LIFECYCLE_LOGGER_NAME,
 )
 from .coordinator import HdgDataUpdateCoordinator
-from .definitions import SENSOR_DEFINITIONS
+from .registry import HdgEntityRegistry
 from .entity import HdgNodeEntity
 from .helpers.entity_utils import create_entity_description
 from .helpers.parsers import parse_sensor_value
-from .helpers.string_utils import strip_hdg_node_suffix
 from .models import SensorDefinition
 
 _LOGGER = logging.getLogger(DOMAIN)
@@ -57,28 +56,31 @@ async def async_setup_entry(
         async_add_entities: Callback function to add entities to Home Assistant.
 
     """
-    coordinator: HdgDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
-        "coordinator"
-    ]
+    integration_data = hass.data[DOMAIN][entry.entry_id]
+    coordinator: HdgDataUpdateCoordinator = integration_data["coordinator"]
+    hdg_entity_registry: HdgEntityRegistry = integration_data["hdg_entity_registry"]
+
     entities: list[HdgBoilerSensor] = []
 
-    for translation_key, entity_def in SENSOR_DEFINITIONS.items():
-        if entity_def.get("ha_platform") == "sensor":
-            description = create_entity_description(
-                SensorEntityDescription, translation_key, entity_def
-            )
-            entities.append(HdgBoilerSensor(coordinator, description, entity_def))
-            _ENTITY_DETAIL_LOGGER.debug(
-                "Preparing HDG sensor for translation_key: %s (HDG Node ID: %s)",
-                translation_key,
-                entity_def.get("hdg_node_id", "N/A"),
-            )
+    sensor_definitions = hdg_entity_registry.get_entities_for_platform("sensor")
+
+    for translation_key, entity_def in sensor_definitions.items():
+        description = create_entity_description(
+            SensorEntityDescription, translation_key, entity_def
+        )
+        entities.append(HdgBoilerSensor(coordinator, description, entity_def))
+        _ENTITY_DETAIL_LOGGER.debug(
+            "Preparing HDG sensor for translation_key: %s (HDG Node ID: %s)",
+            translation_key,
+            entity_def.get("hdg_node_id", "N/A"),
+        )
 
     if entities:
         async_add_entities(entities)
-        _LOGGER.info("Added %s HDG Bavaria sensor entities.", len(entities))
+        hdg_entity_registry.increment_added_entity_count("sensor", len(entities))
+        _LIFECYCLE_LOGGER.info("Added %s HDG Bavaria sensor entities.", len(entities))
     else:
-        _LOGGER.info("No sensor entities to add from SENSOR_DEFINITIONS.")
+        _LIFECYCLE_LOGGER.info("No sensor entities to add from SENSOR_DEFINITIONS.")
 
 
 class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
@@ -104,13 +106,10 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
 
         """
         self.entity_description = entity_description
-        # The hdg_node_id from the definition might include a suffix (T, U, etc.)
-        # which needs to be stripped for data lookup in the coordinator.
-        hdg_api_node_id_from_def = entity_definition["hdg_node_id"]
         super().__init__(
             coordinator,
-            strip_hdg_node_suffix(hdg_api_node_id_from_def),
-            cast(dict[str, Any], entity_definition),
+            entity_description,
+            entity_definition,
         )
 
         # Initialize native_value and update state based on current coordinator data.
@@ -141,7 +140,9 @@ class HdgBoilerSensor(HdgNodeEntity, SensorEntity):
         # Parse the raw value using the centralized parsing utility.
         parsed_value = parse_sensor_value(
             raw_value_text=raw_value_text,
-            entity_definition=self._entity_definition,  # Pass the full definition
+            entity_definition=cast(
+                dict[str, Any], self._entity_definition
+            ),  # Pass the full definition
             node_id_for_log=self._node_id,
             entity_id_for_log=self.entity_id,
             configured_timezone=self.coordinator.entry.options.get(

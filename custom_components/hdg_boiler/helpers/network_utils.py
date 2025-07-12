@@ -7,13 +7,12 @@ as the target HDG boiler device does not support hostnames, ports, or IPv6.
 
 from __future__ import annotations
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 import contextlib
 import asyncio
 import logging
 import platform
-import re
 from urllib.parse import urlparse, urlunparse
 import ipaddress
 
@@ -49,17 +48,7 @@ def normalize_host_for_scheme(host_address: str) -> str:
         ipaddress.IPv4Address(host_address)
         return host_address  # Return as is if valid IPv4
 
-    # If not an IPv4, assume it's a hostname
-    # Basic regex for hostname validation (more permissive than strict RFC)
-    # Allows alphanumeric, hyphens, and dots. No leading/trailing hyphens/dots.
-    hostname_pattern = re.compile(
-        r"^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9]))*$"
-    )
-
-    if not hostname_pattern.match(host_address):
-        raise ValueError(f"Invalid hostname format: '{host_address}'")
-
-    return host_address
+    raise ValueError(f"Invalid IPv4 address format: '{host_address}'")
 
 
 def prepare_base_url(host_input_original_raw: str) -> str | None:
