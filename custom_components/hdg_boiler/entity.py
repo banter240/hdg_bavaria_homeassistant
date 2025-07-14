@@ -9,10 +9,13 @@ availability and attributes.
 
 from __future__ import annotations
 
-__version__ = "0.8.5"
+__version__ = "0.1.5"
 
 import logging
 from typing import Any, cast
+from homeassistant.helpers.entity import EntityDescription
+
+from .models import SensorDefinition
 
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -29,7 +32,10 @@ from .const import (
     LIFECYCLE_LOGGER_NAME,
 )
 from .coordinator import HdgDataUpdateCoordinator
-from .helpers.string_utils import normalize_unique_id_component
+from .helpers.string_utils import (
+    normalize_unique_id_component,
+    strip_hdg_node_suffix,
+)
 from .helpers.logging_utils import format_for_log
 
 _LOGGER = logging.getLogger(DOMAIN)
@@ -176,6 +182,14 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
                     self.entity_id if self.hass else self.unique_id,
                 )
             return False
+
+        if self.coordinator._maintenance_mode:
+            _ENTITY_DETAIL_LOGGER.debug(
+                "Entity %s: Maintenance mode is active. Treating as unavailable.",
+                self.entity_id if self.hass else self.unique_id,
+            )
+            return False
+
         return cast(bool, self.coordinator.last_update_success)
 
 
@@ -190,34 +204,30 @@ class HdgNodeEntity(HdgBaseEntity):
     def __init__(
         self,
         coordinator: HdgDataUpdateCoordinator,
-        node_id: str,  # The base HDG node ID (without TUVWXY suffix)
-        entity_definition: dict[str, Any],  # Full definition from SENSOR_DEFINITIONS
+        description: EntityDescription,
+        entity_definition: SensorDefinition,
     ) -> None:
-        """Initialize the node-specific HDG entity.
-
-        Args:
-            coordinator: The data update coordinator.
-            node_id: The base HDG node ID (e.g., "22003") for data retrieval.
-                     Suffixes like 'T' are typically stripped before being passed here.
-            entity_definition: The full `SensorDefinition` dictionary for this entity.
-
-        """
+        """Initialize the node-specific HDG entity."""
         _ENTITY_DETAIL_LOGGER.debug(
-            f"HdgNodeEntity.__init__ called. Node ID: '{node_id}', Entity Definition: {entity_definition}"
+            f"HdgNodeEntity.__init__ called. Description: {description}. Version: {__version__}"
         )
-        self._node_id = node_id  # Base HDG node ID for data retrieval.
-        self._entity_definition = entity_definition  # Full SENSOR_DEFINITIONS entry.
+        self.entity_description = description
+        self._entity_definition = entity_definition
+        self._node_id = strip_hdg_node_suffix(self._entity_definition["hdg_node_id"])
 
-        # Use 'translation_key' for unique_id_suffix if available, else node_id.
-        unique_id_suffix = self._entity_definition.get("translation_key", self._node_id)
+        # Use 'translation_key' for unique_id_suffix if available, else key.
+        base_unique_id_suffix = getattr(description, "translation_key", description.key)
+        platform_suffix = getattr(description, "ha_platform", "sensor")
+        unique_id_suffix = f"{base_unique_id_suffix}_{platform_suffix}"
+
         super().__init__(coordinator=coordinator, unique_id_suffix=unique_id_suffix)
 
-        self._attr_device_class = self._entity_definition.get("ha_device_class")
-        self._attr_native_unit_of_measurement = self._entity_definition.get(
-            "ha_native_unit_of_measurement"
+        self._attr_state_class = getattr(description, "state_class", None)
+        self._attr_device_class = getattr(description, "device_class", None)
+        self._attr_native_unit_of_measurement = getattr(
+            description, "native_unit_of_measurement", None
         )
-        self._attr_state_class = self._entity_definition.get("ha_state_class")
-        self._attr_icon = self._entity_definition.get("icon")
+        self._attr_icon = getattr(description, "icon", None)
 
         self._log_entity_details(
             f"HdgNodeEntity {unique_id_suffix} (Node ID: {self._node_id})",

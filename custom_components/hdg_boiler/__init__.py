@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.9.5"
+__version__ = "0.9.8"
 
 import logging
 
@@ -13,17 +13,21 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import HdgApiClient
+from .definitions import POLLING_GROUP_DEFINITIONS, SENSOR_DEFINITIONS
+from .registry import HdgEntityRegistry
 from .const import (
     CONF_API_TIMEOUT,
     CONF_CONNECT_TIMEOUT,
     CONF_HOST_IP,
     CONF_POLLING_PREEMPTION_TIMEOUT,
     CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    CONF_MAINTENANCE_MODE,
     DEFAULT_API_TIMEOUT,
     DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     DEFAULT_POLLING_PREEMPTION_TIMEOUT,
     DOMAIN,
+    LIFECYCLE_LOGGER_NAME,
 )
 from .coordinator import async_create_and_refresh_coordinator
 from .helpers.api_access_manager import HdgApiAccessManager
@@ -31,9 +35,10 @@ from .helpers.logging_utils import configure_loggers
 
 
 _LOGGER = logging.getLogger(DOMAIN)
+_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
 
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.NUMBER]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.NUMBER, Platform.SELECT]
 
 
 async def _async_options_update_listener(
@@ -60,7 +65,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     session = async_get_clientsession(hass)
     api_timeout = entry.options.get(CONF_API_TIMEOUT, DEFAULT_API_TIMEOUT)
     connect_timeout = entry.options.get(CONF_CONNECT_TIMEOUT, DEFAULT_CONNECT_TIMEOUT)
-    api_client = HdgApiClient(session, host_ip, api_timeout, connect_timeout)
+    maintenance_mode = entry.options.get(CONF_MAINTENANCE_MODE, False)
+    api_client = HdgApiClient(
+        session,
+        host_ip,
+        api_timeout,
+        connect_timeout,
+        maintenance_mode=maintenance_mode,
+    )
 
     api_preemption_timeout = entry.options.get(
         CONF_POLLING_PREEMPTION_TIMEOUT, DEFAULT_POLLING_PREEMPTION_TIMEOUT
@@ -68,7 +80,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     api_access_manager = HdgApiAccessManager(
         hass, api_client, polling_preemption_timeout=api_preemption_timeout
     )
-    api_access_manager.start(entry)
+    api_access_manager.start(entry, maintenance_mode=maintenance_mode)
+
+    hdg_entity_registry = HdgEntityRegistry(
+        SENSOR_DEFINITIONS, POLLING_GROUP_DEFINITIONS
+    )
 
     log_level_threshold = entry.options.get(
         CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
@@ -76,7 +92,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     try:
         coordinator = await async_create_and_refresh_coordinator(
-            hass, api_access_manager, entry, log_level_threshold
+            hass, api_access_manager, entry, log_level_threshold, hdg_entity_registry
         )
     except ConfigEntryNotReady:
         await api_access_manager.stop()
@@ -86,12 +102,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
         "api_client": api_client,
         "api_access_manager": api_access_manager,
+        "hdg_entity_registry": hdg_entity_registry,
     }
 
     await hass.config_entries.async_forward_entry_setups(
         entry, [platform.value for platform in PLATFORMS]
     )
-    _LOGGER.info(f"HDG Bavaria Boiler integration for {host_ip} setup complete.")
+    total_entities_added = hdg_entity_registry.get_total_added_entities()
+    _LIFECYCLE_LOGGER.info(
+        f"HDG Bavaria Boiler integration for {host_ip} setup complete. "
+        f"Total entities added: {total_entities_added}."
+    )
 
     entry.async_on_unload(entry.add_update_listener(_async_options_update_listener))
 
