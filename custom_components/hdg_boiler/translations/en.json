@@ -41,8 +41,7 @@
           "source_timezone": "Source Timezone (IANA Format)",
           "api_timeout": "API Timeout (seconds)",
           "polling_preemption_timeout": "Polling Preemption Timeout (seconds)",
-          "log_level_threshold_for_connection_errors": "Connection Error Threshold",
-          "maintenance_mode": "Enable Maintenance Mode"
+          "log_level_threshold_for_connection_errors": "Connection Error Threshold"
         },
         "data_description": {
           "device_alias": "An optional, user-friendly name for this boiler in Home Assistant. If left empty, a default name will be used.",
@@ -52,7 +51,6 @@
           "api_timeout": "The maximum time (in seconds) to wait for a response from the boiler for any API request. A higher value can help with unstable networks but may lead to longer waits. Range: {min_api_timeout}-{max_api_timeout}s.",
           "polling_preemption_timeout": "The maximum time (in seconds) a low-priority polling request is allowed to run if a higher-priority request (e.g., a setting change) is queued. A lower value ensures faster response to setting changes but may lead to more frequent interruptions with slow boiler responses. Range: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
           "log_level_threshold_for_connection_errors": "The number of consecutive connection failures after which the logging level for connection errors escalates. For example, if set to 5, the first 4 connection errors will be logged as INFO, and the 5th and subsequent errors will be logged as ERROR. Non-connection API errors will be logged as WARNING after this threshold. Range: 1-60",
-          "maintenance_mode": "When enabled, the integration will suppress all communication with the boiler (no polling, no set commands). This is intended for maintenance work on the boiler to ensure the safety of service personnel. Entities will appear as 'unavailable'.",
           "scan_interval_group_1_realtime_core": "The interval (in seconds) for polling the most important real-time data from the boiler (e.g., temperatures, operating status). Default: {default_scan_interval_group_1_realtime_core}s.",
           "scan_interval_group_2_status_general": "The interval (in seconds) for polling general status information from the boiler. Default: {default_scan_interval_group_2_status_general}s.",
           "scan_interval_group_3_config_counters_1": "The interval (in seconds) for polling configuration and counter data from the boiler (Group 1). This data changes less frequently. Default: {default_scan_interval_group_3_config_counters_1}s.",

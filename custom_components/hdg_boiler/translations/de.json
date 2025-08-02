@@ -41,8 +41,7 @@
           "source_timezone": "Quell-Zeitzone (IANA-Format)",
           "api_timeout": "API-Timeout (Sekunden)",
           "polling_preemption_timeout": "Polling-Vorrang-Timeout (Sekunden)",
-          "log_level_threshold_for_connection_errors": "Fehler-Schwellenwert für Verbindungsprobleme",
-          "maintenance_mode": "Wartungsmodus aktivieren"
+          "log_level_threshold_for_connection_errors": "Fehler-Schwellenwert für Verbindungsprobleme"
         },
         "data_description": {
           "device_alias": "Ein optionaler, benutzerfreundlicher Name für diesen Kessel in Home Assistant. Wenn leer, wird ein Standardname verwendet.",
@@ -52,7 +51,6 @@
           "api_timeout": "Die maximale Wartezeit (in Sekunden) auf eine Antwort vom Kessel für jede API-Anfrage. Ein höherer Wert kann bei instabilen Netzwerken helfen, aber auch zu längeren Wartezeiten führen. Bereich: {min_api_timeout}-{max_api_timeout}s.",
           "polling_preemption_timeout": "Die maximale Zeit (in Sekunden), die eine Abfrageanfrage niedriger Priorität ausgeführt werden darf, wenn eine höher priorisierte Anfrage (z.B. eine Einstellungsänderung) in die Warteschlange gestellt wird. Ein niedrigerer Wert sorgt für schnellere Reaktion auf Einstellungsänderungen, kann aber bei langsamen Kesselantworten zu häufigeren Abbrüchen führen. Bereich: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
           "log_level_threshold_for_connection_errors": "Die Anzahl aufeinanderfolgender Verbindungsfehler, nach der die Protokollierung dieser Fehler eskaliert wird. Liegt die Anzahl unter diesem Schwellenwert, werden Fehler als INFO geloggt. Bei Erreichen oder Überschreiten des Schwellenwerts werden Verbindungsfehler als ERROR und andere API-Fehler als WARNING geloggt. Bereich: 1-60",
-          "maintenance_mode": "Wenn aktiviert, wird die Integration jegliche Kommunikation mit dem Kessel unterbinden (kein Polling, keine Set-Befehle). Dies ist für Wartungsarbeiten am Kessel gedacht, um die Sicherheit des Fachpersonals zu gewährleisten. Entitäten werden als 'nicht verfügbar' angezeigt.",
           "scan_interval_group_1_realtime_core": "Das Intervall (in Sekunden) für die Abfrage der wichtigsten Echtzeitdaten des Kessels (z.B. Temperaturen, Betriebsstatus). Standard: {default_scan_interval_group_1_realtime_core}s.",
           "scan_interval_group_2_status_general": "Das Intervall (in Sekunden) für die Abfrage allgemeiner Statusinformationen des Kessels. Standard: {default_scan_interval_group_2_status_general}s.",
           "scan_interval_group_3_config_counters_1": "Das Intervall (in Sekunden) für die Abfrage von Konfigurations- und Zählerdaten des Kessels (Gruppe 1). Diese Daten ändern sich seltener. Standard: {default_scan_interval_group_3_config_counters_1}s.",

@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
-__version__ = "0.9.38"
+__version__ = "0.2.0"
+__all__ = ["HdgBoilerConfigFlow"]
 
 from typing import Any
 from urllib.parse import urlparse
 
-import async_timeout
 import voluptuous as vol
 from homeassistant import config_entries, core
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from voluptuous.schema_builder import Marker
 from homeassistant.helpers.selector import (
     BooleanSelector,
     NumberSelector,
+    NumberSelectorConfig,
     NumberSelectorMode,
     SelectSelector,
     SelectSelectorConfig,
@@ -23,116 +23,77 @@ from homeassistant.helpers.selector import (
     TextSelector,
 )
 
-from .api import (
-    HdgApiClient,
-    HdgApiConnectionError,
-    HdgApiError,
-)
+from .api import HdgApiClient, HdgApiConnectionError, HdgApiError
 from .const import (
-    CONF_DEVICE_ALIAS,
     CONF_ADVANCED_LOGGING,
-    CONF_HOST_IP,
-    CONF_SOURCE_TIMEZONE,
     CONF_API_TIMEOUT,
+    CONF_CONNECT_TIMEOUT,
+    CONF_DEVICE_ALIAS,
+    CONF_HOST_IP,
+    CONF_LOG_LEVEL,
+    CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    CONF_POLLING_PREEMPTION_TIMEOUT,
+    CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+    CONF_SOURCE_TIMEZONE,
     CONFIG_FLOW_API_TIMEOUT,
     CONFIG_FLOW_TEST_PAYLOAD,
-    DEFAULT_SOURCE_TIMEZONE,
-    DEFAULT_API_TIMEOUT,
-    MIN_API_TIMEOUT,
-    MAX_API_TIMEOUT,
-    CONF_POLLING_PREEMPTION_TIMEOUT,
-    DEFAULT_POLLING_PREEMPTION_TIMEOUT,
-    CONF_CONNECT_TIMEOUT,
-    DEFAULT_CONNECT_TIMEOUT,
-    MIN_CONNECT_TIMEOUT,
-    MAX_CONNECT_TIMEOUT,
-    MIN_POLLING_PREEMPTION_TIMEOUT,
-    MAX_POLLING_PREEMPTION_TIMEOUT,
-    CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
-    DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
-    MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
-    MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
-    CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
-    DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
-    MAX_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
-    DOMAIN,
-    MAX_SCAN_INTERVAL,
     DEFAULT_ADVANCED_LOGGING,
-    MIN_SCAN_INTERVAL,
-    CONF_LOG_LEVEL,
+    DEFAULT_API_TIMEOUT,
+    DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_LOG_LEVEL,
+    DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    DEFAULT_POLLING_PREEMPTION_TIMEOUT,
+    DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+    DEFAULT_SOURCE_TIMEZONE,
+    DOMAIN,
     LOG_LEVELS,
+    MAX_API_TIMEOUT,
+    MAX_CONNECT_TIMEOUT,
+    MAX_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    MAX_POLLING_PREEMPTION_TIMEOUT,
+    MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+    MAX_SCAN_INTERVAL,
+    MIN_API_TIMEOUT,
+    MIN_CONNECT_TIMEOUT,
     MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    MIN_POLLING_PREEMPTION_TIMEOUT,
+    MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+    MIN_SCAN_INTERVAL,
     POLLING_GROUP_DEFINITIONS,
-    CONF_MAINTENANCE_MODE,
 )
+from .helpers.logging_utils import _LOGGER
 from .helpers.network_utils import async_execute_icmp_ping, prepare_base_url
-from .helpers.logging_utils import _LOGGER, _LIFECYCLE_LOGGER, _ENTITY_DETAIL_LOGGER
 
 
 async def _validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) -> bool:
     """Validate connectivity to the HDG boiler."""
     try:
-        prepared_base_url = prepare_base_url(host_ip)
-        if not prepared_base_url:
-            _LOGGER.warning(
-                f"Invalid host_ip format '{host_ip}'. Could not prepare base URL."
-            )
+        prepared_url = prepare_base_url(host_ip)
+        if not prepared_url or not (hostname := urlparse(prepared_url).hostname):
+            _LOGGER.warning("Invalid host_ip format: '%s'", host_ip)
             return False
-        parsed_url = urlparse(prepared_base_url)
-        host_to_ping = parsed_url.hostname
-    except Exception as e:
-        _LOGGER.warning(f"Unexpected error parsing host_ip '{host_ip}': {e}")
-        return False
 
-    if not host_to_ping:
-        _LOGGER.error(
-            f"Could not extract hostname from host_ip '{host_ip}' for ICMP ping."
+        if not await async_execute_icmp_ping(hostname, timeout=3):
+            _LOGGER.warning("ICMP ping to %s (from %s) failed.", hostname, host_ip)
+            return False
+
+        session = async_get_clientsession(hass)
+        api_client = HdgApiClient(
+            session, host_ip, CONFIG_FLOW_API_TIMEOUT, DEFAULT_CONNECT_TIMEOUT
         )
+        test_data = await api_client.async_get_nodes_data(CONFIG_FLOW_TEST_PAYLOAD)
+
+        if test_data and isinstance(test_data, list):
+            _LOGGER.debug("Successfully fetched test nodes from %s.", host_ip)
+            return True
+
+        _LOGGER.warning("Failed to fetch test nodes from %s.", host_ip)
         return False
 
-    if not await async_execute_icmp_ping(host_to_ping, timeout_seconds=3):
-        _LOGGER.warning(f"ICMP ping to {host_to_ping} (from IP: {host_ip}) failed.")
-        return False
-    _ENTITY_DETAIL_LOGGER.debug(
-        f"ICMP ping to {host_to_ping} (from IP: {host_ip}) successful."
-    )
-
-    session = async_get_clientsession(hass)
-    temp_api_client = HdgApiClient(
-        session,
-        host_ip,
-        CONFIG_FLOW_API_TIMEOUT,
-        DEFAULT_CONNECT_TIMEOUT,
-    )
-
-    try:
-        async with async_timeout.timeout(CONFIG_FLOW_API_TIMEOUT):
-            test_payload_str = CONFIG_FLOW_TEST_PAYLOAD
-            _ENTITY_DETAIL_LOGGER.debug(
-                f"Attempting to fetch test nodes ({test_payload_str}) from {host_ip}"
-            )
-            test_data = await temp_api_client.async_get_nodes_data(test_payload_str)
-
-            if test_data and isinstance(test_data, list) and len(test_data) >= 1:
-                _ENTITY_DETAIL_LOGGER.debug(
-                    "Successfully fetched test nodes from %s. Device is likely an HDG boiler.",
-                    host_ip,
-                )
-                return True
-            _LOGGER.warning(
-                "Failed to fetch test nodes or received empty/invalid data from %s. Device might not be an HDG boiler.",
-                host_ip,
-            )
-            return False
     except (HdgApiConnectionError, HdgApiError) as err:
-        _LOGGER.warning("API error during HDG device check for %s: %s", host_ip, err)
-    except TimeoutError:
-        _LOGGER.warning("Timeout during HDG device check for %s.", host_ip)
-    except Exception as err:
-        _LOGGER.exception(
-            "Unexpected error during HDG device check for %s: %s", host_ip, err
-        )
+        _LOGGER.warning("API error during device check for %s: %s", host_ip, err)
+    except Exception:
+        _LOGGER.exception("Unexpected error during device check for %s", host_ip)
     return False
 
 
@@ -140,52 +101,84 @@ async def _validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) ->
 class HdgBoilerConfigFlow(config_entries.ConfigFlow):
     """Handle a config flow for HDG Bavaria Boiler."""
 
-    USER_DATA_SCHEMA = vol.Schema(
-        {
-            vol.Required(CONF_HOST_IP): TextSelector(),
-            vol.Optional(CONF_DEVICE_ALIAS, default=""): TextSelector(),
-        }
-    )
+    VERSION = 1
 
     @staticmethod
-    def _create_options_schema(
-        options: config_entries.Mapping[str, Any] | None = None,
-    ) -> vol.Schema:
-        """Generate the dynamic schema for the options flow.
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> HdgBoilerOptionsFlowHandler:
+        """Get the options flow for this handler."""
+        return HdgBoilerOptionsFlowHandler(config_entry)
 
-        This static method builds the voluptuous schema for the options form,
-        dynamically adding fields for each polling group defined in `const.py`.
-        This approach centralizes schema definition and adheres to the DRY principle,
-        allowing the `HdgBoilerOptionsFlowHandler` to reuse this logic.
-        """
-        current_options = options or {}
-        options_schema_dict: dict[Marker, Any] = {}
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Handle the initial user step."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            host_ip = user_input[CONF_HOST_IP]
+            if await _validate_host_connectivity(self.hass, host_ip):
+                await self.async_set_unique_id(host_ip.lower())
+                self._abort_if_unique_id_configured()
+                title = user_input.get(CONF_DEVICE_ALIAS) or f"HDG Boiler ({host_ip})"
+                return self.async_create_entry(title=title, data=user_input)
+            errors["base"] = "cannot_connect"
 
-        for group_def in POLLING_GROUP_DEFINITIONS:
-            group_key = group_def["key"]
-            config_key = f"scan_interval_{group_key}"
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_HOST_IP): TextSelector(),
+                vol.Optional(CONF_DEVICE_ALIAS): TextSelector(),
+            }
+        )
+        return self.async_show_form(
+            step_id="user", data_schema=data_schema, errors=errors
+        )
 
-            default_interval = group_def["default_interval"]
 
-            options_schema_dict[
-                vol.Optional(
-                    config_key,
-                    default=current_options.get(config_key, default_interval),
-                )
+class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle an options flow for HDG Bavaria Boiler."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self._get_options_schema(),
+            description_placeholders=self._get_description_placeholders(),
+        )
+
+    def _get_options_schema(self) -> vol.Schema:
+        """Generate the dynamic schema for the options flow."""
+        options = self.config_entry.options
+        schema: dict[vol.Marker, Any] = {}
+
+        for group in POLLING_GROUP_DEFINITIONS:
+            key = f"scan_interval_{group['key']}"
+            schema[
+                vol.Optional(key, default=options.get(key, group["default_interval"]))
             ] = NumberSelector(
-                {
-                    "min": MIN_SCAN_INTERVAL,
-                    "max": MAX_SCAN_INTERVAL,
-                    "step": 1,
-                    "mode": NumberSelectorMode.BOX,
-                    "unit_of_measurement": "s",
-                }
+                NumberSelectorConfig(
+                    min=MIN_SCAN_INTERVAL,
+                    max=MAX_SCAN_INTERVAL,
+                    step=1,
+                    mode=NumberSelectorMode.BOX,
+                    unit_of_measurement="s",
+                )
             )
 
-        options_schema_dict |= {
+        schema |= {
             vol.Required(
                 CONF_LOG_LEVEL,
-                default=current_options.get(CONF_LOG_LEVEL, DEFAULT_LOG_LEVEL),
+                default=options.get(CONF_LOG_LEVEL, DEFAULT_LOG_LEVEL),
             ): SelectSelector(
                 SelectSelectorConfig(
                     options=LOG_LEVELS, mode=SelectSelectorMode.DROPDOWN
@@ -193,98 +186,86 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow):
             ),
             vol.Optional(
                 CONF_ADVANCED_LOGGING,
-                default=current_options.get(
-                    CONF_ADVANCED_LOGGING, DEFAULT_ADVANCED_LOGGING
-                ),
+                default=options.get(CONF_ADVANCED_LOGGING, DEFAULT_ADVANCED_LOGGING),
             ): BooleanSelector(),
             vol.Optional(
                 CONF_SOURCE_TIMEZONE,
-                default=current_options.get(
-                    CONF_SOURCE_TIMEZONE, DEFAULT_SOURCE_TIMEZONE
-                ),
+                default=options.get(CONF_SOURCE_TIMEZONE, DEFAULT_SOURCE_TIMEZONE),
             ): TextSelector(),
             vol.Optional(
                 CONF_API_TIMEOUT,
-                default=current_options.get(CONF_API_TIMEOUT, DEFAULT_API_TIMEOUT),
+                default=options.get(CONF_API_TIMEOUT, DEFAULT_API_TIMEOUT),
             ): NumberSelector(
-                {
-                    "min": MIN_API_TIMEOUT,
-                    "max": MAX_API_TIMEOUT,
-                    "step": 1,
-                    "mode": NumberSelectorMode.BOX,
-                    "unit_of_measurement": "s",
-                }
+                NumberSelectorConfig(
+                    min=MIN_API_TIMEOUT,
+                    max=MAX_API_TIMEOUT,
+                    step=1,
+                    mode=NumberSelectorMode.BOX,
+                    unit_of_measurement="s",
+                )
             ),
             vol.Optional(
                 CONF_CONNECT_TIMEOUT,
-                default=current_options.get(
-                    CONF_CONNECT_TIMEOUT, DEFAULT_CONNECT_TIMEOUT
-                ),
+                default=options.get(CONF_CONNECT_TIMEOUT, DEFAULT_CONNECT_TIMEOUT),
             ): NumberSelector(
-                {
-                    "min": MIN_CONNECT_TIMEOUT,
-                    "max": MAX_CONNECT_TIMEOUT,
-                    "step": 0.1,
-                    "mode": NumberSelectorMode.BOX,
-                    "unit_of_measurement": "s",
-                }
+                NumberSelectorConfig(
+                    min=MIN_CONNECT_TIMEOUT,
+                    max=MAX_CONNECT_TIMEOUT,
+                    step=0.1,
+                    mode=NumberSelectorMode.BOX,
+                    unit_of_measurement="s",
+                )
             ),
             vol.Optional(
                 CONF_POLLING_PREEMPTION_TIMEOUT,
-                default=current_options.get(
+                default=options.get(
                     CONF_POLLING_PREEMPTION_TIMEOUT,
                     DEFAULT_POLLING_PREEMPTION_TIMEOUT,
                 ),
             ): NumberSelector(
-                {
-                    "min": MIN_POLLING_PREEMPTION_TIMEOUT,
-                    "max": MAX_POLLING_PREEMPTION_TIMEOUT,
-                    "step": 0.1,
-                    "mode": NumberSelectorMode.BOX,
-                    "unit_of_measurement": "s",
-                }
+                NumberSelectorConfig(
+                    min=MIN_POLLING_PREEMPTION_TIMEOUT,
+                    max=MAX_POLLING_PREEMPTION_TIMEOUT,
+                    step=0.1,
+                    mode=NumberSelectorMode.BOX,
+                    unit_of_measurement="s",
+                )
             ),
             vol.Optional(
                 CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
-                default=current_options.get(
+                default=options.get(
                     CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
                     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
                 ),
             ): NumberSelector(
-                {
-                    "min": MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
-                    "max": MAX_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
-                    "step": 1,
-                    "mode": NumberSelectorMode.BOX,
-                    "unit_of_measurement": "",
-                }
+                NumberSelectorConfig(
+                    min=MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+                    max=MAX_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+                    step=1,
+                    mode=NumberSelectorMode.BOX,
+                )
             ),
             vol.Optional(
                 CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
-                default=current_options.get(
+                default=options.get(
                     CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
                     DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
                 ),
             ): NumberSelector(
-                {
-                    "min": MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
-                    "max": MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
-                    "step": 0.5,
-                    "mode": NumberSelectorMode.BOX,
-                    "unit_of_measurement": "s",
-                }
+                NumberSelectorConfig(
+                    min=MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+                    max=MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+                    step=0.5,
+                    mode=NumberSelectorMode.BOX,
+                    unit_of_measurement="s",
+                )
             ),
-            vol.Optional(
-                CONF_MAINTENANCE_MODE,
-                default=current_options.get(CONF_MAINTENANCE_MODE, False),
-            ): BooleanSelector(),
         }
-        return vol.Schema(options_schema_dict)
+        return vol.Schema(schema)
 
-    @staticmethod
-    def _create_options_description_placeholders() -> dict[str, str]:
-        """Generate placeholders for the options flow description text."""
-        placeholders: dict[str, str] = {
+    def _get_description_placeholders(self) -> dict[str, str]:
+        """Generate placeholders for the options flow description."""
+        placeholders = {
             "min_scan_interval": str(MIN_SCAN_INTERVAL),
             "max_scan_interval": str(MAX_SCAN_INTERVAL),
             "min_api_timeout": str(MIN_API_TIMEOUT),
@@ -301,138 +282,8 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow):
             "max_ignore_window": str(MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S),
             "default_ignore_window": str(DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S),
         }
-        # Dynamically create placeholders for default scan intervals
-        for group_def in POLLING_GROUP_DEFINITIONS:
-            group_key = group_def["key"]
-            config_key = f"scan_interval_{group_key}"
-            placeholder_key = f"default_{config_key}"
-            placeholders[placeholder_key] = str(group_def["default_interval"])
-        return placeholders
-
-    @staticmethod
-    def _get_description_placeholders(step_id: str) -> dict[str, str]:
-        """Return placeholders for the form description text."""
-        if step_id == "options_init":
-            return HdgBoilerConfigFlow._create_options_description_placeholders()
-        placeholders: dict[str, str] = {}
-        return placeholders
-
-    VERSION = 1
-
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Handle the initial user step."""
-        _LOGGER.debug("async_step_user called with user_input: %s", user_input)
-        errors: dict[str, str] = {}
-
-        if user_input is not None:
-            host_ip = user_input.get(CONF_HOST_IP)
-            current_device_alias = user_input.get(CONF_DEVICE_ALIAS, "")
-
-            if not host_ip:
-                errors["base"] = "host_ip_required"
-            else:
-                is_hdg_device_and_connected = await _validate_host_connectivity(
-                    self.hass, host_ip
-                )
-                if is_hdg_device_and_connected:
-                    _LIFECYCLE_LOGGER.info(
-                        f"Successfully validated HDG device at {host_ip}."
-                    )
-                    await self.async_set_unique_id(host_ip.lower())
-                    self._abort_if_unique_id_configured()
-
-                    _LIFECYCLE_LOGGER.debug("Creating entry for host_ip: %s", host_ip)
-                    return self.async_create_entry(
-                        title=current_device_alias or f"HDG Boiler ({host_ip})",
-                        data=user_input,
-                    )
-                else:
-                    _LOGGER.warning(
-                        f"Validation failed for host {host_ip}. It's either not reachable or not a recognized HDG device."
-                    )
-                    errors["base"] = "cannot_connect"
-        data_schema_user = self.USER_DATA_SCHEMA
-        if user_input:
-            data_schema_user = vol.Schema(
-                {
-                    vol.Required(
-                        CONF_HOST_IP, default=user_input.get(CONF_HOST_IP, "")
-                    ): TextSelector(),
-                    vol.Optional(
-                        CONF_DEVICE_ALIAS,
-                        default=user_input.get(CONF_DEVICE_ALIAS, ""),
-                    ): TextSelector(),
-                }
+        for group in POLLING_GROUP_DEFINITIONS:
+            placeholders[f"default_scan_interval_{group['key']}"] = str(
+                group["default_interval"]
             )
-
-        return self.async_show_form(
-            step_id="user",
-            data_schema=data_schema_user,
-            errors=errors,
-            description_placeholders=self._get_description_placeholders("user"),
-        )
-
-    @staticmethod
-    @callback
-    def async_get_options_flow(
-        config_entry: config_entries.ConfigEntry,
-    ) -> HdgBoilerOptionsFlowHandler:
-        """Get the options flow for this handler, as required by Home Assistant."""
-        _LIFECYCLE_LOGGER.debug(
-            "async_get_options_flow called for entry: %s", config_entry.entry_id
-        )
-        return HdgBoilerOptionsFlowHandler(config_entry)
-
-
-class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle an options flow for HDG Bavaria Boiler."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        super().__init__()
-        _LOGGER.debug(
-            "HdgBoilerOptionsFlowHandler initialized for entry: %s",
-            config_entry.entry_id,
-        )
-
-    def _get_options_schema(self) -> vol.Schema:
-        """Get the options schema.
-
-        This creates a temporary instance of the main config flow to reuse its schema creation logic.
-        This is a workaround; a more robust solution might involve static methods or duplicated logic.
-        """
-        return HdgBoilerConfigFlow._create_options_schema(self.config_entry.options)
-
-    def _get_options_description_placeholders(self) -> dict[str, str]:
-        """Get description placeholders for the options form.
-
-        Similar to _get_options_schema, it reuses logic from the main config flow.
-        """
-        return HdgBoilerConfigFlow._get_description_placeholders("options_init")
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Manage minimal options."""
-        _LIFECYCLE_LOGGER.debug(
-            "OptionsFlow async_step_init called with user_input: %s", user_input
-        )
-        current_errors: dict[str, str] = {}
-
-        if user_input is not None:
-            # Options are directly saved without further validation in this simple flow.
-            _LIFECYCLE_LOGGER.debug(
-                "Options flow: Creating entry with new options: %s", user_input
-            )
-            return self.async_create_entry(title="", data=user_input)
-
-        options_schema = self._get_options_schema()
-
-        return self.async_show_form(
-            step_id="init",
-            data_schema=options_schema,
-            errors=current_errors,
-            description_placeholders=self._get_options_description_placeholders(),
-        )
+        return placeholders

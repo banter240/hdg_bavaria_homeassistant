@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-__version__ = "0.1.4"
-import logging
-from typing import cast, Final
-from itertools import groupby
+__version__ = "0.2.0"
+__all__ = ["HdgEntityRegistry"]
 
-from .models import NodeGroupPayload, PollingGroupStaticDefinition, SensorDefinition
+import logging
+from collections.abc import Iterable
+from itertools import groupby
+from typing import cast, Final
+
 from .const import DOMAIN, LIFECYCLE_LOGGER_NAME
 from .helpers.string_utils import strip_hdg_node_suffix
+from .models import NodeGroupPayload, PollingGroupStaticDefinition, SensorDefinition
 
 _LOGGER = logging.getLogger(DOMAIN)
 _LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
@@ -23,19 +26,9 @@ class HdgEntityRegistry:
         sensor_definitions: dict[str, SensorDefinition],
         polling_group_definitions: list[PollingGroupStaticDefinition],
     ) -> None:
-        """Initialize the HdgEntityRegistry.
-
-        Args:
-            sensor_definitions: A dictionary of sensor definitions.
-            polling_group_definitions: A list of static polling group definitions.
-
-        """
-        self._sensor_definitions: Final[dict[str, SensorDefinition]] = (
-            sensor_definitions
-        )
-        self._polling_group_definitions: Final[list[PollingGroupStaticDefinition]] = (
-            polling_group_definitions
-        )
+        """Initialize the HdgEntityRegistry."""
+        self._sensor_definitions: Final = sensor_definitions
+        self._polling_group_definitions: Final = polling_group_definitions
         self._polling_group_order: list[str] = []
         self._hdg_node_payloads: dict[str, NodeGroupPayload] = {}
         self._entities_by_node_id: dict[str, SensorDefinition] = {}
@@ -45,89 +38,86 @@ class HdgEntityRegistry:
             "number": 0,
             "select": 0,
         }
-
         self._build_registry()
 
     def _build_registry(self) -> None:
+        """Construct the internal registry, polling groups, and indexes."""
         _LIFECYCLE_LOGGER.debug("Building HDG entity registry...")
         self._build_polling_groups()
         self._index_entities()
         _LIFECYCLE_LOGGER.info(
-            f"HDG entity registry built with {len(self._polling_group_order)} polling groups and "
-            f"{len(self._sensor_definitions)} entity definitions."
+            "HDG entity registry built with %d polling groups and %d entity definitions.",
+            len(self._polling_group_order),
+            len(self._sensor_definitions),
         )
 
-    def _build_polling_groups(self) -> None:
-        valid_polling_group_keys = {
-            pg_def["key"] for pg_def in self._polling_group_definitions
-        }
-
-        sorted_defs = sorted(
-            [
+    def _get_valid_sorted_sensor_defs(self) -> list[SensorDefinition]:
+        """Filter and sort sensor definitions that belong to a valid polling group."""
+        valid_pg_keys = {pg_def["key"] for pg_def in self._polling_group_definitions}
+        return sorted(
+            (
                 d
                 for d in self._sensor_definitions.values()
-                if d.get("polling_group") in valid_polling_group_keys
-                and d.get("hdg_node_id")
-            ],
+                if d.get("polling_group") in valid_pg_keys and d.get("hdg_node_id")
+            ),
             key=lambda x: x.get("polling_group", ""),
         )
+
+    def _create_node_group_payload(
+        self, group_key: str, group_iter: Iterable[SensorDefinition]
+    ) -> NodeGroupPayload | None:
+        """Create a payload object for a polling group."""
+        nodes_in_group = sorted(
+            {cast(str, d["hdg_node_id"]) for d in group_iter if d.get("hdg_node_id")}
+        )
+        if not nodes_in_group:
+            return None
+
+        group_def = next(
+            (gd for gd in self._polling_group_definitions if gd["key"] == group_key),
+            None,
+        )
+        if not group_def:
+            return None
+
+        payload_base_ids = [self._strip_trailing_t(nid) for nid in nodes_in_group]
+        return {
+            "key": group_key,
+            "name": group_key.replace("_", " ").title(),
+            "nodes": nodes_in_group,
+            "payload_str": f"nodes={'T-'.join(payload_base_ids)}T",
+            "default_scan_interval": group_def["default_interval"],
+        }
+
+    def _build_polling_groups(self) -> None:
+        """Filter and group sensor definitions into polling groups."""
+        sorted_defs = self._get_valid_sorted_sensor_defs()
 
         self._polling_group_order.clear()
         self._hdg_node_payloads.clear()
 
         for group_key, group_iter in groupby(
-            sorted_defs, key=lambda x: x.get("polling_group", "")
+            sorted_defs, lambda x: x.get("polling_group", "")
         ):
             if not group_key:
                 continue
 
-            group_definitions = list(group_iter)
-            nodes_in_group = sorted(
-                {
-                    cast(str, d.get("hdg_node_id"))
-                    for d in group_definitions
-                    if d.get("hdg_node_id")
-                }
-            )
-
-            if not nodes_in_group:
-                continue
-
-            group_definition = next(
-                (
-                    gd
-                    for gd in self._polling_group_definitions
-                    if gd["key"] == group_key
-                ),
-                None,
-            )
-            if not group_definition:
-                continue
-
-            self._polling_group_order.append(group_key)
-            payload_base_ids = [
-                self._extract_node_base_for_payload(nid) for nid in nodes_in_group
-            ]
-            payload_str = f"nodes={'T-'.join(payload_base_ids)}T"
-            self._hdg_node_payloads[group_key] = {
-                "key": group_key,
-                "name": group_key.replace("_", " ").title(),
-                "nodes": nodes_in_group,
-                "payload_str": payload_str,
-                "default_scan_interval": group_definition["default_interval"],
-            }
+            if payload := self._create_node_group_payload(group_key, group_iter):
+                self._polling_group_order.append(group_key)
+                self._hdg_node_payloads[group_key] = payload
 
     def _index_entities(self) -> None:
+        """Create indexes for efficient entity lookup."""
         self._entities_by_node_id.clear()
         self._writable_entities.clear()
-        for _, definition in self._sensor_definitions.items():
+        for definition in self._sensor_definitions.values():
             if hdg_node_id := definition.get("hdg_node_id"):
                 self._entities_by_node_id[hdg_node_id] = definition
             if definition.get("writable"):
                 self._writable_entities.append(definition)
 
     @staticmethod
-    def _extract_node_base_for_payload(node_id: str) -> str:
+    def _strip_trailing_t(node_id: str) -> str:
         """Remove a single trailing 'T' if present, otherwise leave unchanged."""
         return node_id[:-1] if node_id.endswith("T") else node_id
 
@@ -158,35 +148,33 @@ class HdgEntityRegistry:
     def get_settable_number_definition_by_base_node_id(
         self, base_node_id: str
     ) -> SensorDefinition | None:
-        """Find and return the SensorDefinition for a settable 'number' node by its base node ID.
+        """Find a settable 'number' definition by its base node ID.
 
-        This method is intended for use by services that need to find a specific
-        settable entity definition based on its base node ID.
+        This is used by services to find a specific settable entity.
+        Raises ValueError if multiple settable definitions exist for the same base ID.
         """
-        settable_definitions = []
-        for definition_dict in self._sensor_definitions.values():
-            definition = cast(SensorDefinition, definition_dict)
-            hdg_node_id_val = definition.get("hdg_node_id")
+        matching_defs = [
+            definition
+            for definition in self._sensor_definitions.values()
             if (
-                isinstance(hdg_node_id_val, str)
-                and strip_hdg_node_suffix(hdg_node_id_val) == base_node_id
+                (hdg_node_id := definition.get("hdg_node_id"))
+                and isinstance(hdg_node_id, str)
+                and strip_hdg_node_suffix(hdg_node_id) == base_node_id
                 and definition.get("ha_platform") == "number"
                 and definition.get("setter_type")
-            ):
-                settable_definitions.append(definition)
+            )
+        ]
 
-        if not settable_definitions:
-            return None
-        if len(settable_definitions) > 1:
+        if len(matching_defs) > 1:
             _LOGGER.error(
-                "Multiple settable 'number' SensorDefinitions found for base node_id '%s': %s. "
-                "Please ensure only one settable definition exists per node to avoid ambiguity.",
+                "Ambiguous settable definition for base_node_id '%s'. "
+                "Multiple 'number' entities found: %s",
                 base_node_id,
-                [repr(d) for d in settable_definitions],
+                [repr(d) for d in matching_defs],
             )
             raise ValueError(f"Ambiguous settable definition for {base_node_id}")
 
-        return settable_definitions[0]
+        return matching_defs[0] if matching_defs else None
 
     def increment_added_entity_count(self, platform: str, count: int) -> None:
         """Increment the count of successfully added entities for a given platform."""
@@ -198,5 +186,5 @@ class HdgEntityRegistry:
             )
 
     def get_total_added_entities(self) -> int:
-        """Return the total count of all successfully added entities across all platforms."""
+        """Return the total count of all successfully added entities."""
         return sum(self._added_entity_counts.values())
