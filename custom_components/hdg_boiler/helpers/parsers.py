@@ -7,7 +7,7 @@ locale-specific number formats, unit stripping, and various data types.
 
 from __future__ import annotations
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 import html
 import logging
@@ -189,16 +189,20 @@ def format_value_for_api(numeric_value: int | float, setter_type: str) -> str:
 # --- Main Parser ---
 
 _PARSER_MAP: Final[dict[str, Callable[..., Any]]] = {
-    "int": lambda value, prefix, *args: _parse_number(value, int, prefix),
-    "float": lambda value, prefix, *args: _parse_number(value, float, prefix),
-    "enum_text": lambda value, prefix, entity_def, *args: _convert_enum_text_to_key(
-        value, entity_def, prefix
-    ),
-    "hdg_datetime_or_text": lambda value, prefix, *args, timezone: _parse_datetime(
-        value, timezone, prefix
-    ),
-    "text": lambda value, *args: value,
-    "allow_empty_string": lambda value, *args: value,
+    "int": lambda value, prefix, *args, **kwargs: _parse_number(value, int, prefix),
+    "float": lambda value, prefix, *args, **kwargs: _parse_number(value, float, prefix),
+    "enum_text": lambda value,
+    prefix,
+    entity_def,
+    *args,
+    **kwargs: _convert_enum_text_to_key(value, entity_def, prefix),
+    "hdg_datetime_or_text": lambda value,
+    prefix,
+    *args,
+    timezone,
+    **kwargs: _parse_datetime(value, timezone, prefix),
+    "text": lambda value, *args, **kwargs: value,
+    "allow_empty_string": lambda value, *args, **kwargs: value,
 }
 
 

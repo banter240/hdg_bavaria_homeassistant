@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __all__ = ["async_setup_entry"]
 
 import logging
@@ -66,7 +66,16 @@ class HdgBoilerSelect(HdgNodeEntity, SelectEntity):
 
     @property
     def current_option(self) -> str | None:
-        """Return the currently selected option."""
+        """Return the currently selected option, considering optimistic updates."""
+        # Optimistic state is now managed centrally in the coordinator.
+        # Check if an optimistic value for this entity exists and is recent.
+        optimistic_value = self.coordinator._optimistic_set_values.get(self._node_id)
+        if optimistic_value is not None:
+            # To prevent using a stale optimistic value from a failed past request,
+            # we could add a time check, but for now, we trust the coordinator clears it.
+            return str(optimistic_value)
+
+        # If no optimistic value, return the confirmed state from the last poll.
         raw_value = self.coordinator.data.get(self._node_id)
         return str(raw_value) if raw_value is not None else None
 
@@ -81,19 +90,24 @@ class HdgBoilerSelect(HdgNodeEntity, SelectEntity):
             )
             return
 
-        # Optimistically update state and queue the API call
-        self.coordinator.data[self._node_id] = option
-        self.async_write_ha_state()
+        # This call will handle the optimistic state and debouncing centrally.
         await self.coordinator.async_set_node_value(
-            self._node_id, option, self.entity_id, 0.5
+            self._node_id,
+            option,
+            self.entity_id,
+            2.0,  # Using a 2s debounce
         )
+        # Immediately update the UI to reflect the user's choice.
+        self.async_write_ha_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        # The coordinator has received new data. This will clear any optimistic state
+        # implicitly because `current_option` will fall back to `coordinator.data`.
         self.async_write_ha_state()
         _ENTITY_DETAIL_LOGGER.debug(
-            "Entity %s (Node ID: %s): Updated. Current Option: '%s'",
+            "Entity %s (Node ID: %s): Coordinator updated. Current Option: '%s'",
             self.entity_id,
             self._node_id,
             self.current_option,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.2.1"
+__version__ = "0.2.6"
 __all__ = ["HdgDataUpdateCoordinator", "async_create_and_refresh_coordinator"]
 
 import asyncio
@@ -17,6 +17,7 @@ from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .api import HdgApiClient
 from .classes.polling_response_processor import HdgPollingResponseProcessor
 from .const import (
     API_REQUEST_TYPE_GET_NODES_DATA,
@@ -55,19 +56,28 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(
         self,
         hass: HomeAssistant,
+        api_client: HdgApiClient,
         api_access_manager: HdgApiAccessManager,
         entry: ConfigEntry,
         log_level_threshold_for_connection_errors: int,
         hdg_entity_registry: HdgEntityRegistry,
     ):
         """Initialize the HdgDataUpdateCoordinator."""
+        # Step 1: Initialize own attributes first
         self.hass = hass
+        self.api_client = api_client
         self.api_access_manager = api_access_manager
         self.entry = entry
         self._log_level_threshold = log_level_threshold_for_connection_errors
         self.hdg_entity_registry = hdg_entity_registry
 
-        self._initialize_state()
+        # Step 2: Initialize stateful attributes that depend on the above
+        self._initialize_polling_state()
+        self._initialize_setter_state()
+        self._boiler_online_event = asyncio.Event()
+        self._set_boiler_online_status(True)
+
+        # Step 3: Run validation and prepare values needed by super().__init__
         self._validate_polling_config()
         self._initialize_scan_intervals()
 
@@ -76,26 +86,24 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if self.scan_intervals
             else timedelta(seconds=60)
         )
+
+        # Step 4: Call super().__init__ to initialize the base class correctly
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN} ({self.entry.title})",
             update_interval=shortest_interval,
         )
+        # Crucially, ensure self.data is a dict, not None, for direct manipulation.
+        self.data: dict[str, Any] = {}
+
+        # Step 5: Initialize remaining attributes that may depend on the full setup
         self._original_update_interval = self.update_interval
         self._polling_response_processor = HdgPollingResponseProcessor(self)
         _LOGGER.debug(
             "HdgDataUpdateCoordinator initialized. Update interval: %s",
             shortest_interval,
         )
-
-    def _initialize_state(self) -> None:
-        """Initialize all state-tracking attributes."""
-        self.data: dict[str, Any] = {}
-        self._initialize_polling_state()
-        self._initialize_setter_state()
-        self._boiler_online_event = asyncio.Event()
-        self._set_boiler_online_status(True)
 
     def _initialize_polling_state(self) -> None:
         """Initialize attributes related to polling and error handling."""
@@ -134,6 +142,13 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             else:
                 self._boiler_online_event.clear()
 
+    def _parse_scan_interval(self, raw_val: Any, default_val: float) -> float:
+        """Parse and validate a scan interval value."""
+        try:
+            return max(float(raw_val), MIN_SCAN_INTERVAL)
+        except (ValueError, TypeError):
+            return default_val
+
     def _initialize_scan_intervals(self) -> None:
         """Initialize scan intervals for each polling group."""
         current_config = self.entry.options or self.entry.data
@@ -142,12 +157,9 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             payload,
         ) in self.hdg_entity_registry.get_polling_group_payloads().items():
             config_key = f"scan_interval_{group_key}"
-            default_val = payload["default_scan_interval"]
+            default_val = float(payload["default_scan_interval"])
             raw_val = current_config.get(config_key, str(default_val))
-            try:
-                scan_seconds = max(float(raw_val), MIN_SCAN_INTERVAL)
-            except (ValueError, TypeError):
-                scan_seconds = float(default_val)
+            scan_seconds = self._parse_scan_interval(raw_val, default_val)
             self.scan_intervals[group_key] = timedelta(seconds=scan_seconds)
 
     def _validate_polling_config(self) -> None:
@@ -209,6 +221,9 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     any_success = True
             except HdgApiConnectionError:
                 any_conn_error = True
+            except Exception:
+                _LOGGER.exception("Unhandled exception fetching group '%s'.", group_key)
+                any_conn_error = True  # Treat as a connection error for logic flow
             if i < len(groups) - 1:
                 await asyncio.sleep(INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S)
         return any_success, any_conn_error
@@ -359,20 +374,53 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self,
         _: datetime,
         node_id: str,
-        value: str,
+        value: str,  # This 'value' is from when the timer was created, might be stale
         entity_name_for_log: str,
         scheduled_generation: int,
     ) -> None:
         """Process the debounced set value and send it to the API."""
-        del self._pending_set_value_timers[node_id]
         lock = self._set_value_locks.setdefault(node_id, asyncio.Lock())
         async with lock:
+            # Scenario: A newer value has been selected since this timer was scheduled.
+            # This check ensures that only the timer for the *very last* selection proceeds.
             if scheduled_generation != self._current_set_generations.get(node_id):
                 _USER_ACTION_LOGGER.debug(
-                    "Skipping stale set request for %s.", entity_name_for_log
+                    "Skipping stale set request for %s (Gen %s is old).",
+                    entity_name_for_log,
+                    scheduled_generation,
                 )
                 return
 
+            # This is the most recent request, so we are committing to it.
+            # Remove the timer from the pending list so it cannot be cancelled again.
+            self._pending_set_value_timers.pop(node_id, None)
+
+            # CRITICAL: Fetch the LATEST value that the user selected. This handles
+            # Scenario 3 where the user clicks multiple options quickly.
+            final_value_to_send = self._optimistic_set_values.get(node_id)
+            if final_value_to_send is None:
+                _USER_ACTION_LOGGER.debug(
+                    "Skipping set request for %s as there is no final optimistic value.",
+                    entity_name_for_log,
+                )
+                return
+
+            # Scenario 2: User selects a new value, then quickly reverts to the original.
+            # The final optimistic value is the same as the last confirmed state.
+            # We cancel the operation and clear the optimistic state.
+            if final_value_to_send == self.data.get(node_id):
+                _USER_ACTION_LOGGER.debug(
+                    "Skipping redundant set request for %s, value is already '%s'.",
+                    entity_name_for_log,
+                    final_value_to_send,
+                )
+                self._optimistic_set_values.pop(node_id, None)
+                self._optimistic_set_times.pop(node_id, None)
+                # Notify HA to re-render the entity with the confirmed state, removing the optimistic one.
+                self.async_set_updated_data(self.data)
+                return
+
+            # Scenarios 1 & 3: Send the final value to the boiler.
             try:
                 success = await self.api_access_manager.submit_request(
                     priority=ApiPriority.HIGH,
@@ -380,25 +428,41 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     request_type=API_REQUEST_TYPE_SET_NODE_VALUE,
                     context_key=node_id,
                     node_id=node_id,
-                    value=value,
+                    value=final_value_to_send,
                     current_value=self.data.get(node_id),
                 )
                 if success:
-                    self.data[node_id] = value
+                    # The API call was successful. Update the confirmed state.
+                    self.data[node_id] = final_value_to_send
                     self._last_set_times[node_id] = time.monotonic()
                     _LOGGER.info(
-                        "Successfully set %s to '%s'.", entity_name_for_log, value
+                        "Successfully set %s to '%s'.",
+                        entity_name_for_log,
+                        final_value_to_send,
                     )
-                    self.async_set_updated_data(self.data)
                 else:
+                    # The API call failed. Do NOT clear the optimistic value here.
+                    # The UI will continue to show the desired value. The next successful
+                    # poll from the coordinator will eventually overwrite it with the
+                    # actual state from the boiler, correcting the UI if the set failed.
                     _LOGGER.error(
-                        "Failed to set %s to '%s'.", entity_name_for_log, value
+                        "Failed to set %s to '%s'. API call returned False.",
+                        entity_name_for_log,
+                        final_value_to_send,
                     )
             except HdgApiError as e:
+                # Same as above: on API error, leave the optimistic state as is.
                 _LOGGER.error("API error setting %s: %s", entity_name_for_log, e)
             finally:
-                self._optimistic_set_values.pop(node_id, None)
-                self._optimistic_set_times.pop(node_id, None)
+                # This block now only clears the optimistic state upon success.
+                # We check for success by seeing if the optimistic value matches the new data state.
+                if self.data.get(node_id) == self._optimistic_set_values.get(node_id):
+                    self._optimistic_set_values.pop(node_id, None)
+                    self._optimistic_set_times.pop(node_id, None)
+
+                # Always trigger an update to ensure the UI is in sync with the latest state
+                # (either the new confirmed state or the reverted actual state after a failed call).
+                self.async_set_updated_data(self.data)
 
     async def async_stop_api_access_manager(self) -> None:
         """Gracefully stop the background HdgApiAccessManager task."""
@@ -407,6 +471,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
 async def async_create_and_refresh_coordinator(
     hass: HomeAssistant,
+    api_client: HdgApiClient,
     api_access_manager: HdgApiAccessManager,
     entry: ConfigEntry,
     log_level_threshold_for_connection_errors: int,
@@ -415,11 +480,11 @@ async def async_create_and_refresh_coordinator(
     """Create, initialize, and perform the first data refresh for the coordinator."""
     coordinator = HdgDataUpdateCoordinator(
         hass,
+        api_client,
         api_access_manager,
         entry,
         log_level_threshold_for_connection_errors,
         hdg_entity_registry,
     )
-    api_access_manager.start(entry)
     await coordinator.async_config_entry_first_refresh()
     return coordinator

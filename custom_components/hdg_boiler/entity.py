@@ -9,7 +9,7 @@ availability and attributes.
 
 from __future__ import annotations
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __all__ = ["HdgBaseEntity", "HdgNodeEntity"]
 
 import logging
@@ -94,13 +94,7 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
 
     def _get_device_info(self, device_identifier: str, device_name: str) -> DeviceInfo:
         """Generate DeviceInfo for the entity."""
-        config_url = None
-        if hasattr(self.coordinator, "api_access_manager"):
-            if api_client := getattr(
-                self.coordinator.api_access_manager, "_api_client", None
-            ):
-                config_url = getattr(api_client, "base_url", None)
-
+        config_url = getattr(self.coordinator.api_client, "base_url", None)
         _ENTITY_DETAIL_LOGGER.debug(
             "Determined configuration_url '%s' for DeviceInfo.", config_url
         )
@@ -157,10 +151,17 @@ class HdgNodeEntity(HdgBaseEntity):
 
         super().__init__(coordinator=coordinator, unique_id_suffix=unique_id_suffix)
 
-        self._attr_state_class = description.state_class
-        self._attr_device_class = description.device_class
-        self._attr_native_unit_of_measurement = description.native_unit_of_measurement
-        self._attr_icon = description.icon
+        # Set attributes only if they exist in the description
+        if hasattr(description, "state_class"):
+            self._attr_state_class = description.state_class
+        if hasattr(description, "device_class"):
+            self._attr_device_class = description.device_class
+        if hasattr(description, "native_unit_of_measurement"):
+            self._attr_native_unit_of_measurement = (
+                description.native_unit_of_measurement
+            )
+        if hasattr(description, "icon"):
+            self._attr_icon = description.icon
 
     async def async_added_to_hass(self) -> None:
         """Handle entity being added to Home Assistant."""

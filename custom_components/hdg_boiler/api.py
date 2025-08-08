@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __all__ = ["HdgApiClient"]
 
 import functools
@@ -154,12 +154,6 @@ class HdgApiClient:
         self, node_id: str, value: str, current_value: str | None
     ) -> bool:
         """Set a specific node value on the HDG boiler."""
-        if value == str(current_value):
-            _API_LOGGER.debug(
-                "Skipping set for node '%s': new value is same as current.", node_id
-            )
-            return True
-
         _API_LOGGER.debug("Setting node '%s' to '%s'", node_id, value)
         params = {"i": node_id, "v": value}
         async with self._session.get(

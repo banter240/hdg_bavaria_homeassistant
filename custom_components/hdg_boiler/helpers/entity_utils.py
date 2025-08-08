@@ -32,7 +32,7 @@ def _create_base_description_kwargs(
     translation_key: str, entity_definition: SensorDefinition
 ) -> dict[str, Any]:
     """Create a base dictionary of common attributes for entity descriptions."""
-    return {
+    kwargs = {
         "key": translation_key,
         "name": None,  # Use translation key for localization
         "translation_key": translation_key,
@@ -41,8 +41,11 @@ def _create_base_description_kwargs(
         "native_unit_of_measurement": entity_definition.get(
             "ha_native_unit_of_measurement"
         ),
-        "entity_category": entity_definition.get("entity_category"),
     }
+    # EntityCategory is optional, only add it if it exists in the definition.
+    if entity_category := entity_definition.get("entity_category"):
+        kwargs["entity_category"] = entity_category
+    return kwargs
 
 
 def create_sensor_entity_description(

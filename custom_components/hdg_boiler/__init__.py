@@ -74,6 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hdg_entity_registry = HdgEntityRegistry(
         SENSOR_DEFINITIONS, POLLING_GROUP_DEFINITIONS
     )
+    api_access_manager.start(entry)  # Start the worker before awaiting the coordinator
     log_level_threshold = entry.options.get(
         CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
         DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
@@ -81,7 +82,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     try:
         coordinator = await async_create_and_refresh_coordinator(
-            hass, api_access_manager, entry, log_level_threshold, hdg_entity_registry
+            hass,
+            api_client,
+            api_access_manager,
+            entry,
+            log_level_threshold,
+            hdg_entity_registry,
         )
     except ConfigEntryNotReady:
         await api_access_manager.stop()
