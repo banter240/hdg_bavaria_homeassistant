@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-__version__ = "0.9.5"
+__version__ = "0.2.0"
+__all__ = ["async_setup_entry", "async_unload_entry"]
 
 import logging
 
@@ -17,66 +18,71 @@ from .const import (
     CONF_API_TIMEOUT,
     CONF_CONNECT_TIMEOUT,
     CONF_HOST_IP,
-    CONF_POLLING_PREEMPTION_TIMEOUT,
     CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     DEFAULT_API_TIMEOUT,
     DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
-    DEFAULT_POLLING_PREEMPTION_TIMEOUT,
     DOMAIN,
+    LIFECYCLE_LOGGER_NAME,
 )
 from .coordinator import async_create_and_refresh_coordinator
+from .definitions import POLLING_GROUP_DEFINITIONS, SENSOR_DEFINITIONS
 from .helpers.api_access_manager import HdgApiAccessManager
 from .helpers.logging_utils import configure_loggers
-
+from .registry import HdgEntityRegistry
 
 _LOGGER = logging.getLogger(DOMAIN)
+_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
+
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.NUMBER, Platform.SELECT]
 
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.NUMBER]
-
-
-async def _async_options_update_listener(
+def _create_api_and_access_manager(
     hass: HomeAssistant, entry: ConfigEntry
-) -> None:
-    """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+) -> tuple[HdgApiClient, HdgApiAccessManager]:
+    """Create and configure API client and access manager."""
+    host_ip = entry.data[CONF_HOST_IP]
+    session = async_get_clientsession(hass)
+    api_client = HdgApiClient(
+        session,
+        host_ip,
+        entry.options.get(CONF_API_TIMEOUT, DEFAULT_API_TIMEOUT),
+        entry.options.get(CONF_CONNECT_TIMEOUT, DEFAULT_CONNECT_TIMEOUT),
+    )
+    access_manager = HdgApiAccessManager(
+        hass,
+        api_client,
+    )
+    return api_client, access_manager
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up the HDG Bavaria Boiler integration from a config entry.
-
-    This function orchestrates the entire setup process for a single boiler instance,
-    including initializing logging, API clients, data coordinators, and platform setups.
-    """
+    """Set up the HDG Bavaria Boiler integration from a config entry."""
     configure_loggers(entry)
-    _LOGGER.debug(f"Setting up HDG Bavaria Boiler from config entry: {entry.entry_id}")
+    _LOGGER.debug("Setting up HDG Boiler entry: %s", entry.entry_id)
 
-    host_ip = entry.data.get(CONF_HOST_IP)
-    if not host_ip:
-        _LOGGER.error(f"Host IP missing from config entry {entry.entry_id}.")
+    if not entry.data.get(CONF_HOST_IP):
+        _LOGGER.error("Host IP missing from config entry: %s", entry.entry_id)
         return False
 
-    session = async_get_clientsession(hass)
-    api_timeout = entry.options.get(CONF_API_TIMEOUT, DEFAULT_API_TIMEOUT)
-    connect_timeout = entry.options.get(CONF_CONNECT_TIMEOUT, DEFAULT_CONNECT_TIMEOUT)
-    api_client = HdgApiClient(session, host_ip, api_timeout, connect_timeout)
-
-    api_preemption_timeout = entry.options.get(
-        CONF_POLLING_PREEMPTION_TIMEOUT, DEFAULT_POLLING_PREEMPTION_TIMEOUT
+    api_client, api_access_manager = _create_api_and_access_manager(hass, entry)
+    hdg_entity_registry = HdgEntityRegistry(
+        SENSOR_DEFINITIONS, POLLING_GROUP_DEFINITIONS
     )
-    api_access_manager = HdgApiAccessManager(
-        hass, api_client, polling_preemption_timeout=api_preemption_timeout
-    )
-    api_access_manager.start(entry)
-
+    api_access_manager.start(entry)  # Start the worker before awaiting the coordinator
     log_level_threshold = entry.options.get(
         CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
         DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     )
+
     try:
         coordinator = await async_create_and_refresh_coordinator(
-            hass, api_access_manager, entry, log_level_threshold
+            hass,
+            api_client,
+            api_access_manager,
+            entry,
+            log_level_threshold,
+            hdg_entity_registry,
         )
     except ConfigEntryNotReady:
         await api_access_manager.stop()
@@ -86,29 +92,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
         "api_client": api_client,
         "api_access_manager": api_access_manager,
+        "hdg_entity_registry": hdg_entity_registry,
     }
 
-    await hass.config_entries.async_forward_entry_setups(
-        entry, [platform.value for platform in PLATFORMS]
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _LIFECYCLE_LOGGER.info(
+        "HDG Boiler for %s setup complete. Added %d entities.",
+        entry.data[CONF_HOST_IP],
+        hdg_entity_registry.get_total_added_entities(),
     )
-    _LOGGER.info(f"HDG Bavaria Boiler integration for {host_ip} setup complete.")
 
     entry.async_on_unload(entry.add_update_listener(_async_options_update_listener))
-
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry, ensuring all background tasks are stopped."""
-    _LOGGER.debug(f"Unloading HDG Bavaria Boiler config entry: {entry.entry_id}")
+    """Unload a config entry."""
+    _LOGGER.debug("Unloading HDG Boiler entry: %s", entry.entry_id)
+    if not (integration_data := hass.data[DOMAIN].get(entry.entry_id)):
+        _LOGGER.warning("Integration data not found for %s on unload.", entry.entry_id)
+        return True  # Should not fail unload if already partially gone
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        integration_data = hass.data[DOMAIN].pop(entry.entry_id)
         api_access_manager: HdgApiAccessManager = integration_data["api_access_manager"]
-
         await api_access_manager.stop()
-
+        hass.data[DOMAIN].pop(entry.entry_id)
         if not hass.data[DOMAIN]:
             del hass.data[DOMAIN]
-        _LOGGER.info(f"HDG Bavaria Boiler integration for {entry.entry_id} unloaded.")
+        _LIFECYCLE_LOGGER.info("HDG Boiler entry %s unloaded.", entry.entry_id)
+
     return bool(unload_ok)
+
+
+async def _async_options_update_listener(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Handle options update."""
+    _LIFECYCLE_LOGGER.debug("Reloading entry %s due to options update.", entry.entry_id)
+    await hass.config_entries.async_reload(entry.entry_id)

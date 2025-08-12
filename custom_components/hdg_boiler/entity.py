@@ -9,13 +9,15 @@ availability and attributes.
 
 from __future__ import annotations
 
-__version__ = "0.8.5"
+__version__ = "0.2.2"
+__all__ = ["HdgBaseEntity", "HdgNodeEntity"]
 
 import logging
-from typing import Any, cast
+from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -23,14 +25,15 @@ from .const import (
     CONF_HOST_IP,
     DEFAULT_NAME,
     DOMAIN,
+    ENTITY_DETAIL_LOGGER_NAME,
     HDG_DATETIME_SPECIAL_TEXT,
     HDG_UNAVAILABLE_STRINGS,
-    ENTITY_DETAIL_LOGGER_NAME,
     LIFECYCLE_LOGGER_NAME,
 )
 from .coordinator import HdgDataUpdateCoordinator
-from .helpers.string_utils import normalize_unique_id_component
 from .helpers.logging_utils import format_for_log
+from .helpers.string_utils import normalize_unique_id_component, strip_hdg_node_suffix
+from .models import SensorDefinition
 
 _LOGGER = logging.getLogger(DOMAIN)
 _ENTITY_DETAIL_LOGGER = logging.getLogger(ENTITY_DETAIL_LOGGER_NAME)
@@ -38,105 +41,63 @@ _LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
 
 
 class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
-    """Base class for all HDG Bavaria Boiler integration entities.
-
-    This class provides common properties such as `device_info` and standardized
-    unique ID generation. It ensures that entities are correctly grouped under their
-    respective device in Home Assistant.
-
-    Setting `_attr_has_entity_name = True` enables Home Assistant to use
-    the `translation_key` from an `EntityDescription` for localized entity naming.
-    """
+    """Base class for all HDG Bavaria Boiler integration entities."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
         coordinator: HdgDataUpdateCoordinator,
-        unique_id_suffix: str,  # Suffix to make the entity's unique_id distinct
+        unique_id_suffix: str,
     ) -> None:
-        """Initialize the HDG base entity.
-
-        Args:
-            coordinator: The data update coordinator for the integration.
-            unique_id_suffix: A string suffix used to create a unique ID for this
-                              entity within the integration's domain and device.
-                              Typically, this is the `translation_key` or a node ID.
-
-        """
+        """Initialize the HDG base entity."""
         _ENTITY_DETAIL_LOGGER.debug(
-            f"HdgBaseEntity.__init__ for unique_id_suffix: '{unique_id_suffix}'"
+            "HdgBaseEntity.__init__ for unique_id_suffix: '%s'", unique_id_suffix
         )
         super().__init__(coordinator)
 
-        device_alias = self.coordinator.entry.data.get(CONF_DEVICE_ALIAS)
-        device_identifier = (
-            device_alias
-            or self.coordinator.entry.unique_id
-            or self.coordinator.entry.entry_id
-        )
-
-        host_ip = self.coordinator.entry.data.get(CONF_HOST_IP)
-        if device_alias or host_ip:
-            device_name = f"{DEFAULT_NAME} ({device_alias or host_ip})"
-        else:
-            device_name = (
-                f"{DEFAULT_NAME} (Unknown Device - {self.coordinator.entry.entry_id})"
-            )
-            _ENTITY_DETAIL_LOGGER.warning(
-                "Device alias and host IP are both missing for config entry '%s'. Using fallback device name: '%s'",
-                self.coordinator.entry.entry_id,
-                device_name,
-            )
-
+        device_identifier, device_name = self._determine_device_info_components()
         norm_device_identifier = normalize_unique_id_component(device_identifier)
         norm_unique_id_suffix = normalize_unique_id_component(unique_id_suffix)
 
         self._attr_unique_id = (
             f"{DOMAIN}::{norm_device_identifier}::{norm_unique_id_suffix}"
         )
-
-        self._attr_device_info = self._get_device_info(
-            device_alias, device_identifier, device_name, unique_id_suffix
-        )
+        self._attr_device_info = self._get_device_info(device_identifier, device_name)
 
         self._log_entity_details(
             "HdgBaseEntity",
             {
-                "device_identifier": format_for_log(device_identifier),
-                "unique_id_suffix": format_for_log(unique_id_suffix),
-                "normalized_device_identifier": format_for_log(norm_device_identifier),
-                "normalized_unique_id_suffix": format_for_log(norm_unique_id_suffix),
-                "final_unique_id": format_for_log(self._attr_unique_id),
-                "device_name": format_for_log(device_name),
-                "final_device_info": format_for_log(self._attr_device_info),
+                "unique_id_suffix": unique_id_suffix,
+                "final_unique_id": self._attr_unique_id,
+                "device_name": device_name,
             },
         )
 
-    def _get_device_info(
-        self,
-        device_alias: str | None,
-        device_identifier: str,
-        device_name: str,
-        unique_id_suffix: str,
-    ) -> DeviceInfo:
-        """Generate DeviceInfo for the entity."""
-        config_url = None
-        if api_access_manager_obj := getattr(
-            self.coordinator, "api_access_manager", None
-        ):
-            if api_client_obj := getattr(api_access_manager_obj, "_api_client", None):
-                config_url = getattr(api_client_obj, "base_url", None)
+    def _determine_device_info_components(self) -> tuple[str, str]:
+        """Determine the device identifier and name from the config entry."""
+        entry = self.coordinator.entry
+        device_alias = entry.data.get(CONF_DEVICE_ALIAS)
+        device_identifier = device_alias or entry.unique_id or entry.entry_id
 
-        if config_url:
-            _ENTITY_DETAIL_LOGGER.debug(
-                f"HdgBaseEntity: Determined configuration_url '{config_url}' for DeviceInfo for '{unique_id_suffix}'"
-            )
+        host_ip = entry.data.get(CONF_HOST_IP)
+        if name_suffix := device_alias or host_ip:
+            device_name = f"{DEFAULT_NAME} ({name_suffix})"
         else:
-            _ENTITY_DETAIL_LOGGER.info(
-                f"HdgBaseEntity: config_url could not be determined for unique_id_suffix '{unique_id_suffix}'. "
-                "This may indicate the API client is not fully initialized."
+            device_name = f"{DEFAULT_NAME} (Unknown - {entry.entry_id})"
+            _ENTITY_DETAIL_LOGGER.warning(
+                "Device alias and host IP missing for entry '%s'. Using fallback name: '%s'",
+                entry.entry_id,
+                device_name,
             )
+        return device_identifier, device_name
+
+    def _get_device_info(self, device_identifier: str, device_name: str) -> DeviceInfo:
+        """Generate DeviceInfo for the entity."""
+        config_url = getattr(self.coordinator.api_client, "base_url", None)
+        _ENTITY_DETAIL_LOGGER.debug(
+            "Determined configuration_url '%s' for DeviceInfo.", config_url
+        )
 
         return DeviceInfo(
             identifiers={(DOMAIN, device_identifier)},
@@ -150,126 +111,88 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
         """Handle entity being added to Home Assistant."""
         await super().async_added_to_hass()
         _LIFECYCLE_LOGGER.debug(
-            "HdgBaseEntity.async_added_to_hass for %s. Name: %s, HasEntityName: %s, TranslationKey: %s",
+            "HdgBaseEntity added to HASS: %s (Name: %s, TranslationKey: %s)",
             self.unique_id,
             self.name,
-            self.has_entity_name,
-            self.entity_description.translation_key
-            if self.entity_description
-            else "N/A",
+            getattr(self.entity_description, "translation_key", "N/A"),
         )
 
     @property
     def available(self) -> bool:
-        """Return True if the entity is available.
-
-        Availability is based on the coordinator's data fetching success and
-        whether the coordinator's data store has been initialized.
-        A warning is logged if data is None but last_update_success is True,
-        as this indicates an inconsistent state.
-        """
-        if self.coordinator is None or self.coordinator.data is None:
-            if self.coordinator and self.coordinator.last_update_success:
-                _ENTITY_DETAIL_LOGGER.debug(
-                    "Entity %s: Coordinator data is None, "
-                    "but last_update_success is True. Treating as unavailable to prevent errors.",
-                    self.entity_id if self.hass else self.unique_id,
-                )
+        """Return True if the entity is available."""
+        if not self.coordinator or not self.coordinator.last_update_success:
             return False
-        return cast(bool, self.coordinator.last_update_success)
+        if self.coordinator.data is None:
+            _ENTITY_DETAIL_LOGGER.debug(
+                "Entity %s unavailable: coordinator data is None.", self.unique_id
+            )
+            return False
+        return True
 
 
 class HdgNodeEntity(HdgBaseEntity):
-    """Base class for HDG entities directly corresponding to a specific data node.
-
-    Extends `HdgBaseEntity` by adding node-specific logic, such as storing the
-    HDG node ID and its definition (from `SENSOR_DEFINITIONS`). It also refines
-    availability checks based on the presence and content of the specific node's data.
-    """
+    """Base class for HDG entities directly corresponding to a specific data node."""
 
     def __init__(
         self,
         coordinator: HdgDataUpdateCoordinator,
-        node_id: str,  # The base HDG node ID (without TUVWXY suffix)
-        entity_definition: dict[str, Any],  # Full definition from SENSOR_DEFINITIONS
+        description: EntityDescription,
+        entity_definition: SensorDefinition,
     ) -> None:
-        """Initialize the node-specific HDG entity.
+        """Initialize the node-specific HDG entity."""
+        _ENTITY_DETAIL_LOGGER.debug("HdgNodeEntity.__init__: %s", description.key)
+        self.entity_description = description
+        self._entity_definition = entity_definition
+        self._node_id = strip_hdg_node_suffix(self._entity_definition["hdg_node_id"])
 
-        Args:
-            coordinator: The data update coordinator.
-            node_id: The base HDG node ID (e.g., "22003") for data retrieval.
-                     Suffixes like 'T' are typically stripped before being passed here.
-            entity_definition: The full `SensorDefinition` dictionary for this entity.
+        base_id = description.translation_key or description.key
+        platform = getattr(description, "ha_platform", "sensor")
+        unique_id_suffix = f"{base_id}_{platform}"
 
-        """
-        _ENTITY_DETAIL_LOGGER.debug(
-            f"HdgNodeEntity.__init__ called. Node ID: '{node_id}', Entity Definition: {entity_definition}"
-        )
-        self._node_id = node_id  # Base HDG node ID for data retrieval.
-        self._entity_definition = entity_definition  # Full SENSOR_DEFINITIONS entry.
-
-        # Use 'translation_key' for unique_id_suffix if available, else node_id.
-        unique_id_suffix = self._entity_definition.get("translation_key", self._node_id)
         super().__init__(coordinator=coordinator, unique_id_suffix=unique_id_suffix)
 
-        self._attr_device_class = self._entity_definition.get("ha_device_class")
-        self._attr_native_unit_of_measurement = self._entity_definition.get(
-            "ha_native_unit_of_measurement"
-        )
-        self._attr_state_class = self._entity_definition.get("ha_state_class")
-        self._attr_icon = self._entity_definition.get("icon")
-
-        self._log_entity_details(
-            f"HdgNodeEntity {unique_id_suffix} (Node ID: {self._node_id})",
-            {
-                "determined_unique_id_suffix": unique_id_suffix,
-                "name_setup_delegated": "True",
-                "device_class": self._attr_device_class,
-                "native_unit_of_measurement": self._attr_native_unit_of_measurement,
-                "state_class": self._attr_state_class,
-                "icon": self._attr_icon,
-            },
-        )
+        # Set attributes only if they exist in the description
+        if hasattr(description, "state_class"):
+            self._attr_state_class = description.state_class
+        if hasattr(description, "device_class"):
+            self._attr_device_class = description.device_class
+        if hasattr(description, "native_unit_of_measurement"):
+            self._attr_native_unit_of_measurement = (
+                description.native_unit_of_measurement
+            )
+        if hasattr(description, "icon"):
+            self._attr_icon = description.icon
 
     async def async_added_to_hass(self) -> None:
         """Handle entity being added to Home Assistant."""
-        _LIFECYCLE_LOGGER.debug(
-            f"HdgNodeEntity.async_added_to_hass PRE-SUPER for {self.unique_id}. "
-            f"Name: {self.name}, "
-            f"HasEntityName: {self.has_entity_name}, "
-            f"TranslationKey: {
-                self.entity_description.translation_key
-                if self.entity_description
-                else 'N/A'
-            }"
-        )
         await super().async_added_to_hass()
         _LIFECYCLE_LOGGER.debug(
-            f"HdgNodeEntity.async_added_to_hass POST-SUPER for {self.unique_id}. "
-            f"Name: {self.name}, "
-            f"HasEntityName: {self.has_entity_name}, "
-            f"TranslationKey: {
-                self.entity_description.translation_key
-                if self.entity_description
-                else 'N/A'
-            }"
+            "HdgNodeEntity added to HASS: %s (Node ID: %s)",
+            self.unique_id,
+            self._node_id,
+        )
+
+    def _is_value_unavailable(self, raw_value: Any) -> bool:
+        """Check if the raw value indicates unavailability."""
+        if not isinstance(raw_value, str):
+            return False
+
+        text_lower = raw_value.lower().strip()
+        if text_lower in HDG_UNAVAILABLE_STRINGS:
+            return True
+        return (
+            self.device_class == SensorDeviceClass.TIMESTAMP
+            and HDG_DATETIME_SPECIAL_TEXT in text_lower
         )
 
     @property
     def available(self) -> bool:
-        """Determine if the entity is available.
-
-        This method first checks the base availability (coordinator status and data store
-        initialization) via `super().available`. If the base is available, it then
-        verifies the presence of this entity's specific node ID in the coordinator's
-        data. It also checks if the raw string value for this node matches any known
-        "unavailable" markers from the HDG API (e.g., "---", "unavailable").
-        """
+        """Determine if the entity is available."""
         entity_id_for_log = self.entity_id if self.hass else self.unique_id
 
         if not super().available:
             _ENTITY_DETAIL_LOGGER.debug(
-                "Entity %s (Node ID: %s): Not available because super().available is False.",
+                "%s (Node %s): unavailable via HdgBaseEntity",
                 entity_id_for_log,
                 self._node_id,
             )
@@ -278,58 +201,33 @@ class HdgNodeEntity(HdgBaseEntity):
         raw_value = self.coordinator.data.get(self._node_id)
         if raw_value is None:
             _ENTITY_DETAIL_LOGGER.debug(
-                "Entity %s (Node ID: %s): Not available because raw_value is None in coordinator data.",
+                "%s (Node %s): unavailable, raw_value is None",
                 entity_id_for_log,
                 self._node_id,
             )
             return False
 
-        # Check for known "unavailable" markers from the HDG API if value is a string.
-        if isinstance(raw_value, str):
-            text_lower = raw_value.lower().strip()
-            if text_lower in HDG_UNAVAILABLE_STRINGS:
-                _ENTITY_DETAIL_LOGGER.debug(
-                    "Entity %s (Node ID: %s): Not available because raw_value '%s' matches a known unavailable string.",
-                    entity_id_for_log,
-                    self._node_id,
-                    raw_value,
-                )
-                return False
-            if (
-                self._attr_device_class == SensorDeviceClass.TIMESTAMP
-                and HDG_DATETIME_SPECIAL_TEXT in text_lower
-            ):
-                _ENTITY_DETAIL_LOGGER.debug(
-                    "Entity %s (Node ID: %s): Not available because it's a TIMESTAMP and raw_value '%s' contains special text.",
-                    entity_id_for_log,
-                    self._node_id,
-                    raw_value,
-                )
-                return False
+        if self._is_value_unavailable(raw_value):
+            _ENTITY_DETAIL_LOGGER.debug(
+                "%s (Node %s): unavailable, value '%s' is a known unavailable string.",
+                entity_id_for_log,
+                self._node_id,
+                raw_value,
+            )
+            return False
 
-        _ENTITY_DETAIL_LOGGER.debug(
-            "Entity %s (Node ID: %s): Is available. Raw value: '%s'.",
-            entity_id_for_log,
-            self._node_id,
-            raw_value,
-        )
         return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return entity-specific state attributes, primarily for diagnostic purposes.
-
-        Includes the HDG node ID, data type, formatter, enum type (if applicable),
-        and a sample of the raw value from the coordinator. These attributes can
-        be helpful for debugging and understanding the entity's underlying data.
-        """
+        """Return entity-specific state attributes for diagnostics."""
         attributes = {
             "hdg_node_id": self._node_id,
             "hdg_data_type": self._entity_definition.get("hdg_data_type"),
             "hdg_formatter": self._entity_definition.get("hdg_formatter"),
             "hdg_enum_type": self._entity_definition.get("hdg_enum_type"),
         }
-        if self.coordinator.data is not None:
+        if self.coordinator.data:
             raw_value = self.coordinator.data.get(self._node_id)
             if raw_value is not None:
                 attributes["hdg_raw_value"] = str(raw_value)[:100]
@@ -341,3 +239,12 @@ class HdgNodeEntity(HdgBaseEntity):
         _ENTITY_DETAIL_LOGGER.debug(
             "%s: Entity Details: %s", prefix, format_for_log(details)
         )
+
+    def _get_enum_key_from_value(self, raw_value: Any) -> str | None:
+        """Get the enum key for a given raw value."""
+        options = self._entity_definition.get("options")
+        if isinstance(options, dict):
+            for key, value in options.items():
+                if value == raw_value:
+                    return key
+        return None

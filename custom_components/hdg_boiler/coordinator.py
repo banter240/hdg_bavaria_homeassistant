@@ -1,51 +1,36 @@
-"""Manage data fetching, updates, and API interactions for the HDG Bavaria Boiler integration.
-
-This module defines the `HdgDataUpdateCoordinator` class, which is the central
-to the HDG Bavaria Boiler integration. Its responsibilities include:
-- Polling data from the boiler's API for various data groups with configurable update intervals.
-- Processing raw API responses and storing cleaned data.
-- Coordinating requests to set values on the boiler via a dedicated worker.
-- Managing API interaction efficiency, including respecting rate limits and handling
-  connection/response errors.
-- Dynamically adjusting polling frequency and tracking the boiler's online/offline status.
-"""
+"""Manage data fetching, updates, and API interactions for the HDG Bavaria Boiler integration."""
 
 from __future__ import annotations
 
-__version__ = "0.11.0"
+__version__ = "0.3.0"
+__all__ = ["HdgDataUpdateCoordinator", "async_create_and_refresh_coordinator"]
 
 import asyncio
+import functools
 import logging
 import time
-from datetime import timedelta
-from typing import (
-    Any,
-)
+from datetime import datetime, timedelta
+from typing import Any, TypedDict
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
 
-from .classes.polling_response_processor import (
-    HdgPollingResponseProcessor,
-)
+from .api import HdgApiClient
+from .classes.polling_response_processor import HdgPollingResponseProcessor
 from .const import (
     API_REQUEST_TYPE_GET_NODES_DATA,
     API_REQUEST_TYPE_SET_NODE_VALUE,
     COORDINATOR_FALLBACK_UPDATE_INTERVAL_MINUTES,
     COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK,
     DOMAIN,
-    INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S,
     MIN_SCAN_INTERVAL,
-    POST_INITIAL_REFRESH_COOLDOWN_S,
-    POLLING_RETRY_INITIAL_DELAY_S,
-    POLLING_RETRY_MAX_DELAY_S,
     POLLING_RETRY_BACKOFF_FACTOR,
+    POLLING_RETRY_INITIAL_DELAY_S,
     POLLING_RETRY_MAX_ATTEMPTS,
-    LIFECYCLE_LOGGER_NAME,
-    ENTITY_DETAIL_LOGGER_NAME,
-    API_LOGGER_NAME,
+    POLLING_RETRY_MAX_DELAY_S,
+    POST_INITIAL_REFRESH_COOLDOWN_S,
 )
 from .exceptions import (
     HdgApiConnectionError,
@@ -53,81 +38,75 @@ from .exceptions import (
     HdgApiResponseError,
     HdgApiPreemptedError,
 )
-from .models import NodeGroupPayload
 from .helpers.api_access_manager import ApiPriority, HdgApiAccessManager
-from .polling_manager import HDG_NODE_PAYLOADS, POLLING_GROUP_ORDER
+from .helpers.logging_utils import (
+    _LIFECYCLE_LOGGER,
+    _LOGGER,
+    _USER_ACTION_LOGGER,
+)
+from .registry import HdgEntityRegistry
 
 
-_LOGGER = logging.getLogger(DOMAIN)
-_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
-_ENTITY_DETAIL_LOGGER = logging.getLogger(ENTITY_DETAIL_LOGGER_NAME)
-_API_LOGGER = logging.getLogger(API_LOGGER_NAME)
+class RetryInfo(TypedDict):
+    """Information for tracking retries for a failed polling group."""
+
+    attempts: int
+    next_retry_time: float
+
+
+class PollingState(TypedDict):
+    """State related to polling and error handling."""
+
+    consecutive_failures: int
+    failed_group_retry_info: dict[str, RetryInfo]
+    last_update_times: dict[str, float]
+    boiler_is_online: bool
+    boiler_online_event: asyncio.Event
+
+
+class SetterState(TypedDict):
+    """State related to setting values."""
+
+    last_set_times: dict[str, float]
+    pending_timers: dict[str, CALLBACK_TYPE]
+    optimistic_values: dict[str, Any]
+    optimistic_times: dict[str, float]
+    current_generations: dict[str, int]
+    locks: dict[str, asyncio.Lock]
+    initial_values: dict[str, Any]
 
 
 class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """Manage fetching data from the HDG boiler and coordinate updates to entities.
+    """Manage fetching data from the HDG boiler and coordinate updates."""
 
-    This coordinator handles polling groups with varying update intervals, processes
-    API responses, and manages a worker task (`HdgSetValueWorker`) to queue and
-    retry 'set value' operations. It tracks the boiler's online status based on
-    polling success and dynamically adjusts polling frequency in response to
-    persistent API failures.
-    """
+    update_interval: timedelta | None
 
     def __init__(
         self,
         hass: HomeAssistant,
+        api_client: HdgApiClient,
         api_access_manager: HdgApiAccessManager,
         entry: ConfigEntry,
         log_level_threshold_for_connection_errors: int,
-        polling_group_order: list[str],
-        hdg_node_payloads: dict[str, NodeGroupPayload],
+        hdg_entity_registry: HdgEntityRegistry,
     ):
-        """Initialize the HdgDataUpdateCoordinator.
-
-        Args:
-            hass: The HomeAssistant instance.
-            api_access_manager: An instance of HdgApiAccessManager for communication with the boiler.
-            entry: The ConfigEntry associated with this coordinator instance.
-            log_level_threshold_for_connection_errors: Threshold for escalating connection error log level.
-            polling_group_order: Ordered list of polling group keys.
-            hdg_node_payloads: Dictionary of polling group payloads.
-
-        """
-        self._consecutive_poll_failures: int = 0
-        self._original_update_interval: timedelta | None = None
-        self._fallback_update_interval: timedelta = timedelta(
-            minutes=COORDINATOR_FALLBACK_UPDATE_INTERVAL_MINUTES
-        )
-        self._max_consecutive_failures_before_fallback: int = (
-            COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK
-        )
-        self._failed_poll_group_retry_info: dict[str, dict[str, Any]] = {}
-        self._boiler_considered_online: bool = True
-        self._boiler_online_event = asyncio.Event()
-        if self._boiler_considered_online:
-            self._boiler_online_event.set()
+        """Initialize the HdgDataUpdateCoordinator."""
         self.hass = hass
+        self.api_client = api_client
         self.api_access_manager = api_access_manager
         self.entry = entry
-        self._log_level_threshold_for_connection_errors = (
-            log_level_threshold_for_connection_errors
-        )
-        self._polling_group_order = polling_group_order
-        self._hdg_node_payloads = hdg_node_payloads
-        self.scan_intervals: dict[str, timedelta] = {}
+        self.hdg_entity_registry = hdg_entity_registry
+        self._log_level_threshold = log_level_threshold_for_connection_errors
 
+        self._initialize_state()
         self._validate_polling_config()
-        self._initialize_scan_intervals()
-
-        self._last_update_times: dict[str, float] = {}
-        self._initialize_last_update_times_monotonic()
-
+        self.scan_intervals = self._initialize_scan_intervals()
         shortest_interval = (
             min(self.scan_intervals.values())
             if self.scan_intervals
             else timedelta(seconds=60)
         )
+
         super().__init__(
             hass,
             _LOGGER,
@@ -135,737 +114,415 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             update_interval=shortest_interval,
         )
         self.data: dict[str, Any] = {}
-        self._last_set_times: dict[str, float] = {}
-        self._polling_response_processor = HdgPollingResponseProcessor(self)
 
+        self._original_update_interval = self.update_interval
+        self._fallback_update_interval = timedelta(
+            minutes=COORDINATOR_FALLBACK_UPDATE_INTERVAL_MINUTES
+        )
+        self._polling_response_processor = HdgPollingResponseProcessor(self)
         _LOGGER.debug(
-            "HdgDataUpdateCoordinator for '%s' initialized. Update interval: %s.",
-            self.entry.title,
+            "HdgDataUpdateCoordinator initialized. Update interval: %s",
             shortest_interval,
         )
 
-    def _initialize_scan_intervals(self) -> None:
-        """Initialize scan intervals for each polling group from config or defaults."""
+    def _initialize_state(self) -> None:
+        """Initialize the state attributes for the coordinator."""
+        self._polling_state: PollingState = {
+            "consecutive_failures": 0,
+            "failed_group_retry_info": {},
+            "last_update_times": dict.fromkeys(
+                self.hdg_entity_registry.get_polling_group_order(), 0.0
+            ),
+            "boiler_is_online": True,
+            "boiler_online_event": asyncio.Event(),
+        }
+        self._polling_state["boiler_online_event"].set()
+
+        self._setter_state: SetterState = {
+            "last_set_times": {},
+            "pending_timers": {},
+            "optimistic_values": {},
+            "optimistic_times": {},
+            "current_generations": {},
+            "locks": {},
+            "initial_values": {},
+        }
+
+    def _set_boiler_online_status(self, is_online: bool) -> None:
+        """Set and log the boiler's online status."""
+        if self._polling_state["boiler_is_online"] != is_online:
+            _LIFECYCLE_LOGGER.info(
+                "HDG Boiler transitioning to %s state.",
+                "ONLINE" if is_online else "OFFLINE",
+            )
+            self._polling_state["boiler_is_online"] = is_online
+            if is_online:
+                self._polling_state["boiler_online_event"].set()
+            else:
+                self._polling_state["boiler_online_event"].clear()
+
+    def _initialize_scan_intervals(self) -> dict[str, timedelta]:
+        """Initialize scan intervals for each polling group."""
+        scan_intervals: dict[str, timedelta] = {}
         current_config = self.entry.options or self.entry.data
-        for group_key in self._polling_group_order:
-            payload_details = self._hdg_node_payloads.get(group_key)
-            if not payload_details:
-                _ENTITY_DETAIL_LOGGER.error(
-                    "Payload details missing for group '%s'. Skipping.", group_key
-                )
-                continue
-
+        for (
+            group_key,
+            payload,
+        ) in self.hdg_entity_registry.get_polling_group_payloads().items():
             config_key = f"scan_interval_{group_key}"
-            default_val = payload_details["default_scan_interval"]
-            raw_val = current_config.get(config_key, str(default_val))
-
+            default_val = float(payload["default_scan_interval"])
             try:
-                scan_seconds = float(raw_val)  # type: ignore[arg-type]
-                if scan_seconds < MIN_SCAN_INTERVAL:
-                    _LOGGER.warning(
-                        "Scan interval %ss for group '%s' is below minimum %ss. Using default: %ss.",
-                        scan_seconds,
-                        group_key,
-                        MIN_SCAN_INTERVAL,
-                        default_val,
-                    )
-                    scan_seconds = float(default_val)
+                raw_val = max(float(current_config.get(config_key)), MIN_SCAN_INTERVAL)
             except (ValueError, TypeError):
-                _LOGGER.warning(
-                    "Invalid scan interval '%s' for group '%s'. Using default: %ss.",
-                    raw_val,
-                    group_key,
-                    default_val,
-                )
-                scan_seconds = float(default_val)
-            self.scan_intervals[group_key] = timedelta(seconds=scan_seconds)
+                raw_val = default_val
+            scan_intervals[group_key] = timedelta(seconds=raw_val)
+        return scan_intervals
 
     def _validate_polling_config(self) -> None:
-        """Validate consistency between dynamically built polling configurations."""
-        polling_group_set = set(self._polling_group_order)
-        payloads_key_set = set(self._hdg_node_payloads.keys())
-        if polling_group_set != payloads_key_set:
-            missing_in_payloads = polling_group_set - payloads_key_set
-            missing_in_order = payloads_key_set - polling_group_set
-            error_msg = (
-                "CRITICAL DYNAMIC CONFIG MISMATCH: POLLING_GROUP_ORDER and HDG_NODE_PAYLOADS keys do not match. "
-                f"Missing in Payloads: {missing_in_payloads or 'None'}. "
-                f"Missing in Order: {missing_in_order or 'None'}. "
-                "This indicates an issue in polling_manager.py."
-            )
-            _LOGGER.critical(error_msg)
-            raise ValueError(error_msg)
+        """Validate consistency of polling configurations."""
+        if set(self.hdg_entity_registry.get_polling_group_order()) != set(
+            self.hdg_entity_registry.get_polling_group_payloads().keys()
+        ):
+            raise ValueError("Polling group order and payload keys mismatch.")
 
     @property
     def last_update_times_public(self) -> dict[str, float]:
-        """Return a dictionary of last successful update times for polling groups."""
-        return self._last_update_times
+        """Return last successful update times for polling groups."""
+        return self._polling_state["last_update_times"]
 
     @property
     def boiler_is_online(self) -> bool:
-        """Return True if the boiler is currently considered online.
-
-        The online status is determined by the success of recent polling attempts
-        and is managed internally by the coordinator.
-        """
-        return self._boiler_considered_online
-
-    def _cleanup_failed_poll_group_retry_info(
-        self, active_poll_groups: set[str]
-    ) -> None:
-        """Remove retry info for polling groups that are no longer active."""
-        stale_groups = (
-            set(self._failed_poll_group_retry_info.keys()) - active_poll_groups
-        )
-        for group in stale_groups:
-            del self._failed_poll_group_retry_info[group]
-            _LIFECYCLE_LOGGER.debug(
-                "Cleaned up stale retry info for group '%s'.", group
-            )
-
-    def _initialize_last_update_times_monotonic(self) -> None:
-        """Set initial 'last update time' for all polling groups to 0.0.
-
-        This ensures that all groups are considered due for an update on the
-        first polling cycle.
-        """
-        for group_key in self._polling_group_order:
-            self._last_update_times[group_key] = 0.0
-
-    def _log_fetch_error_duration(
-        self,
-        group_key: str,
-        error_type: str,
-        start_time: float,
-        error: Exception,
-        log_level: int = logging.WARNING,
-    ) -> None:
-        """Log error details and duration of a failed fetch attempt.
-
-        This helper method provides a standardized way to log errors during data fetching,
-        including the duration of the failed attempt and dynamic log level selection.
-        """
-        duration = time.monotonic() - start_time
-        log_message = "%s for group: %s at %s. Duration: %.2fs. Error: %s"
-        log_args = (
-            error_type.upper(),
-            group_key,
-            dt_util.as_local(dt_util.utcnow()),
-            duration,
-            error,
-        )
-        # Use logging.log to dynamically set the level
-        if log_level == logging.ERROR:
-            _LOGGER.error(log_message, *log_args)
-        else:  # Default to WARNING for non-ERROR logs in this context
-            _LOGGER.warning(log_message, *log_args)
+        """Return True if the boiler is considered online."""
+        return self._polling_state["boiler_is_online"]
 
     async def _fetch_group_data(
-        self,
-        group_key: str,
-        payload_config: NodeGroupPayload,
-        polling_cycle_start_time_for_log: float,
-        priority: ApiPriority = ApiPriority.LOW,
-    ) -> list[dict[str, Any]] | None:
-        """Fetch and process data for a single polling group.
-
-        This method uses the `HdgApiAccessManager` to submit a request to the
-        boiler's API, processes the response using HdgPollingResponseProcessor,
-        and handles various API-related exceptions.
-        """
-        payload_str: str = payload_config["payload_str"]
+        self, group_key: str, payload_str: str, priority: ApiPriority
+    ) -> bool:
+        """Fetch and process data for a single polling group."""
         try:
-            _API_LOGGER.debug(
-                "FETCHING for group: %s at %s via API Access Manager.",
-                group_key,
-                dt_util.as_local(dt_util.utcnow()),
-            )
-            fetched_data_list = await self.api_access_manager.submit_request(
+            fetched_data = await self.api_access_manager.submit_request(
                 priority=priority,
-                coroutine=self.api_access_manager._api_client.async_get_nodes_data,
+                coroutine=self.api_client.async_get_nodes_data,
                 request_type=API_REQUEST_TYPE_GET_NODES_DATA,
                 context_key=group_key,
                 node_payload_str=payload_str,
             )
-
-            if fetched_data_list is not None:
-                processed_items = (
-                    self._polling_response_processor.parse_and_store_api_items(
-                        group_key, fetched_data_list
-                    )
+            if fetched_data is not None:
+                self._polling_response_processor.process_api_items(
+                    group_key, fetched_data
                 )
-
-                _ENTITY_DETAIL_LOGGER.debug(
-                    "Processed data for HDG group: %s. %s valid items.",
-                    group_key,
-                    len(processed_items),
-                )
-                return processed_items
-            _API_LOGGER.debug(
-                "Polling for group '%s' returned None from api_client without error.",
-                group_key,
-            )
-            return None
-        except (
-            HdgApiPreemptedError
-        ) as preempt_err:  # Catch the new preemption error specifically
-            self._log_fetch_error_duration(
-                group_key,
-                "Preempted by higher priority",
-                polling_cycle_start_time_for_log,
-                preempt_err,
-                logging.WARNING,
-            )
+                return True
+            return False
+        except HdgApiPreemptedError as err:
+            _LOGGER.debug("Fetch for group '%s' preempted: %s", group_key, err)
             raise
-        # Handle specific API response errors (e.g., bad status code, non-JSON response).
-        except HdgApiResponseError as err:
-            self._log_fetch_error_duration(
-                group_key,
-                "API response error",
-                polling_cycle_start_time_for_log,
-                err,
-                logging.WARNING,
-            )
-            return None
-        except (
-            HdgApiConnectionError
-        ) as conn_err:  # Catch general connection errors, including timeouts
-            self._log_fetch_error_duration(  # Corrected to use this logger function
-                group_key,
-                "Connection error",  # Explicitly name the type for the log.
-                polling_cycle_start_time_for_log,
-                conn_err,
-                logging.WARNING,  # Maintain warning level here
-            )
-            raise  # Re-raise to be handled by the sequential fetch logic
-        # Handle generic API errors.
-        except HdgApiError as api_err:
-            self._log_fetch_error_duration(
-                group_key,
-                "Generic API error",
-                polling_cycle_start_time_for_log,
-                api_err,
-                logging.WARNING,
-            )
-            return None
-        except Exception as err:
-            # Catch any other unexpected errors during polling.
-            _LOGGER.exception("Unexpected error polling group '%s': %s", group_key, err)
+        except (HdgApiResponseError, HdgApiError) as err:
+            _LOGGER.warning("API error fetching group '%s': %s", group_key, err)
+            return False
+        except HdgApiConnectionError:
+            raise
+        except Exception:
+            _LOGGER.exception("Unexpected error polling group '%s'.", group_key)
             raise
 
     async def _sequentially_fetch_groups(
-        self,
-        groups_to_fetch: list[tuple[str, NodeGroupPayload]],
-        polling_cycle_start_time: float,
-        request_priority: ApiPriority = ApiPriority.LOW,
+        self, groups: list[tuple[str, str]], priority: ApiPriority
     ) -> tuple[bool, bool]:
-        """Fetch data for multiple polling groups sequentially.
+        """Fetch data for multiple polling groups concurrently with a limit."""
+        semaphore = asyncio.Semaphore(5)  # Limit to 5 concurrent requests
 
-        This method iterates through the provided list of groups, fetching data
-        for each one with a small delay between groups to avoid overwhelming the
-        API. It tracks whether any group was fetched successfully and if any
-        connection errors were encountered.
-        """
-        any_group_fetched_successfully = False
-        any_connection_error_encountered = False
+        async def fetch_with_semaphore(
+            group_key: str, payload_str: str
+        ) -> tuple[str, bool, bool]:
+            async with semaphore:
+                try:
+                    success = await self._fetch_group_data(
+                        group_key, payload_str, priority
+                    )
+                    return group_key, success, False
+                except HdgApiConnectionError:
+                    return group_key, False, True
+                except Exception:
+                    _LOGGER.exception(
+                        "Unhandled exception fetching group '%s'.", group_key
+                    )
+                    return group_key, False, True
 
-        for i, (group_key, payload_config) in enumerate(groups_to_fetch):
-            _ENTITY_DETAIL_LOGGER.debug(
-                "Fetching data for group: %s (Index %s/%s)",
-                group_key,
-                i + 1,
-                len(groups_to_fetch),
-            )
-            try:
-                processed_items = await self._fetch_group_data(
-                    group_key,
-                    payload_config,
-                    polling_cycle_start_time,
-                    request_priority,
-                )
-                if processed_items is not None:
-                    self._last_update_times[group_key] = polling_cycle_start_time
-                    any_group_fetched_successfully = True
-            except HdgApiConnectionError:
-                any_connection_error_encountered = True
-            if i < len(groups_to_fetch) - 1:
-                _ENTITY_DETAIL_LOGGER.debug(
-                    "Waiting %ss before next group.",
-                    INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S,
-                )
-                await asyncio.sleep(INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S)
-        return any_group_fetched_successfully, any_connection_error_encountered
+        tasks = [fetch_with_semaphore(gk, ps) for gk, ps in groups]
+        results = await asyncio.gather(*tasks)
 
-    def _handle_first_refresh_outcome(
-        self,
-        any_group_fetched_successfully: bool,
-        any_connection_error_encountered: bool,
-    ) -> None:
-        """Process the results of the initial data refresh.
+        any_success = any(r[1] for r in results)
+        any_conn_error = any(r[2] for r in results)
 
-        This method updates the boiler's online status and raises `UpdateFailed`
-        if the initial refresh was unsuccessful.
-        """
-        if not any_group_fetched_successfully:
-            error_message = (
-                f"Initial data refresh for {self.name} failed to retrieve any data."
-            )
-            if any_connection_error_encountered:
-                error_message += " Connection errors encountered."
-                self._boiler_considered_online = False
-                self._boiler_online_event.clear()
-            else:
-                error_message += (
-                    " No connection errors, but all groups failed to yield data."
-                )
-            _LOGGER.error(error_message)
-            raise UpdateFailed(error_message)
-        elif not self.data:
-            _LOGGER.warning(
-                "Initial data refresh for %s completed, but no data was fetched overall.",
-                self.name,
-            )
-        else:
-            self._boiler_considered_online = True
-            self._boiler_online_event.set()
+        for group_key, success, _ in results:
+            if success:
+                self._polling_state["last_update_times"][group_key] = time.monotonic()
+
+        return any_success, any_conn_error
 
     async def async_config_entry_first_refresh(self) -> None:
-        """Perform initial sequential data refresh for all polling groups.
-
-        This method is called once when the config entry is first set up. It fetches
-        all defined polling groups sequentially to populate the initial data with a
-        higher priority. It raises `UpdateFailed` if no data can be retrieved,
-        which may cause Home Assistant to retry the setup later.
-        """
-        start_time_first_refresh = time.monotonic()
-        _LIFECYCLE_LOGGER.info(
-            "INITIATING async_config_entry_first_refresh for %s at %s.",
-            self.name,
-            dt_util.as_local(dt_util.utcnow()),
-        )
-
-        all_groups_to_fetch = [
-            (gk, self._hdg_node_payloads[gk])
-            for gk in self._polling_group_order
-            if gk in self._hdg_node_payloads
+        """Perform initial sequential data refresh for all polling groups."""
+        _LIFECYCLE_LOGGER.info("Initiating first data refresh for %s.", self.name)
+        all_groups = [
+            (gk, p["payload_str"])
+            for gk, p in self.hdg_entity_registry.get_polling_group_payloads().items()
         ]
-
-        (
-            any_group_fetched_successfully,
-            any_connection_error_encountered,
-        ) = await self._sequentially_fetch_groups(
-            all_groups_to_fetch, start_time_first_refresh, ApiPriority.MEDIUM
+        any_success, any_conn_error = await self._sequentially_fetch_groups(
+            all_groups, ApiPriority.MEDIUM
         )
 
-        self._handle_first_refresh_outcome(
-            any_group_fetched_successfully, any_connection_error_encountered
-        )
-
-        duration = time.monotonic() - start_time_first_refresh
-        _LIFECYCLE_LOGGER.info(
-            "COMPLETED async_config_entry_first_refresh for %s. Duration: %.2fs. Items: %s",
-            self.name,
-            duration,
-            len(self.data or []),
-        )
-        self.async_set_updated_data(self.data)
-        _ENTITY_DETAIL_LOGGER.debug(
-            "Initial refresh complete. Current data size: %s.", len(self.data)
-        )
-
-        await asyncio.sleep(POST_INITIAL_REFRESH_COOLDOWN_S)
-        _ENTITY_DETAIL_LOGGER.debug("Post-initial-refresh cool-down finished.")
-
-    def _get_due_polling_groups(
-        self, current_time_monotonic: float
-    ) -> list[tuple[str, NodeGroupPayload]]:
-        """Identify polling groups that are currently due for an update.
-
-        A group is considered due if the time elapsed since its last successful
-        update exceeds its configured scan interval. This method iterates through
-        all defined polling groups in their specified order to determine which ones
-        need to be polled in the current cycle.
-        """
-        due_groups: list[tuple[str, NodeGroupPayload]] = []
-        for group_key in self._polling_group_order:
-            payload_config = self._hdg_node_payloads.get(group_key)
-            if not payload_config or group_key not in self.scan_intervals:
-                _ENTITY_DETAIL_LOGGER.debug(
-                    "Skipping group '%s' in due check: not defined or no scan_interval.",
-                    group_key,
-                )
-                continue
-
-            interval_seconds = self.scan_intervals[group_key].total_seconds()
-            last_update = self._last_update_times.get(group_key, 0.0)
-
-            if (current_time_monotonic - last_update) >= interval_seconds:
-                due_groups.append((group_key, payload_config))
-            else:
-                next_poll_in = max(
-                    0, interval_seconds - (current_time_monotonic - last_update)
-                )
-                _ENTITY_DETAIL_LOGGER.debug(
-                    "Skipping poll for HDG group: %s (Next in approx. %.0fs)",
-                    group_key,
-                    next_poll_in,
-                )
-        return due_groups
-
-    def _prepare_current_poll_cycle_groups(
-        self, current_time_monotonic: float
-    ) -> list[tuple[str, NodeGroupPayload]]:
-        """Prepare the list of polling groups to be fetched in the current cycle.
-
-        This method combines regularly scheduled polling groups with any groups
-        that failed in a previous cycle and are marked for immediate retry.
-
-        """
-        _LIFECYCLE_LOGGER.debug("Preparing groups for current poll cycle...")
-
-        due_groups_to_fetch_regular = self._get_due_polling_groups(
-            current_time_monotonic
-        )
-        _LIFECYCLE_LOGGER.debug(
-            "Found %s regularly due groups: %s",
-            len(due_groups_to_fetch_regular),
-            [g[0] for g in due_groups_to_fetch_regular],
-        )
-
-        due_groups_keys_from_retry: list[str] = []
-        for group_key, retry_info in list(self._failed_poll_group_retry_info.items()):
-            if current_time_monotonic >= retry_info["next_retry_time"]:
-                due_groups_keys_from_retry.append(group_key)
-                _LIFECYCLE_LOGGER.info(
-                    "Adding previously failed group '%s' to current poll cycle for retry (attempt %s).",
-                    group_key,
-                    retry_info["attempts"],
-                )
-        _LIFECYCLE_LOGGER.debug(
-            "Found %s groups to retry: %s",
-            len(due_groups_keys_from_retry),
-            due_groups_keys_from_retry,
-        )
-
-        all_due_groups_map: dict[str, NodeGroupPayload] = {
-            g[0]: g[1] for g in due_groups_to_fetch_regular
-        }
-        # Add retry groups to the map if they are not already included.
-        for group_key_to_retry in due_groups_keys_from_retry:
-            if group_key_to_retry not in all_due_groups_map:
-                if payload_config := self._hdg_node_payloads.get(group_key_to_retry):
-                    all_due_groups_map[group_key_to_retry] = payload_config
-
-        return list(all_due_groups_map.items())
-
-    def _process_failed_poll_cycle(
-        self,
-        any_connection_error_encountered: bool,
-        groups_in_cycle: list[tuple[str, NodeGroupPayload]],
-    ) -> None:
-        """Handle the logic when a polling cycle fails to fetch any group successfully.
-
-        This method increments failure counters, updates the boiler's online status,
-        adjusts the update interval on persistent failures (especially connection errors),
-        and raises `UpdateFailed` for critical errors that should halt further updates.
-        """
-        self._consecutive_poll_failures += 1
-        if self._boiler_considered_online:
-            _LIFECYCLE_LOGGER.warning(
-                "HDG Boiler transitioning to OFFLINE state due to poll failures."
-            )
-        self._boiler_considered_online = False
-        self._boiler_online_event.clear()
-
-        msg = "Failed to fetch data from HDG boiler for all attempted groups in this cycle."
-        current_time = time.monotonic()
-
-        for group_key, _ in groups_in_cycle:
-            retry_info = self._failed_poll_group_retry_info.get(
-                group_key, {"attempts": 0, "next_retry_time": 0.0}
-            )
-            retry_info["attempts"] += 1
-
-            next_delay = min(
-                POLLING_RETRY_INITIAL_DELAY_S
-                * (POLLING_RETRY_BACKOFF_FACTOR ** (retry_info["attempts"] - 1)),
-                POLLING_RETRY_MAX_DELAY_S,
-            )
-            retry_info["next_retry_time"] = current_time + next_delay
-
-            self._failed_poll_group_retry_info[group_key] = retry_info
-            self._log_failed_group_retry_info(
-                group_key, retry_info, any_connection_error_encountered, next_delay
-            )
-
-            if retry_info["attempts"] >= POLLING_RETRY_MAX_ATTEMPTS:
-                _LIFECYCLE_LOGGER.warning(
-                    "Group '%s' has reached max retry attempts (%s). It will continue to be retried at the max backoff delay until it succeeds.",
-                    group_key,
-                    retry_info["attempts"],
-                )
-                # The group is NOT popped, allowing it to be retried indefinitely at the max delay.
-
-        if any_connection_error_encountered and (
-            self._consecutive_poll_failures
-            >= self._max_consecutive_failures_before_fallback
-        ):
-            if self._original_update_interval is None:
-                self._original_update_interval = self.update_interval  # type: ignore[assignment, has-type]
-            self.update_interval = self._fallback_update_interval
-            _LIFECYCLE_LOGGER.warning(
-                "HDG Boiler offline for %s cycles. Switching to fallback update interval: %s",
-                self._consecutive_poll_failures,
-                self._fallback_update_interval,
-            )
+        if not any_success:
+            self._set_boiler_online_status(False)
+            msg = f"Initial data refresh failed for {self.name}."
+            if any_conn_error:
+                msg += " Connection errors encountered."
             raise UpdateFailed(msg)
-        else:
-            _LIFECYCLE_LOGGER.warning("%s Data may be stale for some groups.", msg)
 
-    def _log_failed_group_retry_info(
-        self,
-        group_key: str,
-        retry_info: dict[str, Any],
-        is_connection_error: bool,
-        next_retry_delay: float,
-    ) -> None:
-        """Log information about a failed polling group, including retry details."""
-        log_msg = (
-            "Connection error for group '%s'. Attempt %s, next retry in %.0fs."
-            if is_connection_error
-            else "Non-connection API error for group '%s'. Attempt %s, next retry in %.0fs."
+        self._set_boiler_online_status(True)
+        _LIFECYCLE_LOGGER.info("First data refresh for %s complete.", self.name)
+        self.async_set_updated_data(self.data)
+        await asyncio.sleep(POST_INITIAL_REFRESH_COOLDOWN_S)
+
+    def _get_groups_to_fetch(self, current_time: float) -> dict[str, str]:
+        """Identify all polling groups that are due for an update or retry."""
+        payloads = self.hdg_entity_registry.get_polling_group_payloads()
+        due_groups = {
+            key: payloads[key]["payload_str"]
+            for key, interval in self.scan_intervals.items()
+            if (current_time - self._polling_state["last_update_times"].get(key, 0.0))
+            >= interval.total_seconds()
+        }
+        retry_groups = {
+            key: payloads[key]["payload_str"]
+            for key, info in self._polling_state["failed_group_retry_info"].items()
+            if current_time >= info["next_retry_time"]
+        }
+        return due_groups | retry_groups
+
+    def _get_log_level_for_failure(self) -> int:
+        """Determine the appropriate log level based on consecutive failures."""
+        return (
+            logging.WARNING
+            if self._polling_state["consecutive_failures"] >= self._log_level_threshold
+            else logging.INFO
         )
-        log_level = (
-            logging.ERROR
-            if is_connection_error
-            and self._consecutive_poll_failures
-            >= self._log_level_threshold_for_connection_errors
-            else logging.WARNING
-        )
-        _LOGGER.log(
-            log_level, log_msg, group_key, retry_info["attempts"], next_retry_delay
-        )
 
-    def _process_successful_poll_cycle_recovery(self) -> None:
-        """Handle the logic when a polling cycle has at least one successful group fetch.
-
-        This method updates the boiler's online status, resets failure counters, and restores
-        the original update interval if it was previously changed to a fallback interval.
-        """
-        if not self._boiler_considered_online:
-            _LIFECYCLE_LOGGER.info(
-                "HDG Boiler transitioning to ONLINE state after successful poll."
-            )
-        self._boiler_considered_online = True
-        self._boiler_online_event.set()
-
-        if self._consecutive_poll_failures > 0:
-            _LIFECYCLE_LOGGER.info(
-                "HDG Boiler back online or partially responsive. Resetting consecutive poll failures from %s to 0.",
-                self._consecutive_poll_failures,
-            )
-        self._consecutive_poll_failures = 0
-
-        for group_key in self._failed_poll_group_retry_info.copy():
-            if self._last_update_times.get(group_key, 0.0) > 0.0:
-                _LIFECYCLE_LOGGER.debug(
-                    "Clearing retry info for group '%s' after successful poll.",
-                    group_key,
-                )
-                self._failed_poll_group_retry_info.pop(group_key)
-
-        if (
-            self._original_update_interval is not None
-            and self.update_interval == self._fallback_update_interval  # type: ignore[has-type]
-        ):
+    def _handle_successful_poll(self) -> None:
+        """Handle the state update after a successful poll."""
+        if self._polling_state["consecutive_failures"] > 0:
+            _LIFECYCLE_LOGGER.info("Boiler back online. Resetting poll failures.")
+        self._polling_state["consecutive_failures"] = 0
+        for group_key in list(self._polling_state["failed_group_retry_info"].keys()):
+            if self._polling_state["last_update_times"].get(group_key, 0.0) > 0.0:
+                del self._polling_state["failed_group_retry_info"][group_key]
+        if self.update_interval == self._fallback_update_interval:
             self.update_interval = self._original_update_interval
             _LIFECYCLE_LOGGER.info(
-                "HDG Boiler polling successful. Restoring original update interval: %s",
-                self.update_interval,  # type: ignore[attr-defined]
+                "Polling successful. Restoring original interval: %s",
+                self.update_interval,
             )
 
-    def _handle_poll_cycle_outcome(
-        self,
-        any_group_fetched_in_cycle_successfully: bool,
-        any_connection_error_encountered: bool,
-        groups_in_cycle: list[tuple[str, NodeGroupPayload]],
-    ) -> None:
-        """Process the outcome of a polling cycle, updating online status and failure counters.
-
-        This method dispatches to helper methods for more detailed processing of
-        failed or successful recovery states and may raise `UpdateFailed` if
-        critical errors persist.
-        """
-        if not any_group_fetched_in_cycle_successfully and groups_in_cycle:
-            self._process_failed_poll_cycle(
-                any_connection_error_encountered, groups_in_cycle
+    def _handle_failed_poll(self, groups_in_cycle: list[str]) -> None:
+        """Handle the state update after a failed poll."""
+        self._polling_state["consecutive_failures"] += 1
+        for group_key in groups_in_cycle:
+            info = self._polling_state["failed_group_retry_info"].get(
+                group_key, {"attempts": 0, "next_retry_time": 0.0}
             )
-        elif any_group_fetched_in_cycle_successfully:
-            self._process_successful_poll_cycle_recovery()
+            info["attempts"] += 1
+            delay = min(
+                POLLING_RETRY_INITIAL_DELAY_S
+                * (POLLING_RETRY_BACKOFF_FACTOR ** (info["attempts"] - 1)),
+                POLLING_RETRY_MAX_DELAY_S,
+            )
+            info["next_retry_time"] = time.monotonic() + delay
+            self._polling_state["failed_group_retry_info"][group_key] = info
+            _LOGGER.log(
+                self._get_log_level_for_failure(),
+                "Error for group '%s'. Attempt %s, next retry in %.0fs.",
+                group_key,
+                info["attempts"],
+                delay,
+            )
+            if info["attempts"] >= POLLING_RETRY_MAX_ATTEMPTS:
+                _LIFECYCLE_LOGGER.warning(
+                    "Group '%s' reached max retry attempts.", group_key
+                )
+        if (
+            self._polling_state["consecutive_failures"]
+            >= COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK
+        ):
+            self.update_interval = self._fallback_update_interval
+            _LIFECYCLE_LOGGER.warning(
+                "Boiler offline. Switching to fallback interval: %s",
+                self.update_interval,
+            )
+            raise UpdateFailed("Persistent connection errors.")
+
+    def _update_polling_status(self, success: bool, groups_in_cycle: list[str]) -> None:
+        """Update coordinator state based on the polling cycle outcome."""
+        self._set_boiler_online_status(success)
+        if success:
+            self._handle_successful_poll()
+        else:
+            self._handle_failed_poll(groups_in_cycle)
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data for all polling groups that are currently due for an update.
-
-        This is the main method called by Home Assistant to refresh data. It orchestrates the polling cycle,
-        determining which groups are due, fetching their data sequentially, and updating the coordinator's
-        state based on the success or failure of these fetches.
-        """
-        polling_cycle_start_time = time.monotonic()
-        _LIFECYCLE_LOGGER.debug(
-            "INITIATING _async_update_data cycle at %s",
-            dt_util.as_local(dt_util.utcnow()),
-        )
-
-        due_groups_to_fetch = self._prepare_current_poll_cycle_groups(
-            polling_cycle_start_time
-        )
-
-        if not due_groups_to_fetch:
-            _LIFECYCLE_LOGGER.debug(
-                "COMPLETED _async_update_data (no groups due). Duration: %.3fs",
-                time.monotonic() - polling_cycle_start_time,
-            )
+        """Fetch data for all due polling groups."""
+        groups_to_fetch = self._get_groups_to_fetch(time.monotonic())
+        if not groups_to_fetch:
             return self.data
 
-        _ENTITY_DETAIL_LOGGER.debug(
-            "Due groups to fetch in this cycle: %s",
-            [g[0] for g in due_groups_to_fetch],
+        any_success, _ = await self._sequentially_fetch_groups(
+            list(groups_to_fetch.items()), ApiPriority.LOW
         )
-
-        (
-            any_group_fetched_in_cycle_successfully,
-            any_connection_error_encountered,
-        ) = await self._sequentially_fetch_groups(
-            due_groups_to_fetch, polling_cycle_start_time, ApiPriority.LOW
-        )
-
-        self._handle_poll_cycle_outcome(
-            any_group_fetched_in_cycle_successfully,
-            any_connection_error_encountered,
-            due_groups_to_fetch,
-        )
-
-        self._cleanup_failed_poll_group_retry_info({g[0] for g in due_groups_to_fetch})
-
-        _LIFECYCLE_LOGGER.debug(
-            "COMPLETED _async_update_data (polled %s groups: %s). Duration: %.3fs",
-            len(due_groups_to_fetch),
-            ", ".join([g[0] for g in due_groups_to_fetch]),
-            time.monotonic() - polling_cycle_start_time,
-        )
-        _LOGGER.debug(
-            "Finished fetching hdg_boiler (Euro50) data. Polled groups: %s. Duration: %.3fs",
-            ", ".join([g[0] for g in due_groups_to_fetch]),
-            time.monotonic() - polling_cycle_start_time,
-        )
+        self._update_polling_status(any_success, list(groups_to_fetch.keys()))
         return self.data
 
-    async def async_update_internal_node_state(
-        self, node_id: str, new_value: str
-    ) -> None:
-        """Update a node's value in the internal data store and notify listeners.
-
-        This method is typically called by the `HdgSetValueWorker` after a successful
-        API 'set value' operation. It updates the local data cache and triggers an update
-        for all listening entities that depend on this coordinator.
-        """
-        if self.data.get(node_id) != new_value:
-            self._last_set_times[node_id] = time.monotonic()
-            self.data[node_id] = new_value
-            _LOGGER.debug(
-                "Manually updated node '%s' to '%s'.",
-                node_id,
-                new_value,
-            )
-            _ENTITY_DETAIL_LOGGER.debug(
-                "Internal state for node '%s' updated to '%s'. Notifying listeners.",
-                node_id,
-                new_value,
-            )
-            self.async_set_updated_data(self.data)
-        else:
-            _ENTITY_DETAIL_LOGGER.debug(
-                "Internal state for node '%s' already '%s'. No update needed.",
-                node_id,
-                new_value,
-            )
-
-    async def async_set_node_value_if_changed(
-        self,
-        node_id: str,
-        new_value_str_for_api: str,
-        entity_name_for_log: str = "Unknown Entity",
+    async def async_set_node_value(
+        self, node_id: str, value: str, entity_name_for_log: str, debounce_delay: float
     ) -> bool:
-        """Queue a node value to be set on the boiler via the API.
+        """Queue a node value to be set on the boiler with debouncing."""
+        if not isinstance(value, str):
+            raise TypeError(f"Value for {entity_name_for_log} must be a string.")
 
-        This method is called by entities (e.g., `HdgBoilerNumber`) or services to request a value change.
-        It submits the request to the HdgApiAccessManager, which handles queuing, prioritization (HIGH),
-        and retry logic, ensuring robust and responsive write operations. A check for whether the value
-        has actually changed against the coordinator's current data is intentionally omitted to
-        prevent race conditions with optimistic UI updates.
+        # If this is the first request in a potential sequence, store the initial value.
+        if node_id not in self._setter_state["pending_timers"]:
+            self._setter_state["initial_values"][node_id] = self.data.get(node_id)
 
-        Returns:
-            True if the value was successfully set (after potential retries), False otherwise.
+        generation = self._setter_state["current_generations"].get(node_id, 0) + 1
+        self._setter_state["current_generations"][node_id] = generation
+        self._setter_state["optimistic_values"][node_id] = value
+        self._setter_state["optimistic_times"][node_id] = time.monotonic()
 
-        """
-        if not isinstance(new_value_str_for_api, str):
-            _LOGGER.error(
-                "Invalid type for new_value_str_for_api: %s for node '%s'. Expected str.",
-                type(new_value_str_for_api).__name__,
+        if node_id in self._setter_state["pending_timers"]:
+            self._setter_state["pending_timers"].pop(node_id)()
+
+        job_target = functools.partial(
+            self._process_debounced_set_value,
+            node_id=node_id,
+            entity_name_for_log=entity_name_for_log,
+            scheduled_generation=generation,
+        )
+        self._setter_state["pending_timers"][node_id] = async_call_later(
+            self.hass, debounce_delay, HassJob(job_target, cancel_on_shutdown=True)
+        )
+        return True
+
+    def _should_skip_set_request(
+        self, node_id: str, entity_name_for_log: str, scheduled_generation: int
+    ) -> tuple[bool, str | None]:
+        """Validate if a debounced set request should be skipped."""
+        if scheduled_generation != self._setter_state["current_generations"].get(
+            node_id
+        ):
+            _USER_ACTION_LOGGER.debug(
+                "Skipping stale set request for %s (Gen %s is old).",
+                entity_name_for_log,
+                scheduled_generation,
+            )
+            return True, None
+
+        self._setter_state["pending_timers"].pop(node_id, None)
+        final_value = self._setter_state["optimistic_values"].get(node_id)
+        initial_value = self._setter_state["initial_values"].pop(node_id, None)
+
+        if final_value is None:
+            _USER_ACTION_LOGGER.debug(
+                "Skipping set request for %s as there is no final optimistic value.",
                 entity_name_for_log,
             )
-            raise TypeError("new_value_str_for_api must be a string.")
+            return True, None
 
-        _ENTITY_DETAIL_LOGGER.debug(
-            "Coordinator: Queuing set request for node '%s' (ID: %s) to value '%s'.",
-            entity_name_for_log,
-            node_id,
-            new_value_str_for_api,
-        )
+        # Compare final value to the value before the first change in the sequence.
+        if final_value == initial_value:
+            _USER_ACTION_LOGGER.info(
+                "Skipping set request for %s. Final value '%s' matches initial value.",
+                entity_name_for_log,
+                final_value,
+            )
+            self._setter_state["optimistic_values"].pop(node_id, None)
+            self._setter_state["optimistic_times"].pop(node_id, None)
+            self.async_set_updated_data(self.data)
+            return True, None
 
+        return False, final_value
+
+    async def _execute_set_request(
+        self, node_id: str, value: str, entity_name_for_log: str
+    ) -> None:
+        """Execute the API call to set the node value."""
         try:
             success = await self.api_access_manager.submit_request(
                 priority=ApiPriority.HIGH,
-                coroutine=self.api_access_manager._api_client.async_set_node_value,
+                coroutine=self.api_client.async_set_node_value,
                 request_type=API_REQUEST_TYPE_SET_NODE_VALUE,
                 context_key=node_id,
                 node_id=node_id,
-                value=new_value_str_for_api,
+                value=value,
             )
             if success:
-                await self.async_update_internal_node_state(
-                    node_id, new_value_str_for_api
+                self.data[node_id] = value
+                self._setter_state["last_set_times"][node_id] = time.monotonic()
+                _LOGGER.info("Successfully set %s to '%s'.", entity_name_for_log, value)
+            else:
+                _LOGGER.error(
+                    "Failed to set %s to '%s'. API call returned False.",
+                    entity_name_for_log,
+                    value,
                 )
-            return bool(success)
         except HdgApiError as e:
-            _LOGGER.error("Failed to set node value via API Access Manager: %s", e)
-            return False
+            _LOGGER.error("API error setting %s: %s", entity_name_for_log, e)
+        finally:
+            if self.data.get(node_id) == self._setter_state["optimistic_values"].get(
+                node_id
+            ):
+                self._setter_state["optimistic_values"].pop(node_id, None)
+                self._setter_state["optimistic_times"].pop(node_id, None)
+            self.async_set_updated_data(self.data)
+
+    async def _process_debounced_set_value(
+        self,
+        _: datetime,
+        node_id: str,
+        entity_name_for_log: str,
+        scheduled_generation: int,
+    ) -> None:
+        """Process the debounced set value and send it to the API."""
+        lock = self._setter_state["locks"].setdefault(node_id, asyncio.Lock())
+        async with lock:
+            should_skip, final_value = self._should_skip_set_request(
+                node_id, entity_name_for_log, scheduled_generation
+            )
+            if should_skip:
+                return
+
+            if final_value is not None:
+                await self._execute_set_request(
+                    node_id, final_value, entity_name_for_log
+                )
 
     async def async_stop_api_access_manager(self) -> None:
-        """Gracefully stop the background `HdgApiAccessManager` task."""
+        """Gracefully stop the background HdgApiAccessManager task."""
         await self.api_access_manager.stop()
 
 
 async def async_create_and_refresh_coordinator(
     hass: HomeAssistant,
+    api_client: HdgApiClient,
     api_access_manager: HdgApiAccessManager,
     entry: ConfigEntry,
     log_level_threshold_for_connection_errors: int,
+    hdg_entity_registry: HdgEntityRegistry,
 ) -> HdgDataUpdateCoordinator:
-    """Create, initialize, and perform the first data refresh for the coordinator.
-
-    This factory function encapsulates the creation of the `HdgDataUpdateCoordinator`,
-    performs the critical initial data refresh, and starts the background worker task for setting values.
-    It is the primary entry point for setting up the coordinator during integration setup.
-    """
+    """Create, initialize, and perform the first data refresh for the coordinator."""
     coordinator = HdgDataUpdateCoordinator(
         hass,
+        api_client,
         api_access_manager,
         entry,
         log_level_threshold_for_connection_errors,
-        POLLING_GROUP_ORDER,
-        HDG_NODE_PAYLOADS,
+        hdg_entity_registry,
     )
-    api_access_manager.start(entry)
     await coordinator.async_config_entry_first_refresh()
     return coordinator
