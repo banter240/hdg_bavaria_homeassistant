@@ -78,21 +78,24 @@ class HdgBoilerSelect(HdgNodeEntity, SelectEntity):
                 self._node_id
             )
             if optimistic_value is not None:
-                str_optimistic_value = str(cast(str, optimistic_value))
+                processed_value = str(cast(str, optimistic_value))
                 _LOGGER.debug(
                     "[%s] Using optimistic value '%s'",
                     self.entity_description.key,
-                    str_optimistic_value,
+                    processed_value,
                 )
-                return str_optimistic_value
+                if self._entity_definition.get("uppercase_value"):
+                    return processed_value.lower()
+                return processed_value
 
-        # For select entities, the state from the coordinator is the raw enum key.
-        # Home Assistant handles the translation to the display value automatically.
         if self.coordinator.data and (
             raw_value := self.coordinator.data.get(self._node_id)
         ):
             if raw_value is not None:
-                return str(cast(str | int | float, raw_value))
+                processed_value = str(cast(str | int | float, raw_value))
+                if self._entity_definition.get("uppercase_value"):
+                    return processed_value.lower()
+                return processed_value
         return None
 
     async def async_select_option(self, option: str) -> None:
@@ -106,10 +109,14 @@ class HdgBoilerSelect(HdgNodeEntity, SelectEntity):
             )
             return
 
+        value_to_send = option
+        if self._entity_definition.get("uppercase_value"):
+            value_to_send = option.upper()
+
         # This call handles optimistic state and debouncing centrally.
         await self.coordinator.async_set_node_value(
             self._node_id,
-            option,
+            value_to_send,
             self.entity_id,
             2.0,  # Using a 2s debounce
         )

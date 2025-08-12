@@ -226,7 +226,7 @@
       "kessel_ausbrandgrund": {
         "name": "Kessel Ausbrandgrund",
         "state": {
-          "": "",
+          "none": "Keiner",
           "abschaltung": "Abschaltung",
           "keine_anforderung": "Keine Anforderung",
           "rostkippung": "Rostkippung"
@@ -831,12 +831,12 @@
       "betriebsart": {
         "name": "Betriebsart",
         "state": {
-          "NORMAL": "Normal",
-          "TAG": "Tagbetrieb",
-          "NACHT": "Nachtbetrieb",
-          "PARTY": "Partybetrieb",
-          "SOMMER": "Sommerbetrieb",
-          "URLAUB": "Urlaubsbetrieb"
+          "normal": "Normal",
+          "tag": "Tagbetrieb",
+          "nacht": "Nachtbetrieb",
+          "party": "Partybetrieb",
+          "sommer": "Sommerbetrieb",
+          "urlaub": "Urlaubsbetrieb"
         }
       }
     }

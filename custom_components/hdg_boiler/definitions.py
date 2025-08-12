@@ -86,6 +86,7 @@ def _create_sensor_definition(
     setter_max_val: float | None = None,
     setter_step: float | None = None,
     options: list[str] | None = None,
+    uppercase_value: bool | None = None,
 ) -> SensorDefinition:
     """Create a SensorDefinition dictionary. Avoid using directly."""
     definition: dict[str, object | None] = {
@@ -120,6 +121,8 @@ def _create_sensor_definition(
         definition["setter_step"] = setter_step
     if options is not None:
         definition["options"] = options
+    if uppercase_value is not None:
+        definition["uppercase_value"] = uppercase_value
     return cast(SensorDefinition, definition)
 
 
@@ -449,6 +452,7 @@ def create_select_entity(
     icon: str,
     options: list[str],
     entity_category: EntityCategory | None = None,
+    uppercase_value: bool | None = None,
 ) -> SensorDefinition:
     """Create a writable select entity."""
     return _create_sensor_definition(
@@ -462,6 +466,7 @@ def create_select_entity(
         entity_category=entity_category,
         icon=icon,
         options=options,
+        uppercase_value=uppercase_value,
         ha_device_class=SensorDeviceClass.ENUM,
     )
 
@@ -1602,11 +1607,13 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
         icon="mdi:thermostat",
         options=[
-            "NORMAL",
-            "TAG",
-            "NACHT",
-            "PARTY",
-            "SOMMER",
+            "normal",
+            "tag",
+            "nacht",
+            "party",
+            "sommer",
+            "urlaub",
         ],
+        uppercase_value=True,
     ),
 }

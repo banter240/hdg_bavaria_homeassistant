@@ -325,6 +325,18 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _handle_failed_poll(self, groups_in_cycle: list[str]) -> None:
         """Handle the state update after a failed poll."""
         self._polling_state["consecutive_failures"] += 1
+        failures = self._polling_state["consecutive_failures"]
+        threshold = self._log_level_threshold
+
+        # Log a single, general message if the threshold is newly crossed
+        if failures == threshold:
+            _LOGGER.warning(
+                "Connection to host appears to be lost (failed %d consecutive times). Suppressing further group errors.",
+                failures,
+            )
+
+        log_level_for_details = logging.DEBUG if failures >= threshold else logging.INFO
+
         for group_key in groups_in_cycle:
             info = self._polling_state["failed_group_retry_info"].get(
                 group_key, {"attempts": 0, "next_retry_time": 0.0}
@@ -337,21 +349,22 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
             info["next_retry_time"] = time.monotonic() + delay
             self._polling_state["failed_group_retry_info"][group_key] = info
+
+            # Log detailed per-group errors only at a lower level
             _LOGGER.log(
-                self._get_log_level_for_failure(),
+                log_level_for_details,
                 "Error for group '%s'. Attempt %s, next retry in %.0fs.",
                 group_key,
                 info["attempts"],
                 delay,
             )
+
             if info["attempts"] >= POLLING_RETRY_MAX_ATTEMPTS:
                 _LIFECYCLE_LOGGER.warning(
                     "Group '%s' reached max retry attempts.", group_key
                 )
-        if (
-            self._polling_state["consecutive_failures"]
-            >= COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK
-        ):
+
+        if failures >= COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK:
             self.update_interval = self._fallback_update_interval
             _LIFECYCLE_LOGGER.warning(
                 "Boiler offline. Switching to fallback interval: %s",

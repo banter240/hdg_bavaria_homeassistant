@@ -226,7 +226,7 @@
       "kessel_ausbrandgrund": {
         "name": "Boiler Burn-out Reason",
         "state": {
-          "": "",
+          "none": "None",
           "abschaltung": "Switch-off",
           "keine_anforderung": "No demand",
           "rostkippung": "Tip grate"
@@ -831,12 +831,12 @@
       "betriebsart": {
         "name": "Operating Mode",
         "state": {
-          "NORMAL": "Normal",
-          "TAG": "Day mode",
-          "NACHT": "Night mode",
-          "PARTY": "Party mode",
-          "SOMMER": "Summer mode",
-          "URLAUB": "Holiday mode"
+          "normal": "Normal",
+          "tag": "Day mode",
+          "nacht": "Night mode",
+          "party": "Party mode",
+          "sommer": "Summer mode",
+          "urlaub": "Holiday mode"
         }
       }
     }
