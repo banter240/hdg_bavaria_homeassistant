@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __all__ = ["async_setup_entry"]
 
 import logging
@@ -64,6 +64,7 @@ class HdgBoilerSelect(HdgNodeEntity, SelectEntity):
         """Initialize the HDG Boiler select entity."""
         super().__init__(coordinator, description, entity_definition)
         self._attr_options = entity_definition.get("options", [])
+        self._attr_translation_key = entity_definition.get("translation_key")
         _LIFECYCLE_LOGGER.debug("HdgBoilerSelect %s: Initialized.", self.entity_id)
 
     @property
