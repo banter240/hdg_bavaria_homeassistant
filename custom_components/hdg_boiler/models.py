@@ -77,6 +77,7 @@ class SensorDefinition(TypedDict, total=False):
     setter_step: float | None
     options: list[str] | None
     normalize_internal_whitespace: bool | None
+    uppercase_value: bool | None
 
 
 class NodeGroupPayload(TypedDict):
