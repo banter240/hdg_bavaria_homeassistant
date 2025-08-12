@@ -69,499 +69,693 @@
   },
   "entity": {
     "sensor": {
-      "aussentemperatur": { "name": "Outside Temperature" },
-      "brennraumtemperatur_soll": { "name": "Target Combustion Chamber Temp." },
-      "kessel_abgastemperatur_ist": { "name": "Boiler Flue Gas Temp. Actual" },
-      "kessel_restsauerstoff_ist": { "name": "Boiler Residual Oxygen Actual" },
-      "kesseltemperatur_ist": { "name": "Boiler Temperature Actual" },
-      "kessel_rucklauftemperatur_ist": { "name": "Boiler Return Temperature Actual" },
-      "materialmenge_aktuell": { "name": "Current Material Quantity" },
-      "primarluftklappe_ist": { "name": "Primary Air Flap Actual" },
-      "sekundarluftklappe_ist": { "name": "Secondary Air Flap Actual" },
+      "aussentemperatur": {
+        "name": "Outside Temperature"
+      },
+      "brennraumtemperatur_soll": {
+        "name": "Target Combustion Chamber Temp."
+      },
+      "kessel_abgastemperatur_ist": {
+        "name": "Boiler Flue Gas Temp. Actual"
+      },
+      "kessel_restsauerstoff_ist": {
+        "name": "Boiler Residual Oxygen Actual"
+      },
+      "kesseltemperatur_ist": {
+        "name": "Boiler Temperature Actual"
+      },
+      "kessel_rucklauftemperatur_ist": {
+        "name": "Boiler Return Temperature Actual"
+      },
+      "materialmenge_aktuell": {
+        "name": "Current Material Quantity"
+      },
+      "primarluftklappe_ist": {
+        "name": "Primary Air Flap Actual"
+      },
+      "sekundarluftklappe_ist": {
+        "name": "Secondary Air Flap Actual"
+      },
       "kessel_status": {
         "name": "Boiler Status",
         "state": {
-          "ABGASTEMP.–STOPP": "Fluegas temp.stop",
-          "ANHEIZEN": "Heating-up",
-          "ANZÜNDEN": "Ignition",
-          "ANZÜNDEN KÜHLEN": "Cooling ignition",
-          "AUSBRENNEN": "Burn out",
-          "AUSGESCHALTET": "Turned off",
-          "AUTOMATIK": "Automatic",
-          "BEREIT": "Ready",
-          "FÜLLEN": "Filling",
-          "GLUTERHALTUNG": "Keep embers glow",
-          "LAMBDATEST": "Lambda test",
-          "REINIGUNG": "Cleaning",
-          "RESTWÄRMENUTZUNG": "Resid.heat utilis.",
-          "SCHUTZPROGRAMM": "Protection program",
-          "STÖRUNG": "Fault",
-          "VORBELÜFTEN": "Pre-ventilation",
-          "ZÜNDUNG BEREIT": "Ignition ready"
+          "abgastemp_stopp": "Fluegas temp.stop",
+          "anheizen": "Heating-up",
+          "anzuenden": "Ignition",
+          "anzuenden_kuehlen": "Cooling ignition",
+          "ausbrennen": "Burn out",
+          "ausgeschaltet": "Turned off",
+          "automatik": "Automatic",
+          "bereit": "Ready",
+          "fuellen": "Filling",
+          "gluterhaltung": "Keep embers glow",
+          "lambdatest": "Lambda test",
+          "reinigung": "Cleaning",
+          "restwaermenutzung": "Resid.heat utilis.",
+          "schutzprogramm": "Protection program",
+          "stoerung": "Fault",
+          "vorbelueften": "Pre-ventilation",
+          "zuendung_bereit": "Ignition ready"
         }
       },
-      "primarluftklappe_soll": { "name": "Primary Air Flap Target" },
-      "kessel_externe_anforderung": { "name": "Boiler External Demand %" },
-      "kesselvorlauf_solltemperatur": { "name": "Boiler Flow Target Temperature" },
-      "kesselrucklauf_solltemperatur": { "name": "Boiler Return Target Temperature" },
-      "kesselleistung_ist": { "name": "Boiler Output Actual" },
-      "kessel_saugzuggeblase_ist": { "name": "Boiler Flue Gas Fan Actual" },
-      "kessel_unterdruck_ist": { "name": "Boiler Negative Pressure Actual" },
-      "sekundarluftklappe_soll": { "name": "Secondary Air Flap Target" },
-      "kessel_rucklaufmischer": { "name": "Boiler Return Mixer %" },
-      "abgasleitwert_ist": { "name": "Flue Gas Conductance Actual" },
-      "kessel_restsauerstoff_korr": { "name": "Boiler Residual Oxygen Corr. %" },
-      "abgasleitwert_soll": { "name": "Flue Gas Conductance Target" },
-      "kessel_o2_sollwert": { "name": "Boiler O2 Target Value" },
-      "kessel_nachlegemenge": { "name": "Boiler Refill Quantity %" },
-      "kessel_nachlegebedarf": { "name": "Boiler Refill Demand %" },
-      "stillstandszeit_soll": { "name": "Target Idle Time" },
-      "kessel_stillstandszeit": { "name": "Boiler Idle Time" },
-      "angeforderte_temperatur_abnehmer": { "name": "Requested Temperature Consumers" },
-      "puffer_temperatur_oben": { "name": "Buffer Temperature Top" },
-      "puffer_temperatur_mitte": { "name": "Buffer Temperature Middle" },
-      "puffer_temperatur_unten": { "name": "Buffer Temperature Bottom" },
-      "puffer_ladezustand": { "name": "Buffer Charge State" },
-      "hk1_vorlauftemperatur_ist": { "name": "HC1 Flow Temperature Actual" },
-      "hk1_vorlauftemperatur_soll": { "name": "HC1 Flow Temperature Target" },
+      "primarluftklappe_soll": {
+        "name": "Primary Air Flap Target"
+      },
+      "kessel_externe_anforderung": {
+        "name": "Boiler External Demand %"
+      },
+      "kesselvorlauf_solltemperatur": {
+        "name": "Boiler Flow Target Temperature"
+      },
+      "kesselrucklauf_solltemperatur": {
+        "name": "Boiler Return Target Temperature"
+      },
+      "kesselleistung_ist": {
+        "name": "Boiler Output Actual"
+      },
+      "kessel_saugzuggeblase_ist": {
+        "name": "Boiler Flue Gas Fan Actual"
+      },
+      "kessel_unterdruck_ist": {
+        "name": "Boiler Negative Pressure Actual"
+      },
+      "sekundarluftklappe_soll": {
+        "name": "Secondary Air Flap Target"
+      },
+      "kessel_rucklaufmischer": {
+        "name": "Boiler Return Mixer %"
+      },
+      "abgasleitwert_ist": {
+        "name": "Flue Gas Conductance Actual"
+      },
+      "kessel_restsauerstoff_korr": {
+        "name": "Boiler Residual Oxygen Corr. %"
+      },
+      "abgasleitwert_soll": {
+        "name": "Flue Gas Conductance Target"
+      },
+      "kessel_o2_sollwert": {
+        "name": "Boiler O2 Target Value"
+      },
+      "kessel_nachlegemenge": {
+        "name": "Boiler Refill Quantity %"
+      },
+      "kessel_nachlegebedarf": {
+        "name": "Boiler Refill Demand %"
+      },
+      "stillstandszeit_soll": {
+        "name": "Target Idle Time"
+      },
+      "kessel_stillstandszeit": {
+        "name": "Boiler Idle Time"
+      },
+      "angeforderte_temperatur_abnehmer": {
+        "name": "Requested Temperature Consumers"
+      },
+      "puffer_temperatur_oben": {
+        "name": "Buffer Temperature Top"
+      },
+      "puffer_temperatur_mitte": {
+        "name": "Buffer Temperature Middle"
+      },
+      "puffer_temperatur_unten": {
+        "name": "Buffer Temperature Bottom"
+      },
+      "puffer_ladezustand": {
+        "name": "Buffer Charge State"
+      },
+      "hk1_vorlauftemperatur_ist": {
+        "name": "HC1 Flow Temperature Actual"
+      },
+      "hk1_vorlauftemperatur_soll": {
+        "name": "HC1 Flow Temperature Target"
+      },
       "kessel_haupt_betriebsart": {
         "name": "Boiler Main Operating Mode",
         "state": {
-          "ABSCHALTVORGANG": "Power down",
-          "AKTOREN ANLAGE": "Actuator system",
-          "AKTOREN ZUFÜHRUNG": "Actuator feed",
-          "AUSGESCHALTET": "Turned off",
-          "AUTOBINDING": "Autobinding",
-          "EINGESCHALTET": "Turned on",
-          "FESTWERT": "Fixed value",
-          "SCHORNSTEINFEGER": "Chimney sweep",
-          "UNBEKANNT": "Unknown"
+          "abschaltvorgang": "Power down",
+          "aktoren_anlage": "Actuator system",
+          "aktoren_zufuehrung": "Actuator feed",
+          "ausgeschaltet": "Turned off",
+          "autobinding": "Autobinding",
+          "eingeschaltet": "Turned on",
+          "festwert": "Fixed value",
+          "schornsteinfeger": "Chimney sweep",
+          "unbekannt": "Unknown"
         }
       },
       "kessel_betriebsphase_text": {
         "name": "Boiler Operating Phase",
         "state": {
-          "AUSBRAND": "Burn-out",
-          "BRENNER AUS": "Burner off",
-          "BRENNER GESPERRT": "Burner disabled",
-          "FLAMMENSTABILISIERUNG": "Flame stabilisation",
-          "MODULATION ENTASCHUNG": "De-ashing modulation",
-          "MODULATION FIXLEISTUNG": "Fix output modulation",
-          "MODULATIONSBETRIEB": "Modulation phase",
-          "SELBSTTEST": "Self test",
-          "STANDBY": "Standby",
-          "STÖRABSCHALTUNG": "Fault shutdown",
-          "VORSPÜLEN": "Flushing",
-          "WE AUSSCHALTEN": "Turn off WE",
-          "WE EINSCHALTEN": "Turn on WE",
-          "ZÜNDPHASE": "Ignition phase"
+          "ausbrand": "Burn-out",
+          "brenner_aus": "Burner off",
+          "brenner_gesperrt": "Burner disabled",
+          "flammenstabilisierung": "Flame stabilisation",
+          "modulation_entaschung": "De-ashing modulation",
+          "modulation_fixleistung": "Fix output modulation",
+          "modulationsbetrieb": "Modulation phase",
+          "selbsttest": "Self test",
+          "standby": "Standby",
+          "stoerabschaltung": "Fault shutdown",
+          "vorspuelen": "Flushing",
+          "we_ausschalten": "Turn off WE",
+          "we_einschalten": "Turn on WE",
+          "zuendphase": "Ignition phase"
         }
       },
       "kessel_ausbrandgrund": {
         "name": "Boiler Burn-out Reason",
         "state": {
           "": "",
-          "ABSCHALTUNG": "Switch-off",
-          "KEINE ANFORDERUNG": "No demand",
-          "ROSTKIPPUNG": "Tip grate"
+          "abschaltung": "Switch-off",
+          "keine_anforderung": "No demand",
+          "rostkippung": "Tip grate"
         }
       },
-      "puffer_status": { "name": "Buffer Status" },
-      "hk1_mischer_status_text": { "name": "HC1 Mixer Status" },
-      "hk1_pumpe_status_text": { "name": "HC1 Pump Status" },
+      "puffer_status": {
+        "name": "Buffer Status"
+      },
+      "hk1_mischer_status_text": {
+        "name": "HC1 Mixer Status"
+      },
+      "hk1_pumpe_status_text": {
+        "name": "HC1 Pump Status"
+      },
       "hk1_aktuelle_betriebsart": {
         "name": "HC1 Current Operating Mode",
         "state": {
-          "ABGESENKT": "Reduced",
-          "AUS": "Off",
-          "NACHT": "Night mode",
-          "PARTY": "Party mode",
-          "SOMMER": "Summer mode",
-          "STANDARD": "Standard",
-          "TAG": "Day mode",
-          "URLAUB": "Holiday mode"
+          "abgesenkt": "Reduced",
+          "aus": "Off",
+          "nacht": "Night mode",
+          "party": "Party mode",
+          "sommer": "Summer mode",
+          "standard": "Standard",
+          "tag": "Day mode",
+          "urlaub": "Holiday mode"
         }
       },
       "sprache": {
         "name": "Language",
         "state": {
-          "DANSK": "Dansk",
-          "DEUTSCH": "Deutsch",
-          "ENGLISH": "English",
-          "ESPAGNOL": "Espagnol",
-          "FRANÇAIS": "Français",
-          "ITALIANO": "Italiano",
-          "JĘZYK POLSKI": "Jezyk polski",
-          "NEDERLANDS": "Nederlands",
-          "NORSK": "Norsk",
-          "SLOVENŠCINA": "Slovenšcina",
-          "SVENSKA": "Svenska"
+          "dansk": "Dansk",
+          "deutsch": "Deutsch",
+          "english": "English",
+          "espagnol": "Espagnol",
+          "fran_ais": "Français",
+          "italiano": "Italiano",
+          "j_zyk_polski": "Jezyk polski",
+          "nederlands": "Nederlands",
+          "norsk": "Norsk",
+          "sloven_cina": "Slovenšcina",
+          "svenska": "Svenska"
         }
       },
       "bauart": {
         "name": "System Type",
         "state": {
-          "HSF": "HSF",
-          "PHA": "PHA",
-          "SAL": "SAL",
-          "SHK": "SHK"
+          "hsf": "HSF",
+          "pha": "PHA",
+          "sal": "SAL",
+          "shk": "SHK"
         }
       },
       "kesseltyp_kennung": {
         "name": "Boiler Type ID",
         "state": {
-          "TYP_SAL_SLAVE": "Slave",
-          "TYP_SAL_MASTER": "Master",
-          "TYP_HSF_COMPACT_25": "Compact 25",
-          "TYP_HSF_COMPACT_35": "Compact 35",
-          "TYP_HSF_COMPACT_50": "Compact 50",
-          "TYP_HSF_COMPACT_65": "Compact 65",
-          "TYP_HSF_COMPACT_80": "Compact 80",
-          "TYP_PHA_K10": "K10",
-          "TYP_PHA_K15": "K15",
-          "TYP_PHA_K21": "K21",
-          "TYP_PHA_K26": "K26",
-          "TYP_PHA_K35": "K35",
-          "TYP_PHA_K45": "K45",
-          "TYP_PHA_K60": "K60",
-          "TYP_SHK_F20": "F20",
-          "TYP_SHK_F25": "F25",
-          "TYP_SHK_F30": "F30",
-          "TYP_SHK_F40": "F40",
-          "TYP_SHK_F50": "F50",
-          "TYP_SHK_EURO_30": "Euro 30",
-          "TYP_SHK_EURO_40": "Euro 40",
-          "TYP_SHK_EURO_50": "Euro 50",
-          "TYP_SHK_H20": "H20",
-          "TYP_SHK_H25": "H25",
-          "TYP_SHK_H30": "H30",
-          "TYP_SHK_HYBRID_20_15": "FK Hybrid 20/15",
-          "TYP_SHK_HYBRID_30_15": "FK Hybrid 30/15",
-          "TYP_SHK_HYBRID_30_26": "FK Hybrid 30/26",
-          "TYP_SHK_HYBRID_40_26": "FK Hybrid 40/26",
-          "TYP_SHK_HYBRID_50_26": "FK Hybrid 50/26",
-          "TYP_PHA_K33": "K33",
-          "TYP_HSF_COMPACT_40": "Compact 40",
-          "TYP_HSF_COMPACT_95": "Compact 95",
-          "TYP_HSF_COMPACT_30": "Compact 30",
-          "TYP_PHA_K38_V2": "K38",
-          "TYP_PHA_K45_V2": "K45 (2)",
-          "TYP_PHA_K50_V2": "K50",
-          "TYP_PHA_K63_V2": "K63",
-          "Euro 50": "Euro 50"
+          "typ_sal_slave": "Slave",
+          "typ_sal_master": "Master",
+          "typ_hsf_compact_25": "Compact 25",
+          "typ_hsf_compact_35": "Compact 35",
+          "typ_hsf_compact_50": "Compact 50",
+          "typ_hsf_compact_65": "Compact 65",
+          "typ_hsf_compact_80": "Compact 80",
+          "typ_pha_k10": "K10",
+          "typ_pha_k15": "K15",
+          "typ_pha_k21": "K21",
+          "typ_pha_k26": "K26",
+          "typ_pha_k35": "K35",
+          "typ_pha_k45": "K45",
+          "typ_pha_k60": "K60",
+          "typ_shk_f20": "F20",
+          "typ_shk_f25": "F25",
+          "typ_shk_f30": "F30",
+          "typ_shk_f40": "F40",
+          "typ_shk_f50": "F50",
+          "typ_shk_euro_30": "Euro 30",
+          "typ_shk_euro_40": "Euro 40",
+          "typ_shk_euro_50": "Euro 50",
+          "typ_shk_h20": "H20",
+          "typ_shk_h25": "H25",
+          "typ_shk_h30": "H30",
+          "typ_shk_hybrid_20_15": "FK Hybrid 20/15",
+          "typ_shk_hybrid_30_15": "FK Hybrid 30/15",
+          "typ_shk_hybrid_30_26": "FK Hybrid 30/26",
+          "typ_shk_hybrid_40_26": "FK Hybrid 40/26",
+          "typ_shk_hybrid_50_26": "FK Hybrid 50/26",
+          "typ_pha_k33": "K33",
+          "typ_hsf_compact_40": "Compact 40",
+          "typ_hsf_compact_95": "Compact 95",
+          "typ_hsf_compact_30": "Compact 30",
+          "typ_pha_k38_v2": "K38",
+          "typ_pha_k45_v2": "K45 (2)",
+          "typ_pha_k50_v2": "K50",
+          "typ_pha_k63_v2": "K63",
+          "euro_50": "Euro 50"
         }
       },
       "stromnetz": {
         "name": "Mains Electricity",
         "state": {
-          "1X230V": "1x230V",
-          "3X230V": "3x230V",
-          "3X400V": "3x400V"
+          "1x230v": "1x230V",
+          "3x230v": "3x230V",
+          "3x400v": "3x400V"
         }
       },
       "brennstoff": {
         "name": "Fuel Type",
         "state": {
-          "MATERIAL 1": "Fuel 1",
-          "MATERIAL 2": "Fuel 2",
-          "MATERIAL 3": "Fuel 3",
-          "MATERIAL 4": "Fuel 4"
+          "material_1": "Fuel 1",
+          "material_2": "Fuel 2",
+          "material_3": "Fuel 3",
+          "material_4": "Fuel 4"
         }
       },
       "automatische_zeitumstellung": {
         "name": "Automatic Time Adjustment",
         "state": {
-          "EIN": "On",
-          "AUS": "Off"
+          "ein": "On",
+          "aus": "Off"
         }
       },
       "einstiegsbild": {
         "name": "Initial Screen",
         "state": {
-          "HEIZKESSEL": "Boiler",
-          "PUFFER 1": "Accumulator 1"
+          "heizkessel": "Boiler",
+          "puffer_1": "Accumulator 1"
         }
       },
       "holzart": {
         "name": "Wood Type",
         "state": {
-          "HARTHOLZ": "Hardwood",
-          "HOLZBRIKETTS": "Wood briquettes",
-          "MISCHHOLZ": "Mixed wood",
-          "SÄGERESTE": "Sawing waste",
-          "WEICHHOLZ": "Softwood"
+          "hartholz": "Hardwood",
+          "holzbriketts": "Wood briquettes",
+          "mischholz": "Mixed wood",
+          "saegereste": "Sawing waste",
+          "weichholz": "Softwood"
         }
       },
       "holzfeuchte": {
         "name": "Wood Moisture",
         "state": {
-          "FEUCHTE QUALITÄT": "wet quality",
-          "MITTLERE QUALITÄT": "medium quality",
-          "TROCKENE QUALITÄT": "dry quality"
+          "feuchte_qualitaet": "wet quality",
+          "mittlere_qualitaet": "medium quality",
+          "trockene_qualitaet": "dry quality"
         }
       },
       "automatische_zundung_aktivieren": {
         "name": "Activate Automatic Ignition",
         "state": {
-          "JA": "Yes",
-          "NEIN": "No",
-          "EIN": "On"
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
         }
       },
       "auto_zundung_webcontrol_erlauben": {
         "name": "Allow Auto Ignition via WebControl",
         "state": {
-          "JA": "Yes",
-          "NEIN": "No",
-          "EIN": "On"
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
         }
       },
-      "objektwarmebedarf": { "name": "Object Heating Demand" },
-      "minimale_nachlegemenge": { "name": "Minimum Refill Quantity" },
-      "nachlegeschritt_text": { "name": "Refill Step (Text)" },
+      "objektwarmebedarf": {
+        "name": "Object Heating Demand"
+      },
+      "minimale_nachlegemenge": {
+        "name": "Minimum Refill Quantity"
+      },
+      "nachlegeschritt_text": {
+        "name": "Refill Step (Text)"
+      },
       "nachlegeschritt": {
         "name": "Refill Step",
         "state": {
-          "1%-SCHRITTE": "1%-steps",
-          "5%-SCHRITTE": "5%-steps",
-          "5.0": "5%-steps"
+          "1prozent_schritte": "1%-steps",
+          "5prozent_schritte": "5%-steps",
+          "5_0": "5%-steps"
         }
       },
       "nachlege_benachrichtigung": {
         "name": "Refill Notification",
         "state": {
-          "NIEMALS": "Never",
-          "BEI ÄNDERUNG UM 1 H": "if changed by 1 h",
-          "BEI ÄNDERUNG UM 30 MIN": "if changed by 30 min",
-          "BEI ÄNDERUNG UM > 2 H": "if changed by > 2 h"
+          "niemals": "Never",
+          "bei_aenderung_um_1_h": "if changed by 1 h",
+          "bei_aenderung_um_30_min": "if changed by 30 min",
+          "bei_aenderung_um_groesser_2_h": "if changed by > 2 h"
         }
       },
-      "offset_aussenfuhler": { "name": "Outside Sensor Offset" },
-      "kesseltemperatur_sollwert_param": { "name": "Boiler Target Temperature (Param)" },
+      "offset_aussenfuhler": {
+        "name": "Outside Sensor Offset"
+      },
+      "kesseltemperatur_sollwert_param": {
+        "name": "Boiler Target Temperature (Param)"
+      },
       "frostschutzprogramm_aktivieren": {
         "name": "Activate Frost Protection Program",
         "state": {
-          "JA": "Yes",
-          "NEIN": "No",
-          "EIN": "On"
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
         }
       },
-      "frostschutz_zirkulation_at_kleiner": { "name": "Frost Protection Circulation OT lower" },
-      "frostschutz_rlt_kleiner": { "name": "Frost Protection Return Temp lower" },
-      "frostschutz_rlt_groesser": { "name": "Frost Protection Return Temp greater" },
-      "offset_kesseltemperatur_soll_maximum": { "name": "Offset Boiler Target Temp Max" },
-      "anzunden_zeitdauer": { "name": "Ignition Duration" },
-      "anzunden_primarluft": { "name": "Ignition Primary Air" },
-      "anzunden_sekundarluft": { "name": "Ignition Secondary Air" },
-      "anheizen_zeitdauer": { "name": "Heating Up Duration" },
-      "auto_zundung_einschaltverzogerung": { "name": "Auto Ignition Switch-on Delay" },
-      "ausbrennen_primarluft": { "name": "Burn Out Primary Air" },
-      "ausbrennen_sekundarluft": { "name": "Burn Out Secondary Air" },
+      "frostschutz_zirkulation_at_kleiner": {
+        "name": "Frost Protection Circulation OT lower"
+      },
+      "frostschutz_rlt_kleiner": {
+        "name": "Frost Protection Return Temp lower"
+      },
+      "frostschutz_rlt_groesser": {
+        "name": "Frost Protection Return Temp greater"
+      },
+      "offset_kesseltemperatur_soll_maximum": {
+        "name": "Offset Boiler Target Temp Max"
+      },
+      "anzunden_zeitdauer": {
+        "name": "Ignition Duration"
+      },
+      "anzunden_primarluft": {
+        "name": "Ignition Primary Air"
+      },
+      "anzunden_sekundarluft": {
+        "name": "Ignition Secondary Air"
+      },
+      "anheizen_zeitdauer": {
+        "name": "Heating Up Duration"
+      },
+      "auto_zundung_einschaltverzogerung": {
+        "name": "Auto Ignition Switch-on Delay"
+      },
+      "ausbrennen_primarluft": {
+        "name": "Burn Out Primary Air"
+      },
+      "ausbrennen_sekundarluft": {
+        "name": "Burn Out Secondary Air"
+      },
       "ausbrennen_bezugsgrosse": {
         "name": "Burn Out Reference Point",
         "state": {
-          "O2": "O2",
-          "RGT": "RGT"
+          "o2": "O2",
+          "rgt": "RGT"
         }
       },
-      "festwertvorgabe_primarluft": { "name": "Fixed Value Primary Air" },
-      "festwertvorgabe_sekundarluft": { "name": "Fixed Value Secondary Air" },
-      "pid3_o2_sekundarluft_minimum": { "name": "PID3 O2 Secondary Air Minimum" },
-      "pid3_o2_sekundarluft_maximum": { "name": "PID3 O2 Secondary Air Maximum" },
-      "rucklaufmischer_laufzeit_gesamt": { "name": "Mixer Total Runtime" },
+      "festwertvorgabe_primarluft": {
+        "name": "Fixed Value Primary Air"
+      },
+      "festwertvorgabe_sekundarluft": {
+        "name": "Fixed Value Secondary Air"
+      },
+      "pid3_o2_sekundarluft_minimum": {
+        "name": "PID3 O2 Secondary Air Minimum"
+      },
+      "pid3_o2_sekundarluft_maximum": {
+        "name": "PID3 O2 Secondary Air Maximum"
+      },
+      "rucklaufmischer_laufzeit_gesamt": {
+        "name": "Mixer Total Runtime"
+      },
       "pid_sollwert_rucklauf_spreizung_minimum": {
         "name": "PID Target Return Temp. Diff. Min"
       },
       "restwarmenutzung_puffer_bezug": {
         "name": "Residual Heat Buffer Reference",
         "state": {
-          "PUFFER MITTE": "Accumulator middle",
-          "PUFFER MITTE-OBEN": "Accumulator middle upper",
-          "PUFFER MITTE-UNTEN": "Accumulator middle lower",
-          "PUFFER OBEN": "Accumulator top",
-          "PUFFER UNTEN": "Accumulator bottom"
+          "puffer_mitte": "Accumulator middle",
+          "puffer_mitte_oben": "Accumulator middle upper",
+          "puffer_mitte_unten": "Accumulator middle lower",
+          "puffer_oben": "Accumulator top",
+          "puffer_unten": "Accumulator bottom"
         }
       },
-      "freigabe_kesseltemperatur": { "name": "Enable Boiler Temperature" },
-      "freigabe_abgastemperatur": { "name": "Enable Flue Gas Temperature" },
-      "puffer_1_bezeichnung": { "name": "Buffer 1 Label" },
-      "puffer_1_ladung_abbruch_temperatur_oben": { "name": "Buffer 1 Charge Stop Temp Top" },
+      "freigabe_kesseltemperatur": {
+        "name": "Enable Boiler Temperature"
+      },
+      "freigabe_abgastemperatur": {
+        "name": "Enable Flue Gas Temperature"
+      },
+      "puffer_1_bezeichnung": {
+        "name": "Buffer 1 Label"
+      },
+      "puffer_1_ladung_abbruch_temperatur_oben": {
+        "name": "Buffer 1 Charge Stop Temp Top"
+      },
       "puffer_1_fuhler_quelle": {
         "name": "Buffer 1 Sensor Source",
         "state": {
-          "PUFFER MITTE": "Accumulator middle",
-          "PUFFER MITTE-OBEN": "Accumulator middle upper",
-          "PUFFER MITTE-UNTEN": "Accumulator middle lower",
-          "PUFFER OBEN": "Accumulator top",
-          "PUFFER UNTEN": "Accumulator bottom"
+          "puffer_mitte": "Accumulator middle",
+          "puffer_mitte_oben": "Accumulator middle upper",
+          "puffer_mitte_unten": "Accumulator middle lower",
+          "puffer_oben": "Accumulator top",
+          "puffer_unten": "Accumulator bottom"
         }
       },
       "puffer_1_energieberechnung_aktivieren": {
         "name": "Buffer 1 Activate Energy Calc.",
         "state": {
-          "JA": "Yes",
-          "NEIN": "No",
-          "EIN": "On"
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
         }
       },
-      "puffer_1_temperatur_kalt": { "name": "Buffer 1 Temperature Cold" },
-      "puffer_1_temperatur_warm": { "name": "Buffer 1 Temperature Warm" },
+      "puffer_1_temperatur_kalt": {
+        "name": "Buffer 1 Temperature Cold"
+      },
+      "puffer_1_temperatur_warm": {
+        "name": "Buffer 1 Temperature Warm"
+      },
       "puffer_1_nachlegemenge_optimieren": {
         "name": "Buffer 1 Optimize Refill Quantity",
         "state": {
-          "JA": "Yes",
-          "NEIN": "No",
-          "EIN": "On"
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
         }
       },
-      "puffer_1_grosse": { "name": "Buffer 1 Size" },
+      "puffer_1_grosse": {
+        "name": "Buffer 1 Size"
+      },
       "puffer_1_umladesystem_aktivieren": {
         "name": "Buffer 1 Activate Reloading System",
         "state": {
-          "JA": "Yes",
-          "NEIN": "No",
-          "EIN": "On"
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
         }
       },
       "puffer_1_beladeventil_aktivieren": {
         "name": "Buffer 1 Activate Load Valve",
         "state": {
-          "JA": "Yes",
-          "NEIN": "No",
-          "EIN": "On"
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
         }
       },
       "puffer_1_zonenventil_aktivieren": {
         "name": "Buffer 1 Activate Zone Valve",
         "state": {
-          "JA": "Yes",
-          "NEIN": "No",
-          "EIN": "On"
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
         }
       },
       "puffer_1_y2_ventil_aktivieren": {
         "name": "Buffer 1 Activate Y2 Valve",
         "state": {
-          "EIN": "On",
-          "AUS": "Off"
+          "ein": "On",
+          "aus": "Off"
         }
       },
       "puffer_art": {
         "name": "Buffer Type",
         "state": {
-          "KEIN": "None",
-          "KOMBI": "Combi",
-          "NORMAL": "Normal"
+          "kein": "None",
+          "kombi": "Combi",
+          "normal": "Normal"
         }
       },
       "heizkreis_1_system": {
         "name": "Heating Circuit 1 System",
         "state": {
-          "FUSSBODEN": "Underfloor heat",
-          "HEIZKÖRPER": "Radiators",
-          "KEINES": "None",
-          "KONSTANT": "Constant",
-          "UNGEREGELT": "Uncontrolled"
+          "fussboden": "Underfloor heat",
+          "heizkoerper": "Radiators",
+          "keines": "None",
+          "konstant": "Constant",
+          "ungeregelt": "Uncontrolled"
         }
       },
-      "hk1_bezeichnung": { "name": "HC1 Label" },
-      "hk1_soll_normal": { "name": "HC1 Target Normal" },
-      "hk1_parallelverschiebung": { "name": "HC1 Parallel Shift" },
-      "hk1_raumeinflussfaktor": { "name": "HC1 Room Influence Factor" },
-      "hk1_vorlauftemperatur_minimum": { "name": "HC1 Flow Temperature Minimum" },
-      "hk1_vorlauftemperatur_maximum": { "name": "HC1 Flow Temperature Maximum" },
+      "hk1_bezeichnung": {
+        "name": "HC1 Label"
+      },
+      "hk1_soll_normal": {
+        "name": "HC1 Target Normal"
+      },
+      "hk1_parallelverschiebung": {
+        "name": "HC1 Parallel Shift"
+      },
+      "hk1_raumeinflussfaktor": {
+        "name": "HC1 Room Influence Factor"
+      },
+      "hk1_vorlauftemperatur_minimum": {
+        "name": "HC1 Flow Temperature Minimum"
+      },
+      "hk1_vorlauftemperatur_maximum": {
+        "name": "HC1 Flow Temperature Maximum"
+      },
       "hk1_raumeinheit_status": {
         "name": "HC1 Room Unit Status",
         "state": {
-          "KEINE": "None",
-          "RAUMBEDIEN- GERÄT BUS": "Room control unit BUS",
-          "RAUMBEDIEN- GERÄT BUS NLM": "Raumbedien- gerät BUS NLM",
-          "RAUMBEDIEN- GERÄT LIGHT": "Room control unit LIGHT",
-          "RAUMTEMPERA- TURFÜHLER": "Indoor thermostat unit"
+          "keine": "None",
+          "raumbedien_geraet_bus": "Room control unit BUS",
+          "raumbedien_geraet_bus_nlm": "Raumbedien- gerät BUS NLM",
+          "raumbedien_geraet_light": "Room control unit LIGHT",
+          "raumtempera_turfuehler": "Indoor thermostat unit"
         }
       },
-      "hk1_offset_raumfuhler": { "name": "HC1 Room Sensor Offset" },
+      "hk1_offset_raumfuhler": {
+        "name": "HC1 Room Sensor Offset"
+      },
       "hk1_warmequelle": {
         "name": "HC1 Heat Source",
         "state": {
-          "KEINE": "None",
-          "KESSEL": "Boiler",
-          "NETZPUMPE 1": "Network pump 1",
-          "NETZPUMPE 2": "Network pump 2",
-          "NETZPUMPE 3": "Network pump 3",
-          "PUFFER 1": "Accumulator 1",
-          "PUFFER 2": "Accumulator 2",
-          "VERBAND": "Master"
+          "keine": "None",
+          "kessel": "Boiler",
+          "netzpumpe_1": "Network pump 1",
+          "netzpumpe_2": "Network pump 2",
+          "netzpumpe_3": "Network pump 3",
+          "puffer_1": "Accumulator 1",
+          "puffer_2": "Accumulator 2",
+          "verband": "Master"
         }
       },
-      "hk1_mischerlaufzeit_maximum": { "name": "HC1 Mixer Max Runtime" },
-      "hk1_pumpe_ein_freigabetemperatur": { "name": "HC1 Pump On Enable Temperature" },
-      "hk1_frostschutz_temp": { "name": "HC1 Frost Protection Temp" },
-      "heizgrenze_sommer": { "name": "Heating Limit Summer" },
-      "heizgrenze_winter": { "name": "Heating Limit Winter" },
+      "hk1_mischerlaufzeit_maximum": {
+        "name": "HC1 Mixer Max Runtime"
+      },
+      "hk1_pumpe_ein_freigabetemperatur": {
+        "name": "HC1 Pump On Enable Temperature"
+      },
+      "hk1_frostschutz_temp": {
+        "name": "HC1 Frost Protection Temp"
+      },
+      "heizgrenze_sommer": {
+        "name": "Heating Limit Summer"
+      },
+      "heizgrenze_winter": {
+        "name": "Heating Limit Winter"
+      },
       "hk1_restwarme_aufnehmen": {
         "name": "HC1 Use Residual Heat",
         "state": {
-          "JA": "Yes",
-          "NEIN": "No",
-          "EIN": "On"
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
         }
       },
-      "software_version_touch": { "name": "Software Version (Touch)" },
-      "anlagenbezeichnung_sn": { "name": "System Label/SN" },
-      "mac_adresse": { "name": "MAC Address" },
+      "software_version_touch": {
+        "name": "Software Version (Touch)"
+      },
+      "anlagenbezeichnung_sn": {
+        "name": "System Label/SN"
+      },
+      "mac_adresse": {
+        "name": "MAC Address"
+      },
       "anlage_betriebsart": {
         "name": "System Operating Mode",
         "state": {
-          "Frostschutz": "Frost protection",
-          "Normal": "Normal",
-          "Sommerbetrieb": "Summer mode",
-          "Urlaubs- betrieb": "Holiday mode"
+          "frostschutz": "Frost protection",
+          "normal": "Normal",
+          "sommerbetrieb": "Summer mode",
+          "urlaubs_betrieb": "Holiday mode"
         }
       },
       "anlage_status_text": {
         "name": "System Status",
         "state": {
-          "Aus": "Off",
-          "Ein": "On",
-          "Frostschutz": "Frost protection",
-          "Sommerbetrieb": "Summer mode",
-          "Urlaubs- betrieb": "Holiday mode"
+          "aus": "Off",
+          "ein": "On",
+          "frostschutz": "Frost protection",
+          "sommerbetrieb": "Summer mode",
+          "urlaubs_betrieb": "Holiday mode"
         }
       },
-      "software_version_fa": { "name": "Software Version FA" },
-      "extra_version_info": { "name": "Extra Version Info" },
-      "hydraulikschema_nummer": { "name": "Hydraulic Diagram Number" },
-      "kessel_betriebsstunden": { "name": "Boiler Operating Hours" },
-      "laufzeit_wt_reinigung": { "name": "HE Cleaning Runtime" },
-      "laufzeit_entaschung": { "name": "De-ashing Runtime" },
-      "laufzeit_hauptgeblase": { "name": "Main Fan Runtime" },
-      "laufzeit_zundgeblase": { "name": "Ignition Fan Runtime" },
-      "anzahl_rostkippungen": { "name": "Number of Grate Tilts" },
-      "kessel_restlaufzeit_wartung": { "name": "Boiler Remaining Maintenance Time" },
-      "kessel_wirkungsgrad": { "name": "Boiler Efficiency" },
-      "betriebsstunden_rostmotor": { "name": "Grate Motor Operating Hours" },
-      "betriebsstunden_stokerschnecke": { "name": "Stoker Auger Operating Hours" },
-      "betriebsstunden_ascheschnecke": { "name": "Ash Auger Operating Hours" },
-      "restlaufzeit_schornsteinfeger": { "name": "Chimney Sweep Remaining Time" },
-      "kessel_typ_info_leer": { "name": "Boiler Type Info" },
+      "software_version_fa": {
+        "name": "Software Version FA"
+      },
+      "extra_version_info": {
+        "name": "Extra Version Info"
+      },
+      "hydraulikschema_nummer": {
+        "name": "Hydraulic Diagram Number"
+      },
+      "kessel_betriebsstunden": {
+        "name": "Boiler Operating Hours"
+      },
+      "laufzeit_wt_reinigung": {
+        "name": "HE Cleaning Runtime"
+      },
+      "laufzeit_entaschung": {
+        "name": "De-ashing Runtime"
+      },
+      "laufzeit_hauptgeblase": {
+        "name": "Main Fan Runtime"
+      },
+      "laufzeit_zundgeblase": {
+        "name": "Ignition Fan Runtime"
+      },
+      "anzahl_rostkippungen": {
+        "name": "Number of Grate Tilts"
+      },
+      "kessel_restlaufzeit_wartung": {
+        "name": "Boiler Remaining Maintenance Time"
+      },
+      "kessel_wirkungsgrad": {
+        "name": "Boiler Efficiency"
+      },
+      "betriebsstunden_rostmotor": {
+        "name": "Grate Motor Operating Hours"
+      },
+      "betriebsstunden_stokerschnecke": {
+        "name": "Stoker Auger Operating Hours"
+      },
+      "betriebsstunden_ascheschnecke": {
+        "name": "Ash Auger Operating Hours"
+      },
+      "restlaufzeit_schornsteinfeger": {
+        "name": "Chimney Sweep Remaining Time"
+      },
+      "kessel_typ_info_leer": {
+        "name": "Boiler Type Info"
+      },
       "primarluft_korrektur_o2": {
         "name": "Primary Air Correction O2",
         "state": {
-          "JA": "Yes",
-          "NEIN": "No",
-          "EIN": "On"
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
         }
       },
-      "kessel_nachlegezeitpunkt_2": { "name": "Boiler Refill Timepoint" },
-      "kessel_energieverbrauch_tag_gesamt": { "name": "Boiler Energy Consumption Day/Total" },
+      "kessel_nachlegezeitpunkt_2": {
+        "name": "Boiler Refill Timepoint"
+      },
+      "kessel_energieverbrauch_tag_gesamt": {
+        "name": "Boiler Energy Consumption Day/Total"
+      },
       "kessel_nachlegen_anzeige_text": {
         "name": "Boiler Refill Indication",
         "state": {
-          "ERLAUBT, ABER STILLSTANDSZEIT": "allowed, but idle time",
-          "MÖGLICH UND SINNVOLL": "possible and useful",
-          "NICHT MÖGLICH": "not possible",
-          "NOTWENDIG, ODER ES WIRD KALT": "necessary, or it gets cold"
+          "erlaubt_aber_stillstandszeit": "allowed, but idle time",
+          "moeglich_und_sinnvoll": "possible and useful",
+          "nicht_moeglich": "not possible",
+          "notwendig_oder_es_wird_kalt": "necessary, or it gets cold"
         }
       },
       "zeit_kesseluberhitzung_10_abbrande_std": {
@@ -570,27 +764,65 @@
       "zeit_kesseluberhitzung_10_abbrande_prozent": {
         "name": "Boiler Overheating Time 10 Cycles (%)"
       },
-      "zeit_kesseluberhitzung_gesamt_std": { "name": "Boiler Overheating Time Total (Hrs)" },
-      "zeit_kesseluberhitzung_gesamt_prozent": { "name": "Boiler Overheating Time Total (%)" },
-      "kessel_warmemenge_gesamt": { "name": "Boiler Total Heat Output" },
-      "puffer_soll_oben": { "name": "Buffer Target Top" },
-      "puffer_rucklauf_soll": { "name": "Buffer Target Return" },
-      "puffer_energie_max": { "name": "Buffer Energy Max" },
-      "puffer_energie_aktuell": { "name": "Buffer Energy Current" },
-      "puffer_ladezustand_alt": { "name": "Buffer Charge State Alt." },
-      "puffer_energie_gesamt_zahler": { "name": "Buffer Energy Total (Counter)" },
-      "puffer_energie_ist": { "name": "Buffer Energy Actual" },
-      "puffer_energie_aufnehmbar": { "name": "Buffer Energy Receivable" },
-      "puffer_vorlauf_extern": { "name": "Buffer Flow External" },
-      "puffer_rucklauf_extern": { "name": "Buffer Return External" },
-      "hk1_temp_quelle_status_wert": { "name": "HC1 Temp Source Status Value" }
+      "zeit_kesseluberhitzung_gesamt_std": {
+        "name": "Boiler Overheating Time Total (Hrs)"
+      },
+      "zeit_kesseluberhitzung_gesamt_prozent": {
+        "name": "Boiler Overheating Time Total (%)"
+      },
+      "kessel_warmemenge_gesamt": {
+        "name": "Boiler Total Heat Output"
+      },
+      "puffer_soll_oben": {
+        "name": "Buffer Target Top"
+      },
+      "puffer_rucklauf_soll": {
+        "name": "Buffer Target Return"
+      },
+      "puffer_energie_max": {
+        "name": "Buffer Energy Max"
+      },
+      "puffer_energie_aktuell": {
+        "name": "Buffer Energy Current"
+      },
+      "puffer_ladezustand_alt": {
+        "name": "Buffer Charge State Alt."
+      },
+      "puffer_energie_gesamt_zahler": {
+        "name": "Buffer Energy Total (Counter)"
+      },
+      "puffer_energie_ist": {
+        "name": "Buffer Energy Actual"
+      },
+      "puffer_energie_aufnehmbar": {
+        "name": "Buffer Energy Receivable"
+      },
+      "puffer_vorlauf_extern": {
+        "name": "Buffer Flow External"
+      },
+      "puffer_rucklauf_extern": {
+        "name": "Buffer Return External"
+      },
+      "hk1_temp_quelle_status_wert": {
+        "name": "HC1 Temp Source Status Value"
+      }
     },
     "number": {
-      "hk1_soll_normal": { "name": "Daytime Room Temperature Target" },
-      "hk1_parallelverschiebung": { "name": "HC1 Parallel Shift" },
-      "hk1_steilheit": { "name": "HC1 Heating Curve Slope" },
-      "hk1_pumpe_aus_aussentemperatur": { "name": "HC1 Pump Off Outside Temperature" },
-      "hk1_soll_absenk": { "name": "HC1 Target Reduced" },
+      "hk1_soll_normal": {
+        "name": "Daytime Room Temperature Target"
+      },
+      "hk1_parallelverschiebung": {
+        "name": "HC1 Parallel Shift"
+      },
+      "hk1_steilheit": {
+        "name": "HC1 Heating Curve Slope"
+      },
+      "hk1_pumpe_aus_aussentemperatur": {
+        "name": "HC1 Pump Off Outside Temperature"
+      },
+      "hk1_soll_absenk": {
+        "name": "HC1 Target Reduced"
+      },
       "hk1_eco_absenken_aus_aussentemperatur": {
         "name": "HC1 Eco Reduced Off Outside Temp"
       }
