@@ -31,31 +31,35 @@
         "description": "Options for the HDG Boiler.",
         "data": {
           "device_alias": "Device Alias",
-          "scan_interval_group_1_realtime_core": "Scan Interval: Realtime Core Values (seconds)",
-          "scan_interval_group_2_status_general": "Scan Interval: General Status Values (seconds)",
-          "scan_interval_group_3_config_counters_1": "Scan Interval: Config/Counters Part 1 (seconds)",
-          "scan_interval_group_4_config_counters_2": "Scan Interval: Config/Counters Part 2 (seconds)",
-          "scan_interval_group_5_config_counters_3": "Scan Interval: Config/Counters Part 3 (seconds)",
+          "scan_interval_group_1": "Scan Interval: Real-time Core (seconds)",
+          "scan_interval_group_2": "Scan Interval: General Status (seconds)",
+          "scan_interval_group_3": "Scan Interval: Config/Counters 1 (seconds)",
+          "scan_interval_group_4": "Scan Interval: Config/Counters 2 (seconds)",
+          "scan_interval_group_5": "Scan Interval: Config/Counters 3 (seconds)",
           "log_level": "Logging Level",
           "advanced_logging": "Enable Advanced Logging",
           "source_timezone": "Source Timezone (IANA Format)",
           "api_timeout": "API Timeout (seconds)",
+          "connect_timeout": "Connection Timeout (seconds)",
           "polling_preemption_timeout": "Polling Preemption Timeout (seconds)",
+          "recently_set_poll_ignore_window_s": "Recently Set Ignore Window (seconds)",
           "log_level_threshold_for_connection_errors": "Connection Error Threshold"
         },
         "data_description": {
           "device_alias": "An optional, user-friendly name for this boiler in Home Assistant. If left empty, a default name will be used.",
+          "scan_interval_group_1": "Interval for polling the most important real-time data (e.g., temperatures, status). Default: {default_scan_interval_group_1}s.",
+          "scan_interval_group_2": "Interval for polling general status information. Default: {default_scan_interval_group_2}s.",
+          "scan_interval_group_3": "Interval for polling configuration and counter data (Part 1). Default: {default_scan_interval_group_3}s.",
+          "scan_interval_group_4": "Interval for polling configuration and counter data (Part 2). Default: {default_scan_interval_group_4}s.",
+          "scan_interval_group_5": "Interval for polling configuration and counter data (Part 3). Default: {default_scan_interval_group_5}s.",
           "log_level": "Sets the verbosity of logs for this integration. 'DEBUG' is very verbose and useful for troubleshooting. 'INFO' is the standard for normal operation.",
           "advanced_logging": "Enables additional INFO-level logs for important actions (e.g., setting values, API request/response summaries), even when the main integration log level is set to `INFO`. Useful for tracking key operations without enabling full `DEBUG` logging, which can be very verbose.",
           "source_timezone": "The timezone in which the boiler provides its time data (e.g., 'Europe/Berlin'). This is important for correct interpretation of date/time values from the boiler.",
           "api_timeout": "The maximum time (in seconds) to wait for a response from the boiler for any API request. A higher value can help with unstable networks but may lead to longer waits. Range: {min_api_timeout}-{max_api_timeout}s.",
-          "polling_preemption_timeout": "The maximum time (in seconds) a low-priority polling request is allowed to run if a higher-priority request (e.g., a setting change) is queued. A lower value ensures faster response to setting changes but may lead to more frequent interruptions with slow boiler responses. Range: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
-          "log_level_threshold_for_connection_errors": "The number of consecutive connection failures after which the logging level for connection errors escalates. For example, if set to 5, the first 4 connection errors will be logged as INFO, and the 5th and subsequent errors will be logged as ERROR. Non-connection API errors will be logged as WARNING after this threshold. Range: 1-60",
-          "scan_interval_group_1_realtime_core": "The interval (in seconds) for polling the most important real-time data from the boiler (e.g., temperatures, operating status). Default: {default_scan_interval_group_1_realtime_core}s.",
-          "scan_interval_group_2_status_general": "The interval (in seconds) for polling general status information from the boiler. Default: {default_scan_interval_group_2_status_general}s.",
-          "scan_interval_group_3_config_counters_1": "The interval (in seconds) for polling configuration and counter data from the boiler (Group 1). This data changes less frequently. Default: {default_scan_interval_group_3_config_counters_1}s.",
-          "scan_interval_group_4_config_counters_2": "The interval (in seconds) for polling configuration and counter data from the boiler (Group 2). Default: {default_scan_interval_group_4_config_counters_2}s.",
-          "scan_interval_group_5_config_counters_3": "The interval (in seconds) for polling configuration and counter data from the boiler (Group 3). Default: {default_scan_interval_group_5_config_counters_3}s."
+          "connect_timeout": "The maximum time (in seconds) to wait for a connection to be established with the boiler. Range: {min_connect_timeout}-{max_connect_timeout}s.",
+          "polling_preemption_timeout": "The maximum time (in seconds) a low-priority polling request is allowed to run if a higher-priority request (e.g., a setting change) is queued. A lower value ensures faster response to setting changes but may lead to more frequent interruptions with slow boiler responses. This value must be a whole number. Range: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
+          "recently_set_poll_ignore_window_s": "Time window (in seconds) to ignore updates for values that have been recently set via Home Assistant. This prevents the integration from immediately overwriting a user's change with an old value from the boiler. Default: {default_ignore_window}s, Range: {min_ignore_window}-{max_ignore_window}s.",
+          "log_level_threshold_for_connection_errors": "The number of consecutive connection failures after which the logging level for connection errors escalates. For example, if set to 5, the first 4 connection errors will be logged as INFO, and the 5th and subsequent errors will be logged as ERROR. Non-connection API errors will be logged as WARNING after this threshold. Range: 1-60"
         }
       }
     },
@@ -835,8 +839,7 @@
           "tag": "Day mode",
           "nacht": "Night mode",
           "party": "Party mode",
-          "sommer": "Summer mode",
-          "urlaub": "Holiday mode"
+          "sommer": "Summer mode"
         }
       }
     }

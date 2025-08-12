@@ -1612,7 +1612,6 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
             "nacht",
             "party",
             "sommer",
-            "urlaub",
         ],
         uppercase_value=True,
     ),

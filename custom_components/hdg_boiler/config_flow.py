@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.3.0"
+__version__ = "0.3.2"
 __all__ = ["HdgBoilerConfigFlow"]
 
 from typing import Any, TypedDict
@@ -30,6 +30,7 @@ from .const import (
     CONF_API_TIMEOUT,
     CONF_CONNECT_TIMEOUT,
     CONF_DEVICE_ALIAS,
+    CONF_ERROR_THRESHOLD,
     CONF_HOST_IP,
     CONF_LOG_LEVEL,
     CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
@@ -41,6 +42,7 @@ from .const import (
     DEFAULT_ADVANCED_LOGGING,
     DEFAULT_API_TIMEOUT,
     DEFAULT_CONNECT_TIMEOUT,
+    DEFAULT_ERROR_THRESHOLD,
     DEFAULT_LOG_LEVEL,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     DEFAULT_POLLING_PREEMPTION_TIMEOUT,
@@ -50,12 +52,14 @@ from .const import (
     LOG_LEVELS,
     MAX_API_TIMEOUT,
     MAX_CONNECT_TIMEOUT,
+    MAX_ERROR_THRESHOLD,
     MAX_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     MAX_POLLING_PREEMPTION_TIMEOUT,
     MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
     MAX_SCAN_INTERVAL,
     MIN_API_TIMEOUT,
     MIN_CONNECT_TIMEOUT,
+    MIN_ERROR_THRESHOLD,
     MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     MIN_POLLING_PREEMPTION_TIMEOUT,
     MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
@@ -165,7 +169,6 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -259,7 +262,7 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     "min": MIN_POLLING_PREEMPTION_TIMEOUT,
                     "max": MAX_POLLING_PREEMPTION_TIMEOUT,
-                    "step": 0.1,
+                    "step": 1,
                     "unit_of_measurement": "s",
                 },
             ),
@@ -273,12 +276,21 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
                 },
             ),
             (
+                CONF_ERROR_THRESHOLD,
+                DEFAULT_ERROR_THRESHOLD,
+                {
+                    "min": MIN_ERROR_THRESHOLD,
+                    "max": MAX_ERROR_THRESHOLD,
+                    "step": 1,
+                },
+            ),
+            (
                 CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
                 DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
                 {
                     "min": MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
                     "max": MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
-                    "step": 0.5,
+                    "step": 1,
                     "unit_of_measurement": "s",
                 },
             ),
@@ -299,10 +311,14 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
             "max_scan_interval": MAX_SCAN_INTERVAL,
             "min_api_timeout": MIN_API_TIMEOUT,
             "max_api_timeout": MAX_API_TIMEOUT,
+            "min_connect_timeout": MIN_CONNECT_TIMEOUT,
+            "max_connect_timeout": MAX_CONNECT_TIMEOUT,
             "min_polling_preemption_timeout": MIN_POLLING_PREEMPTION_TIMEOUT,
             "max_polling_preemption_timeout": MAX_POLLING_PREEMPTION_TIMEOUT,
             "min_log_level_threshold": MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
             "max_log_level_threshold": MAX_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+            "min_error_threshold": MIN_ERROR_THRESHOLD,
+            "max_error_threshold": MAX_ERROR_THRESHOLD,
             "min_ignore_window": MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
             "max_ignore_window": MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
             "default_ignore_window": DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,

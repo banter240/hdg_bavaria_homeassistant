@@ -17,10 +17,12 @@ from .api import HdgApiClient
 from .const import (
     CONF_API_TIMEOUT,
     CONF_CONNECT_TIMEOUT,
+    CONF_ERROR_THRESHOLD,
     CONF_HOST_IP,
     CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     DEFAULT_API_TIMEOUT,
     DEFAULT_CONNECT_TIMEOUT,
+    DEFAULT_ERROR_THRESHOLD,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     DOMAIN,
     LIFECYCLE_LOGGER_NAME,
@@ -74,6 +76,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
         DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     )
+    error_threshold = entry.options.get(
+        CONF_ERROR_THRESHOLD,
+        DEFAULT_ERROR_THRESHOLD,
+    )
 
     try:
         coordinator = await async_create_and_refresh_coordinator(
@@ -82,6 +88,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             api_access_manager,
             entry,
             log_level_threshold,
+            error_threshold,
             hdg_entity_registry,
         )
     except ConfigEntryNotReady:
