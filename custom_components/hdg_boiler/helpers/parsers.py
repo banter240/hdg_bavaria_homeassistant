@@ -1,22 +1,22 @@
-"""General parsing utility functions for the HDG Bavaria Boiler integration.
+"""Parsing utility functions for the HDG Bavaria Boiler integration.
 
-This module provides helper functions for parsing numeric values from strings,
-handling locale-specific number formats, and formatting values for API communication.
-It aims to robustly extract and convert data from potentially varied string inputs.
+This module provides robust helpers for parsing and converting raw string values
+from the HDG API into typed data for Home Assistant entities. It handles
+locale-specific number formats, unit stripping, and various data types.
 """
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.5.0"
 
+import html
 import logging
 import re
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Final, cast
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from typing import Any, Final
 
-from homeassistant.util import dt as dt_util
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from ..const import (
     DEFAULT_SOURCE_TIMEZONE,
@@ -24,391 +24,245 @@ from ..const import (
     HDG_DATETIME_SPECIAL_TEXT,
     HEURISTICS_LOGGER_NAME,
 )
+from .enum_mappings import HDG_ENUM_TEXT_TO_KEY_MAPPINGS
 from .logging_utils import make_log_prefix
 
 _LOGGER = logging.getLogger(DOMAIN)
 _HEURISTICS_LOGGER = logging.getLogger(HEURISTICS_LOGGER_NAME)
 
-NUMERIC_PART_REGEX: Final = re.compile(r"([-+]?\d*\.?\d+)")
-DEFAULT_PERCENT_REGEX_PATTERN: Final = r"(\d+)\s*%?[\s-]*Schritte"
+__all__ = ["parse_sensor_value", "format_value_for_api"]
 
-DEFAULT_PERCENT_REGEX: Final = re.compile(DEFAULT_PERCENT_REGEX_PATTERN, re.IGNORECASE)
+# Regex to find the first numeric part of a string.
+_NUMERIC_PART_REGEX: Final = re.compile(r"([-+]?\d*[.,]?\d+)")
 
-KNOWN_LOCALE_SEPARATORS: Final[dict[str, dict[str, str]]] = {
-    "en_US": {"decimal_point": ".", "thousands_sep": ","},
-    "de_DE": {"decimal_point": ",", "thousands_sep": "."},
-    "en_GB": {"decimal_point": ".", "thousands_sep": ","},
-    "fr_FR": {
-        "decimal_point": ",",
-        "thousands_sep": " ",
-    },
-    "it_IT": {"decimal_point": ",", "thousands_sep": "."},
-    "es_ES": {"decimal_point": ",", "thousands_sep": "."},
-}
+# Regex to strip common units from the end of a string.
+_COMMON_UNITS_REGEX: Final = re.compile(
+    r"\s*(°C|K|%|Std|min|s|pa|kw|kWh|MWh|l|l/h|m3/h|bar|rpm|A|V|Hz|ppm|pH|µS/cm|mS/cm|mg/l|g/l|kg/l|m3|m|mm|cm|km|g|kg|t|Wh|MWh|kJ|MJ|kcal|Mcal|l/min|m3/min|m/s|km/h|m/h|°F|psi|mbar|hPa|kPa|MPa|GW|MW|VA|kVA|MVA|VAR|kVAR|MVAR|PF|cosΦ|lux|lm|cd|lx|W/m2|J/m2|kWh/m2|ppm|ppb|mg/m3|g/m3|kg/m3|m3/m3|l/l|g/g|kg/kg|t/t|Wh/Wh|J/J|kcal/kcal|l/min/m2|m3/min/m2|m/s/m2|km/h/m2|m/h/m2|°F/min|psi/min|mbar/min|hPa/min|kPa/min|MPa/min|GW/min|MW/min|VA/min|kVA/min|MVA/min|VAR|kVAR|MVAR|PF/min|cosΦ/min|lux/min|lm/min|cd/min|lx/min|W/m2/min|J/m2/min|kWh/m2/min|ppm/min|ppb/min|mg/m3/min|g/m3/min|kg/m3/min|t/t/min|Wh/Wh/min|J/J/min|kcal/kcal/min|Schritte)$",
+    re.IGNORECASE,
+)
 
-
-def _get_locale_separators_from_known_list(
-    locale_str: str,
-) -> tuple[str, str] | None:
-    """Retrieve decimal and thousands separators for a given locale from a predefined list."""
-    if locale_str in KNOWN_LOCALE_SEPARATORS:
-        conv = KNOWN_LOCALE_SEPARATORS[locale_str]
-        return conv["decimal_point"], conv["thousands_sep"]
-    return None
+# Datetime formats to attempt parsing, in order of preference.
+_DATETIME_FORMATS: Final[list[str]] = [
+    "%d.%m.%Y %H:%M",  # Standard HDG format
+    "%Y-%m-%d %H:%M:%S%z",  # ISO-like format with timezone
+]
 
 
-def _normalize_string_by_locale(
-    value_str: str, locale_str: str, log_prefix: str, raw_cleaned_value_for_log: str
-) -> str | None:
-    """Normalize a string using locale-specific decimal and thousands separators."""
-    normalized_value = value_str
-    if separators := _get_locale_separators_from_known_list(locale_str):
-        decimal_sep, thousands_sep = separators
-        if thousands_sep:
-            normalized_value = normalized_value.replace(thousands_sep, "")
-        if decimal_sep and decimal_sep != ".":
-            normalized_value = normalized_value.replace(decimal_sep, ".")
+def _normalize_numeric_string(value_str: str) -> str:
+    """Normalize a string containing a number by standardizing separators."""
+    value_str = value_str.replace(" ", "").replace("\u00a0", "")
+    has_dot = "." in value_str
+    has_comma = "," in value_str
+
+    if has_dot and has_comma:
+        # If both are present, assume the last one is the decimal separator.
+        return (
+            value_str.replace(".", "").replace(",", ".")
+            if value_str.rfind(",") > value_str.rfind(".")
+            else value_str.replace(",", "")
+        )
+    return value_str.replace(",", ".") if has_comma else value_str
+
+
+def _extract_numeric_string(raw_value: str, log_prefix: str) -> str | None:
+    """Extract a normalized numeric string from a raw value."""
+    value_no_units = _COMMON_UNITS_REGEX.sub("", raw_value).strip()
+    if value_no_units != raw_value:
         _HEURISTICS_LOGGER.debug(
-            f"{log_prefix}Normalized '{raw_cleaned_value_for_log}' to '{normalized_value}' "
-            f"using pre-defined locale '{locale_str}' (dec: '{decimal_sep}', thou: '{thousands_sep}')"
-        )
-        return normalized_value
-    else:
-        _LOGGER.warning(
-            f"{log_prefix}Locale '{locale_str}' not in pre-defined list for numeric parsing. "
-            "Falling back to heuristic."
-        )
-        return None
-
-
-def _normalize_string_by_heuristic(
-    value_str: str, log_prefix: str, raw_cleaned_value_for_log: str
-) -> str | None:
-    """Normalize a string using a heuristic for mixed decimal/thousands separators."""
-    if " " in value_str or "\u00a0" in value_str:
-        original_for_space_log = value_str
-        value_str = value_str.replace(" ", "").replace("\u00a0", "")
-        _HEURISTICS_LOGGER.debug(
-            f"{log_prefix}Heuristic: removed spaces/NBSPs from '{original_for_space_log}', now '{value_str}'."
+            "%sStripped units from '%s' to '%s'.",
+            log_prefix,
+            raw_value,
+            value_no_units,
         )
 
-    if "." in value_str and "," in value_str:
-        last_dot_pos = value_str.rfind(".")
-        last_comma_pos = value_str.rfind(",")
-        if last_comma_pos > last_dot_pos:
-            normalized_str = value_str.replace(".", "").replace(",", ".")
-            _HEURISTICS_LOGGER.debug(
-                f"{log_prefix}Heuristic: mixed separators in '{value_str}', assuming European, normalized to '{normalized_str}'."
-            )
-            return normalized_str
-        elif last_dot_pos > last_comma_pos:
-            normalized_str = value_str.replace(",", "")
-            _HEURISTICS_LOGGER.debug(
-                f"{log_prefix}Heuristic: mixed separators in '{value_str}', assuming US, normalized to '{normalized_str}'."
-            )
-            return normalized_str
-        _LOGGER.warning(
-            f"{log_prefix}Heuristic: Ambiguous mixed separators in '{value_str}'. Unable to normalize reliably."
-        )
-        return None
-    elif "," in value_str:
-        normalized_str = value_str.replace(",", ".")
-        _HEURISTICS_LOGGER.debug(
-            f"{log_prefix}Heuristic: replaced comma with dot in '{raw_cleaned_value_for_log}', now '{normalized_str}'."
-        )
-        return normalized_str
-    return value_str
+    normalized_str = _normalize_numeric_string(value_no_units)
+    if match := _NUMERIC_PART_REGEX.search(normalized_str):
+        return match.group(1)
 
-
-def _normalize_value_string(
-    value_str: str,
-    locale_str: str | None,
-    log_prefix: str,
-    raw_cleaned_value_for_log: str,
-) -> str | None:
-    """Normalize a string using locale-specific rules or heuristics."""
-    normalized_value_str: str | None = None
-    if locale_str:
-        normalized_value_str = _normalize_string_by_locale(
-            value_str, locale_str, log_prefix, raw_cleaned_value_for_log
-        )
-        if normalized_value_str is None:
-            _HEURISTICS_LOGGER.debug(
-                f"{log_prefix}Locale normalization failed for '{raw_cleaned_value_for_log}', attempting heuristic."
-            )
-            normalized_value_str = _normalize_string_by_heuristic(
-                value_str, log_prefix, raw_cleaned_value_for_log
-            )
-    else:
-        normalized_value_str = _normalize_string_by_heuristic(
-            value_str, log_prefix, raw_cleaned_value_for_log
-        )
-    return normalized_value_str
-
-
-def extract_numeric_string(
-    raw_cleaned_value: str,
-    node_id_for_log: str | None = None,
-    entity_id_for_log: str | None = None,
-    locale: str | None = None,
-) -> str | None:
-    """Extract the numeric part of a string using regex after locale-aware normalization."""
-    log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
-    normalized_value_str = _normalize_value_string(
-        raw_cleaned_value, locale, log_prefix, raw_cleaned_value
-    )
-
-    if normalized_value_str is None:
-        return None
-
-    if match := NUMERIC_PART_REGEX.search(normalized_value_str):
-        return match.group(0)
     _LOGGER.debug(
-        f"{log_prefix}No numeric part found in '{normalized_value_str}' (original: '{raw_cleaned_value}') during numeric extraction."
+        "%sNo numeric part found in '%s' (original: '%s').",
+        log_prefix,
+        normalized_str,
+        raw_value,
     )
     return None
 
 
-def parse_percent_from_string(
-    cleaned_value: str,
-    regex_pattern: re.Pattern[str] = DEFAULT_PERCENT_REGEX,
-    node_id_for_log: str | None = None,
-    entity_id_for_log: str | None = None,
-) -> int | None:
-    """Parse percentage from a string using a regex pattern."""
-    log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
-    if match := re.search(regex_pattern, cleaned_value):
-        if match.lastindex is not None and match.lastindex >= 1:
-            try:
-                return int(match[1])
-            except ValueError:
-                _LOGGER.warning(
-                    f"{log_prefix}Could not parse numeric part from regex group 1 ('{match[1]}') in '{cleaned_value}' for percent regex."
-                )
-                return None
-            except IndexError:
-                _LOGGER.error(
-                    f"{log_prefix}Regex pattern '{regex_pattern}' did not capture group 1 as expected from '{cleaned_value}'."
-                )
-                return None
-        else:
-            _LOGGER.warning(
-                f"{log_prefix}Regex pattern '{regex_pattern}' did not find expected capturing group in '{cleaned_value}'."
-            )
-            return None
+def _parse_number(
+    raw_value: str, target_type: type[int] | type[float], log_prefix: str
+) -> int | float | None:
+    """Parse a number from a string into the specified type."""
+    numeric_str = _extract_numeric_string(raw_value, log_prefix)
+    if numeric_str is None:
+        return None
+    try:
+        return target_type(float(numeric_str))
+    except (ValueError, TypeError):
+        _LOGGER.warning(
+            "%sCould not parse %s from '%s' (original: '%s').",
+            log_prefix,
+            target_type.__name__,
+            numeric_str,
+            raw_value,
+        )
+        return None
+
+
+def _get_source_timezone(timezone_str: str, log_prefix: str) -> ZoneInfo | None:
+    """Get a ZoneInfo object from a string, with error logging."""
+    try:
+        return ZoneInfo(timezone_str)
+    except ZoneInfoNotFoundError:
+        _LOGGER.error(
+            "%sInvalid source timezone '%s'. Cannot parse datetime.",
+            log_prefix,
+            timezone_str,
+        )
+        return None
+
+
+def _parse_datetime(
+    value: str, timezone_str: str, log_prefix: str
+) -> datetime | str | None:
+    """Parse a datetime string into a timezone-aware datetime object."""
+    if HDG_DATETIME_SPECIAL_TEXT in value.lower():
+        return value
+
+    source_tz = _get_source_timezone(timezone_str, log_prefix)
+    if not source_tz:
+        return None
+
+    for fmt in _DATETIME_FORMATS:
+        try:
+            if "%z" in fmt:
+                # Handle timezone offsets with or without colon
+                val_for_fmt = value
+                if ":" in val_for_fmt[-6:]:
+                    val_for_fmt = val_for_fmt[:-3] + val_for_fmt[-2:]
+                dt_aware = datetime.strptime(val_for_fmt, fmt)
+                return dt_aware.astimezone(source_tz)
+
+            dt_naive = datetime.strptime(value, fmt)
+            return dt_naive.replace(tzinfo=source_tz)
+        except ValueError:
+            continue  # Try the next format
+
     _LOGGER.warning(
-        f"{log_prefix}Regex did not find percentage in '{cleaned_value}' for percent regex."
+        "%sCould not parse '%s' as datetime with known formats.", log_prefix, value
     )
     return None
+
+
+def _convert_enum_text_to_key(
+    value: str, entity_def: dict[str, Any], log_prefix: str
+) -> str:
+    """Convert a raw enum text value from the boiler to its canonical key."""
+    translation_key = entity_def.get("translation_key")
+    if not translation_key:
+        return value
+
+    enum_map = HDG_ENUM_TEXT_TO_KEY_MAPPINGS.get(translation_key)
+    if not enum_map:
+        return value
+
+    if key := next((k for text, k in enum_map.items() if text == value), None):
+        _LOGGER.debug("%sMapped enum '%s' to key '%s'.", log_prefix, value, key)
+        return key
+
+    _LOGGER.warning(
+        "%sEnum value '%s' not found in mapping for '%s'. Returning raw value.",
+        log_prefix,
+        value,
+        translation_key,
+    )
+    return value
 
 
 def format_value_for_api(numeric_value: int | float, setter_type: str) -> str:
     """Format a numeric value into the string representation expected by the HDG API."""
     if setter_type == "int":
         return str(int(round(numeric_value)))
-    elif setter_type == "float1":
+    if setter_type == "float1":
         return f"{numeric_value:.1f}"
-    elif setter_type == "float2":
+    if setter_type == "float2":
         return f"{numeric_value:.2f}"
-    else:
-        msg = f"Unknown 'setter_type' ('{setter_type}') for value '{numeric_value}'."
-        _LOGGER.error(msg)
-        raise ValueError(msg)
+
+    raise ValueError(f"Unknown 'setter_type' ('{setter_type}') for value.")
 
 
-def parse_int_from_string(
-    raw_value: str,
-    node_id_for_log: str | None = None,
-    entity_id_for_log: str | None = None,
-) -> int | None:
-    """Parse an integer from a string, robustly handling potential float representations."""
-    numeric_part_str = extract_numeric_string(
-        raw_value, node_id_for_log, entity_id_for_log
-    )
-    if numeric_part_str is None:
-        return None
-    try:
-        return int(float(numeric_part_str))  # type: ignore[arg-type]
-    except ValueError:
-        log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
+def _prepare_parser_and_value(
+    raw_value: str | None,
+    entity_definition: dict[str, Any],
+    log_prefix: str,
+) -> tuple[Callable[..., Any] | None, str | None]:
+    """Prepare the parser and cleaned value, returning None if parsing is not possible."""
+    if raw_value is None:
+        return None, None
+
+    cleaned_value = html.unescape(str(raw_value)).strip()
+    parse_as_type = entity_definition.get("parse_as_type")
+
+    if not parse_as_type or parse_as_type not in _PARSER_MAP:
         _LOGGER.warning(
-            f"{log_prefix}Could not parse int value from '{numeric_part_str}' (original: '{raw_value}')."
+            "%sUnknown or invalid parse_as_type '%s'. Returning raw value.",
+            log_prefix,
+            parse_as_type,
         )
-        return None
+        return None, cleaned_value
+
+    return _PARSER_MAP.get(parse_as_type), cleaned_value
 
 
-def parse_float_from_string(
-    raw_value: str,
-    node_id_for_log: str | None = None,
-    entity_id_for_log: str | None = None,
-) -> float | None:
-    """Parse a float from a string, extracting the numeric part first."""
-    numeric_part_str = extract_numeric_string(
-        raw_value, node_id_for_log, entity_id_for_log
-    )
-    if numeric_part_str is None:
-        return None
-    try:
-        return float(numeric_part_str)
-    except ValueError:
-        log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
-        _LOGGER.warning(
-            f"{log_prefix}Could not parse float value from '{numeric_part_str}' (original: '{raw_value}')."
-        )
-        return None
+# --- Main Parser ---
 
-
-def parse_datetime_value(
-    cleaned_value: str,
-    source_timezone_str: str,
-    node_id_for_log: str | None = None,
-    entity_id_for_log: str | None = None,
-) -> datetime | str | None:
-    """Parse a string value that represents a datetime or special text."""
-    cleaned_value_dt = cleaned_value.strip().replace("&nbsp;", " ")
-    if HDG_DATETIME_SPECIAL_TEXT in cleaned_value_dt.lower():
-        return cleaned_value_dt
-    try:
-        dt_object_naive = datetime.strptime(cleaned_value_dt, "%d.%m.%Y %H:%M")
-        try:
-            source_tz = ZoneInfo(source_timezone_str)
-        except ZoneInfoNotFoundError:
-            _LOGGER.error(
-                f"Invalid source timezone '{source_timezone_str}' for sensor "
-                f"(node {node_id_for_log or 'Unknown'}, entity {entity_id_for_log or 'Unknown'}). "
-                f"Cannot parse datetime value '{cleaned_value_dt}'. Correct timezone in options."
-            )
-            return None
-
-        dt_object_source_aware = dt_object_naive.replace(tzinfo=source_tz)
-        return cast(datetime, dt_util.as_utc(dt_object_source_aware))
-    except ValueError:
-        _LOGGER.warning(
-            f"Node {node_id_for_log} (entity {entity_id_for_log}): Could not parse '{cleaned_value_dt}' as datetime."
-        )
-        return None
-
-
-def parse_as_float_type(
-    cleaned_value: str,
-    formatter: str | None,
-    node_id_for_log: str | None = None,
-    entity_id_for_log: str | None = None,
-) -> float | int | None:
-    """Parse a string value as a float, with specific handling for certain formatters."""
-    val_float = parse_float_from_string(
-        cleaned_value, node_id_for_log, entity_id_for_log
-    )
-    if val_float is None:
-        return None
-    if formatter == "iFLOAT2":
-        return round(val_float, 2)
-
-    if formatter in [
-        "iKWH",
-        "iMWH",
-        "iSTD",
-        "iMIN",
-        "iSEK",
-        "iLITER",
-    ] and val_float == int(val_float):
-        return int(val_float)
-    return val_float
-
-
-_PARSERS: dict[str, Callable[[str, str | None, str | None, Any], Any | None]] = {
-    "percent_from_string_regex": lambda cv,
-    node_id,
-    entity_id,
-    _: parse_percent_from_string(
-        cv, node_id_for_log=node_id, entity_id_for_log=entity_id
-    ),
-    "int": lambda cv, node_id, entity_id, _: parse_int_from_string(
-        cv, node_id_for_log=node_id, entity_id_for_log=entity_id
-    ),
-    "enum_text": lambda cv, *_: cv,
-    "text": lambda cv, *_: cv,
-    "allow_empty_string": lambda cv, *_: cv,
-    "hdg_datetime_or_text": lambda cv, node_id, entity_id, tz: parse_datetime_value(
-        cv, tz, node_id_for_log=node_id, entity_id_for_log=entity_id
-    ),
-    "float": lambda cv, node_id, entity_id, formatter: parse_as_float_type(
-        cv, formatter, node_id_for_log=node_id, entity_id_for_log=entity_id
-    ),
+_PARSER_MAP: Final[dict[str, Callable[..., Any]]] = {
+    "int": lambda value, prefix, *args, **kwargs: _parse_number(value, int, prefix),
+    "float": lambda value, prefix, *args, **kwargs: _parse_number(value, float, prefix),
+    "enum_text": lambda value,
+    prefix,
+    entity_def,
+    *args,
+    **kwargs: _convert_enum_text_to_key(value, entity_def, prefix),
+    "hdg_datetime_or_text": lambda value,
+    prefix,
+    *args,
+    timezone,
+    **kwargs: _parse_datetime(value, timezone, prefix),
+    "text": lambda value, *args, **kwargs: value,
+    "allow_empty_string": lambda value, *args, **kwargs: value,
 }
 
 
 def parse_sensor_value(
-    raw_value_text: str | None,
+    raw_value: str | None,
     entity_definition: dict[str, Any],
     node_id_for_log: str | None = None,
     entity_id_for_log: str | None = None,
     configured_timezone: str = DEFAULT_SOURCE_TIMEZONE,
 ) -> Any | None:
-    """Parse the raw string value from the API into the appropriate type for the sensor state."""
-    if raw_value_text is None:
-        return None
-
-    # Centralized dispatch table for parsing logic
-    parser_map: dict[str, Callable[..., Any]] = {
-        "percent_from_string_regex": parse_percent_from_string,
-        "int": parse_int_from_string,
-        "enum_text": lambda val, *args, **kwargs: val,
-        "text": lambda val, *args, **kwargs: val,
-        "allow_empty_string": lambda val, *args, **kwargs: val,
-        "hdg_datetime_or_text": parse_datetime_value,
-        "float": parse_as_float_type,
-    }
-
-    parse_as_type = entity_definition.get("parse_as_type")
-    formatter = entity_definition.get("hdg_formatter")
-    data_type = entity_definition.get("hdg_data_type")
-
-    # Pre-process the raw value
-    cleaned_value = (
-        re.sub(r"\s+", " ", raw_value_text).strip()
-        if entity_definition.get("normalize_internal_whitespace", False)
-        else raw_value_text.strip()
+    """Parse a raw string value from the API into the appropriate type."""
+    log_prefix = make_log_prefix(node_id_for_log, entity_id_for_log)
+    parser, cleaned_value = _prepare_parser_and_value(
+        raw_value, entity_definition, log_prefix
     )
 
-    if not cleaned_value:
-        return "" if parse_as_type == "allow_empty_string" else None
+    if parser is None:
+        return cleaned_value  # Return raw or cleaned value if no parser found
 
-    # Primary parsing using `parse_as_type`
-    if isinstance(parse_as_type, str) and parse_as_type in parser_map:
-        parser_func = parser_map[parse_as_type]
-        # Prepare arguments for the specific parser
-        if parse_as_type == "hdg_datetime_or_text":
-            return parser_func(
-                cleaned_value,
-                configured_timezone,
-                node_id_for_log,
-                entity_id_for_log,
-            )
-        elif parse_as_type == "float":
-            return parser_func(
-                cleaned_value, formatter, node_id_for_log, entity_id_for_log
-            )
-        else:
-            return parser_func(
-                cleaned_value,
-                node_id_for_log=node_id_for_log,
-                entity_id_for_log=entity_id_for_log,
-            )
-
-    # Fallback parsing using `hdg_data_type` and `hdg_formatter`
-    if data_type == "10" or formatter in ["iVERSION", "iREVISION"]:
-        return cleaned_value
-    if data_type == "4":  # Often text despite being numeric type
-        return cleaned_value
-    if data_type == "2":  # Generic float type
-        return parse_as_float_type(
-            cleaned_value, formatter, node_id_for_log, entity_id_for_log
+    try:
+        return parser(
+            cleaned_value,
+            log_prefix,
+            entity_definition,
+            timezone=configured_timezone,
         )
-
-    _LOGGER.warning(
-        f"Node {node_id_for_log or 'Unknown'} (entity {entity_id_for_log or 'Unknown'}): "
-        f"Unhandled value parsing. Raw: '{raw_value_text}', "
-        f"ParseAs: {parse_as_type}, HDG Type: {data_type}, Formatter: {formatter}. Parsed: None."
-    )
-    return None
+    except Exception as e:
+        _LOGGER.warning(
+            "%sError parsing value '%s' as %s: %s. Returning raw.",
+            log_prefix,
+            cleaned_value,
+            entity_definition.get("parse_as_type"),
+            e,
+            exc_info=True,
+        )
+        return cleaned_value

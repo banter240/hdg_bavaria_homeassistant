@@ -1,265 +1,123 @@
-"""Service handlers for the HDG Bavaria Boiler integration.
+"""Service handlers for the HDG Bavaria Boiler integration."""
 
-This module implements the logic for custom Home Assistant services exposed by
-the HDG Bavaria Boiler integration. These services allow users to directly
-interact with the boiler by setting specific node values (e.g., temperature setpoints)
-and retrieving current raw values for any monitored node.
-"""
+from __future__ import annotations
 
-__version__ = "0.8.5"
+__version__ = "0.2.0"
+__all__ = ["async_handle_set_node_value", "async_handle_get_node_value"]
+
 import logging
 from typing import Any, cast
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
-from .const import (
-    ATTR_NODE_ID,
-    DOMAIN,
-    SERVICE_GET_NODE_VALUE,
-    SERVICE_SET_NODE_VALUE,
-)
+from .const import DEFAULT_SET_VALUE_DEBOUNCE_DELAY_S, DOMAIN
 from .coordinator import HdgDataUpdateCoordinator
-from .definitions import (
-    SENSOR_DEFINITIONS,
-    SensorDefinition,
-)
 from .exceptions import HdgApiError
-from .helpers.parsers import (
-    format_value_for_api,
-)
-from .helpers.string_utils import (
-    strip_hdg_node_suffix,
-)
+from .helpers.parsers import format_value_for_api
 from .helpers.validation_utils import (
     coerce_value_to_numeric_type,
     validate_get_node_service_call,
-    validate_service_call_input,
+    validate_set_node_service_call,
     validate_value_range_and_step,
 )
-from .helpers.logging_utils import format_for_log
+from .models import SensorDefinition
+from .registry import HdgEntityRegistry
+
 
 _LOGGER = logging.getLogger(DOMAIN)
 
 
-def _build_sensor_definitions_by_base_node_id() -> dict[str, list[SensorDefinition]]:
-    """Build an index of sensor definitions keyed by their base HDG node ID.
-
-    This allows quick lookup of all definitions associated with a specific base node ID.
-    The index is used by `_find_settable_sensor_definition` to efficiently locate
-    the correct definition for a `set_node_value` service call.
-    """
-    index: dict[str, list[SensorDefinition]] = {}
-
-    for definition_dict in SENSOR_DEFINITIONS.values():
-        definition = cast(SensorDefinition, definition_dict)
-        hdg_node_id_val = definition.get("hdg_node_id")
-        if isinstance(hdg_node_id_val, str) and (
-            base_hdg_node_id_from_def := strip_hdg_node_suffix(hdg_node_id_val)
-        ):
-            if base_hdg_node_id_from_def not in index:
-                index[base_hdg_node_id_from_def] = []
-            index[base_hdg_node_id_from_def].append(definition)
-        else:
-            _LOGGER.warning(
-                "Skipping definition in _build_sensor_definitions_by_base_node_id due to missing or invalid 'hdg_node_id': %s",
-                format_for_log(definition_dict.get("translation_key", "Unknown Key")),
-            )
-    return index
-
-
-# Pre-build the index at module load time for efficiency.
-SENSOR_DEFINITIONS_BY_BASE_NODE_ID = _build_sensor_definitions_by_base_node_id()
-
-
-def _find_settable_sensor_definition(node_id_str: str) -> SensorDefinition:
-    """Find and return the SensorDefinition for a settable 'number' node.
-
-    Queries the cached `SENSOR_DEFINITIONS_BY_BASE_NODE_ID` index to find definitions
-    matching the base node ID. It then filters for definitions where `ha_platform`
-    is "number" and `setter_type` is defined, returning the single matching definition.
-
-    Raises:
-        ServiceValidationError: If no matching settable 'number' definition is found,
-                                or if multiple conflicting definitions are found for the
-                                same base node ID.
-
-    Args:
-        node_id_str: The base HDG node ID to search for.
-
-    """
-    definitions_for_base = SENSOR_DEFINITIONS_BY_BASE_NODE_ID.get(node_id_str, [])
-    settable_definitions = [
-        d
-        for d in definitions_for_base
-        if d.get("ha_platform") == "number" and d.get("setter_type")
-    ]
-
-    if not settable_definitions:
-        error_detail = "No SENSOR_DEFINITIONS entry found or not a settable 'number' platform with a 'setter_type'."
-        if definitions_for_base:
-            error_detail = (
-                f"Node ID found, but no valid settable 'number' definition. "
-                f"Found {len(definitions_for_base)} definition(s), but none matched criteria "
-                f"(ha_platform='number' and 'setter_type' defined)."
-            )
-        _LOGGER.error(
-            "Node ID '%s' not configured as settable 'number'. Details: %s",
-            format_for_log(node_id_str),
-            error_detail,
-        )
+def _get_settable_definition(
+    node_id: str, hdg_entity_registry: HdgEntityRegistry
+) -> SensorDefinition:
+    """Get the entity definition for a settable number entity."""
+    if definition := hdg_entity_registry.get_settable_number_definition_by_base_node_id(
+        node_id
+    ):
+        return definition
+    else:
         raise ServiceValidationError(
-            f"Node ID '{node_id_str}' not settable. Reason: {error_detail}"
+            f"Node ID '{node_id}' is not a valid settable 'number' entity."
         )
 
-    if len(settable_definitions) > 1:
-        _LOGGER.error(
-            "Multiple settable 'number' SensorDefinitions found for node_id '%s': %s. Please ensure only one settable definition exists per node to avoid ambiguity.",
-            format_for_log(node_id_str),
-            format_for_log([repr(d) for d in settable_definitions]),
-        )
-        raise ServiceValidationError(
-            f"Multiple settable 'number' definitions for node ID '{node_id_str}'. Conflicting definitions: {[repr(d) for d in settable_definitions]}"
-        )
-    return settable_definitions[0]
+
+def _validate_and_coerce_value(
+    raw_value: Any, definition: SensorDefinition, node_id: str
+) -> int | float:
+    """Validate and coerce the raw value to the correct numeric type."""
+    entity_name = definition.get("translation_key", node_id)
+    node_type = definition.get("setter_type")
+
+    coerced_value = coerce_value_to_numeric_type(raw_value, node_type, entity_name)
+    validate_value_range_and_step(
+        coerced_numeric_value=coerced_value,
+        min_val_def=definition.get("setter_min_val"),
+        max_val_def=definition.get("setter_max_val"),
+        node_step_def=definition.get("setter_step"),
+        entity_name_for_log=entity_name,
+    )
+    return coerced_value
+
+
+def _validate_and_prepare_node_value(
+    call: ServiceCall, hdg_entity_registry: HdgEntityRegistry
+) -> tuple[str, str, str]:
+    """Validate service call input, find definition, and prepare value."""
+    node_id, raw_value = validate_set_node_service_call(call)
+    _LOGGER.debug("Service set_node_value: id='%s', value='%s'", node_id, raw_value)
+
+    definition = _get_settable_definition(node_id, hdg_entity_registry)
+    coerced_value = _validate_and_coerce_value(raw_value, definition, node_id)
+
+    entity_name = definition.get("translation_key", node_id)
+    node_type = definition.get("setter_type")
+    api_value = format_value_for_api(coerced_value, cast(str, node_type))
+
+    return node_id, api_value, entity_name
 
 
 async def async_handle_set_node_value(
     hass: HomeAssistant,
     coordinator: HdgDataUpdateCoordinator,
+    hdg_entity_registry: HdgEntityRegistry,
     call: ServiceCall,
 ) -> None:
-    """Handle the 'set_node_value' service call.
-
-    This function validates the provided `node_id` against SENSOR_DEFINITIONS
-    to ensure it's a settable 'number' entity. It then coerces the `value`
-    to the expected numeric type, validates it against the node's configured
-    range and step, formats it for the API, and finally delegates the set # sourcery skip: extract-method
-    operation to the HdgDataUpdateCoordinator.
-
-    Args:
-        hass: The HomeAssistant instance.
-        coordinator: The HdgDataUpdateCoordinator instance.
-        call: The ServiceCall object containing `node_id` and `value`.
-
-    Raises:
-        ServiceValidationError: If input validation fails or configuration is incorrect.
-        HomeAssistantError: If the API call fails or the coordinator reports an error.
-
-    """
-    node_id_input = call.data.get(ATTR_NODE_ID)
-    node_id_str, value_to_set_raw = validate_service_call_input(call)
-    _LOGGER.debug(
-        f"Service '{SERVICE_SET_NODE_VALUE}': node_id='{node_id_input}' (base='{node_id_str}'), value='{value_to_set_raw}'"
-    )
-
-    sensor_def_for_node = _find_settable_sensor_definition(node_id_str)
-    entity_name_for_log = sensor_def_for_node.get("translation_key", node_id_str)
-
-    node_type = sensor_def_for_node.get("setter_type")
-    min_val_def = sensor_def_for_node.get("setter_min_val")
-    max_val_def = sensor_def_for_node.get("setter_max_val")
-    node_step_def = sensor_def_for_node.get("setter_step")
-
-    coerced_numeric_value = coerce_value_to_numeric_type(
-        value_to_set_raw, node_type, entity_name_for_log
-    )
-
-    validate_value_range_and_step(
-        coerced_numeric_value=coerced_numeric_value,
-        min_val_def=min_val_def,
-        max_val_def=max_val_def,
-        node_step_def=node_step_def,
-        entity_name_for_log=entity_name_for_log,
-        node_id_str_for_log=node_id_str,
-        original_value_to_set_for_log=value_to_set_raw,
-    )
-
+    """Handle the 'set_node_value' service call."""
     try:
-        api_value_to_send_str = format_value_for_api(
-            coerced_numeric_value, cast(str, node_type)
+        node_id, value_to_set, entity_name = _validate_and_prepare_node_value(
+            call, hdg_entity_registry
         )
-    except ValueError as e:
-        _LOGGER.error(
-            f"Configuration error formatting value for API for node '{entity_name_for_log}' (ID: {node_id_str}): {e}"
-        )
-        raise ServiceValidationError(
-            f"Configuration error formatting value for API for node '{entity_name_for_log}': {e}"
-        ) from e
-
-    try:
-        success = await coordinator.async_set_node_value_if_changed(
-            node_id=node_id_str,
-            new_value_str_for_api=api_value_to_send_str,
-            entity_name_for_log=entity_name_for_log,
+        success = await coordinator.async_set_node_value(
+            node_id=node_id,
+            value=value_to_set,
+            entity_name_for_log=entity_name,
+            debounce_delay=DEFAULT_SET_VALUE_DEBOUNCE_DELAY_S,
         )
         if not success:
-            _LOGGER.error(
-                f"Failed to set node '{entity_name_for_log}' (ID: {node_id_str}). Coordinator reported failure (e.g., queue full or API error)."
-            )
-            raise HomeAssistantError(
-                f"Failed to set node '{entity_name_for_log}' (ID: {node_id_str}). Coordinator reported failure."
-            )
-    except HdgApiError as err:
-        _LOGGER.error(
-            f"API error setting node '{entity_name_for_log}' (ID: {node_id_str}): {err}"
-        )
-        raise HomeAssistantError(
-            f"API error setting node '{entity_name_for_log}' (ID: {node_id_str}): {err}"
-        ) from err
+            raise HomeAssistantError(f"Failed to set node '{entity_name}' ({node_id}).")
+    except (HdgApiError, HomeAssistantError, ServiceValidationError) as err:
+        _LOGGER.error("Error during service call to set node value: %s", err)
+        raise
     except Exception as err:
-        _LOGGER.exception(
-            f"Unexpected error setting node '{entity_name_for_log}' (ID: {node_id_str}): {err}"
-        )
-        raise HomeAssistantError(
-            f"Unexpected error setting node '{entity_name_for_log}' (ID: {node_id_str}): {err}"
-        ) from err
+        _LOGGER.exception("Unexpected error setting node value.")
+        raise HomeAssistantError("Unexpected error setting node value.") from err
 
 
 async def async_handle_get_node_value(
-    hass: HomeAssistant, coordinator: HdgDataUpdateCoordinator, call: ServiceCall
+    hass: HomeAssistant,
+    coordinator: HdgDataUpdateCoordinator,
+    hdg_entity_registry: HdgEntityRegistry,
+    call: ServiceCall,
 ) -> dict[str, Any]:
-    """Handle the 'get_node_value' service call.
-
-    Retrieves the current raw string value for a specified node ID from the
-    coordinator's internal data cache and returns it.
-    Raises ServiceValidationError if the required `node_id` is missing.
-
-    Args:
-        hass: The HomeAssistant instance.
-        coordinator: The HdgDataUpdateCoordinator instance.
-        call: The ServiceCall object containing `node_id`.
-
-    Returns:
-        A dictionary containing the `node_id`, its `value` (or None),
-        and a `status` string.
-
-    """
-    node_id_input = call.data.get(ATTR_NODE_ID)
-    node_id_str = validate_get_node_service_call(call)
-    _LOGGER.debug(
-        f"Service '{SERVICE_GET_NODE_VALUE}': node_id='{node_id_input}' (base='{node_id_str}')"
-    )
+    """Handle the 'get_node_value' service call."""
+    node_id = validate_get_node_service_call(call)
+    _LOGGER.debug("Service get_node_value: node_id='%s'", node_id)
 
     if coordinator.data is None:
-        _LOGGER.warning(
-            f"Coordinator data not initialized. Cannot get value for node '{node_id_str}'."
-        )
-        raise ServiceValidationError(
-            f"Coordinator data store not initialized. Cannot get value for node '{node_id_str}'."
-        )
+        raise ServiceValidationError("Coordinator data not available.")
 
-    if node_id_str in coordinator.data:
-        value = coordinator.data[node_id_str]
-        _LOGGER.debug(
-            f"Node '{node_id_str}' found in coordinator. Raw value: '{value}'"
-        )
-        return {"node_id": node_id_str, "value": value, "status": "found"}
-    else:
-        _LOGGER.warning(f"Node '{node_id_str}' not found in coordinator data.")
-        _LOGGER.debug(
-            f"Attempted find '{node_id_str}'. Available keys (sample): {list(coordinator.data.keys())[:20]}"
-        )
-        raise ServiceValidationError(
-            f"Node ID '{node_id_str}' not found in coordinator's data."
-        )
+    if (value := coordinator.data.get(node_id)) is not None:
+        return {"node_id": node_id, "value": value}
+
+    raise ServiceValidationError(f"Node ID '{node_id}' not found in coordinator data.")

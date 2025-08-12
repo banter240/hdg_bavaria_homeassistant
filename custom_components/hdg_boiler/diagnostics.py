@@ -1,13 +1,10 @@
-"""Provides diagnostic support for the HDG Bavaria Boiler integration.
-
-This module includes functions to gather comprehensive diagnostic information,
-such as configuration details, coordinator status, API client information,
-and entity states. This data aids in troubleshooting and support for the integration.
-"""
+"""Provides diagnostic support for the HDG Bavaria Boiler integration."""
 
 from __future__ import annotations
 
-__version__ = "0.9.36"
+__version__ = "0.2.0"
+__all__ = ["async_get_config_entry_diagnostics"]
+
 import ipaddress
 import logging
 from typing import Any, cast
@@ -19,7 +16,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
-from .api import HdgApiClient
 from .const import (
     CONF_HOST_IP,
     DIAGNOSTICS_REDACTED_PLACEHOLDER,
@@ -28,8 +24,8 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import HdgDataUpdateCoordinator
-from .helpers.string_utils import normalize_unique_id_component
 from .helpers.logging_utils import format_for_log
+from .helpers.string_utils import normalize_unique_id_component
 
 _LOGGER = logging.getLogger(DOMAIN)
 
@@ -37,316 +33,197 @@ _LOGGER = logging.getLogger(DOMAIN)
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
-    """Asynchronously generate and return diagnostics data for a config entry.
-
-    Args:
-        hass: The Home Assistant instance.
-        entry: The config entry for which to gather diagnostics.
-
-    Returns:
-        A dictionary containing the diagnostics data. If essential integration
-        data is missing, an error dictionary is returned instead.
-
-    """
+    """Generate and return diagnostics for a given config entry."""
     integration_data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
     if not integration_data:
         _LOGGER.warning(
-            f"Integration data for entry {entry.entry_id} not found. Diagnostics will be limited."
+            "Integration data for entry %s not found. Diagnostics will be limited.",
+            entry.entry_id,
         )
         return {
-            "error": {
-                "code": "integration_data_missing",
-                "message": "Integration data not found. Setup might not have completed successfully.",
-                "details": {"entry_id": entry.entry_id, "domain": DOMAIN},
-            }
+            "error": "Integration data not found. Setup might have failed.",
+            "entry_id": entry.entry_id,
         }
 
-    coordinator: HdgDataUpdateCoordinator = integration_data.get("coordinator")
-    api_client: HdgApiClient = integration_data.get("api_client")
-    diag_data: dict[str, Any] = {
-        "config_entry": _get_redacted_config_entry_info(entry),
-        "coordinator": (
-            _get_coordinator_diagnostics(coordinator)
-            if coordinator is not None
-            else "Coordinator not found or not initialized."
-        ),
-        "api_client": (
-            _get_api_client_diagnostics(api_client, entry.data.get(CONF_HOST_IP))
-            if api_client is not None
-            else {"error": "API Client not found or not initialized."}
-        ),
-        "entities": await _get_entity_diagnostics(hass, entry),
-    }
-
-    return diag_data
-
-
-def _get_redacted_unique_id(
-    unique_id: str | None,
-    sensitive_raw_value: str | None,
-    placeholder: str,
-) -> str:
-    """Redacts a sensitive raw value (like host_ip) from a unique_id string for diagnostics output.
-
-    Unique IDs can sometimes contain sensitive information derived from the configuration,
-    such as the host IP. This function replaces occurrences of the sensitive raw value
-    (after normalization for comparison) within the unique ID string with a placeholder.
-
-    Args:
-        unique_id: The original unique ID string.
-        sensitive_raw_value: The specific sensitive value (e.g., host IP) to look for and redact.
-                             This value is normalized using `normalize_unique_id_component`
-                             before being compared against parts of the unique ID.
-        placeholder: The string to use as a replacement for the sensitive value.
-
-    Returns:
-        The unique ID string with sensitive parts replaced by the placeholder.
-
-    """
-    if not unique_id or not sensitive_raw_value:
-        return unique_id or ""
-
-    normalized_sensitive_component = normalize_unique_id_component(sensitive_raw_value)
-    normalized_unique_id = normalize_unique_id_component(unique_id)
-
-    if normalized_sensitive_component in normalized_unique_id:
-        _LOGGER.debug(
-            "Redacting sensitive component '%s' (normalized: '%s') "
-            "within unique_id '%s'.",
-            format_for_log(sensitive_raw_value),
-            format_for_log(normalized_sensitive_component),
-            format_for_log(unique_id),
-        )
-        return unique_id.replace(normalized_sensitive_component, placeholder)
-
-    return unique_id
-
-
-def _get_redacted_config_entry_info(entry: ConfigEntry) -> dict[str, Any]:
-    """Prepare redacted configuration entry information for diagnostics.
-
-    Args:
-        entry: The ConfigEntry object.
-
-    Returns:
-        A dictionary containing redacted configuration entry information.
-
-    """
+    coordinator = integration_data.get("coordinator")
+    api_client = integration_data.get("api_client")
     sensitive_host_ip = entry.data.get(CONF_HOST_IP)
 
-    unique_id_display = _get_redacted_unique_id(
-        entry.unique_id,
-        sensitive_host_ip,
-        DIAGNOSTICS_REDACTED_PLACEHOLDER,
-    )
+    return {
+        "config_entry": _get_redacted_config_entry_info(entry, sensitive_host_ip),
+        "coordinator": _get_coordinator_diagnostics(coordinator),
+        "api_client": _get_api_client_diagnostics(api_client, sensitive_host_ip),
+        "entities": await _get_entity_diagnostics(hass, entry, sensitive_host_ip),
+    }
 
+
+def _get_redacted_config_entry_info(
+    entry: ConfigEntry, sensitive_host_ip: str | None
+) -> dict[str, Any]:
+    """Return redacted configuration entry information."""
     return {
         "title": entry.title,
         "entry_id": entry.entry_id,
         "data": async_redact_data(entry.data, DIAGNOSTICS_TO_REDACT_CONFIG_KEYS),
         "options": async_redact_data(entry.options, DIAGNOSTICS_TO_REDACT_CONFIG_KEYS),
-        "unique_id": unique_id_display,
+        "unique_id": _get_redacted_unique_id(
+            entry.unique_id, sensitive_host_ip, DIAGNOSTICS_REDACTED_PLACEHOLDER
+        ),
     }
 
 
 def _get_coordinator_diagnostics(
     coordinator: HdgDataUpdateCoordinator | None,
 ) -> dict[str, Any] | str:
-    """Gather diagnostic information about the DataUpdateCoordinator.
+    """Return diagnostic information about the DataUpdateCoordinator."""
+    if not coordinator:
+        return "Coordinator not found or not initialized."
 
-    Args:
-        coordinator: The HdgDataUpdateCoordinator instance. Can be None if not initialized.
+    coordinator_diag: dict[str, Any] = {
+        "last_update_success": coordinator.last_update_success,
+        "last_update_time_successful": (
+            coordinator.last_update_success_time.isoformat()
+            if coordinator.last_update_success_time
+            else None
+        ),
+        "scan_intervals_used": {
+            k: v.total_seconds() for k, v in coordinator.scan_intervals.items()
+        },
+        "last_update_times_per_group": {
+            k: dt_util.utc_from_timestamp(v).isoformat()
+            for k, v in coordinator.last_update_times_public.items()
+        },
+        "consecutive_poll_failures": coordinator._consecutive_poll_failures,
+        "boiler_considered_online": coordinator._boiler_considered_online,
+        "failed_poll_group_retry_info": {
+            k: {
+                "attempts": v["attempts"],
+                "next_retry_time_utc": dt_util.utc_from_timestamp(
+                    v["next_retry_time"]
+                ).isoformat(),
+            }
+            for k, v in coordinator._failed_poll_group_retry_info.items()
+            if v["next_retry_time"] > 0
+        },
+    }
+    if coordinator.data:
+        redacted_data = async_redact_data(
+            coordinator.data, DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS
+        )
+        coordinator_diag["data_item_count"] = len(redacted_data)
+        coordinator_diag["data_sample_keys"] = list(redacted_data.keys())[:20]
 
-    Returns:
-        A dictionary with coordinator diagnostics, or a string message if the
-        coordinator is not found or not initialized.
+    return coordinator_diag
 
-    """
-    if coordinator:
-        coordinator_diag: dict[str, Any] = {
-            "last_update_success": coordinator.last_update_success,
-            "last_update_time_successful": (
-                coordinator.last_update_success_time.isoformat()
-                if coordinator.last_update_success_time
-                else None
+
+def _get_api_client_diagnostics(
+    api_client: Any, sensitive_host_ip: str | None
+) -> dict[str, Any]:
+    """Return diagnostic information about the HdgApiClient."""
+    if not api_client:
+        return {"error": "API Client not found or not initialized."}
+    return {"base_url": _redact_api_client_base_url(api_client, sensitive_host_ip)}
+
+
+async def _get_entity_diagnostics(
+    hass: HomeAssistant, entry: ConfigEntry, sensitive_host_ip: str | None
+) -> list[dict[str, Any]]:
+    """Return information about entities associated with this config entry."""
+    entity_reg = er.async_get(hass)
+    entities = er.async_entries_for_config_entry(entity_reg, entry.entry_id)
+
+    return [
+        {
+            "entity_id": entity.entity_id,
+            "unique_id": _get_redacted_unique_id(
+                entity.unique_id,
+                sensitive_host_ip,
+                DIAGNOSTICS_REDACTED_PLACEHOLDER,
             ),
-            "data_sample_keys": [],
-            "data_item_count": 0,
-            "scan_intervals_used": {
-                str(k): v.total_seconds() for k, v in coordinator.scan_intervals.items()
-            },
-            "last_update_times_per_group": {
-                group_key: dt_util.utc_from_timestamp(timestamp).isoformat()
-                for group_key, timestamp in coordinator.last_update_times_public.items()
-            },
-            "consecutive_poll_failures": coordinator._consecutive_poll_failures,
-            "boiler_considered_online": coordinator._boiler_considered_online,
-            "failed_poll_group_retry_info": {
-                k: {
-                    "attempts": v["attempts"],
-                    "next_retry_time_utc": dt_util.utc_from_timestamp(
-                        v["next_retry_time"]
-                    ).isoformat()
-                    if v["next_retry_time"] > 0
-                    else None,
-                }
-                for k, v in coordinator._failed_poll_group_retry_info.items()
-            },
+            "platform": entity.platform,
+            "disabled_by": entity.disabled_by,
         }
-        if coordinator.data:
-            redacted_coordinator_data = async_redact_data(
-                coordinator.data, DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS
-            )
-            coordinator_diag["data_sample_keys"] = list(
-                redacted_coordinator_data.keys()
-            )[:20]
-            coordinator_diag["data_item_count"] = len(redacted_coordinator_data)
-        return coordinator_diag
-    return "Coordinator not found or not initialized."
+        for entity in entities
+    ]
 
 
-def _is_ip_address_for_redaction(host_to_check: str) -> bool:
-    """Check if a host string is an IP address."""
-    try:
-        ipaddress.ip_address(host_to_check)
-        return True
-    except ValueError:
-        return False
-
-
-def _build_redacted_netloc(
-    parsed_url: ParseResult, sensitive_host_ip: str | None
+def _get_redacted_unique_id(
+    unique_id: str | None, sensitive_raw_value: str | None, placeholder: str
 ) -> str:
-    """Build the redacted network location (netloc) string.
+    """Redact a sensitive raw value from a unique_id string."""
+    if not unique_id or not sensitive_raw_value:
+        return unique_id or ""
 
-    Handles redaction of userinfo (username:password), host/IP, and port.
-
-    Args:
-        parsed_url: The ParseResult object from urlparse.
-        sensitive_host_ip: The specific host IP or hostname to redact.
-
-    Returns:
-        The redacted netloc string.
-
-    """
-    netloc_parts = []
-    if parsed_url.username:
-        netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)
-        if parsed_url.password:
-            netloc_parts.append(f":{DIAGNOSTICS_REDACTED_PLACEHOLDER}")
-        netloc_parts.append("@")
-
-    if host_to_check := parsed_url.hostname:
-        if (
-            sensitive_host_ip and host_to_check.lower() == sensitive_host_ip.lower()
-        ) or _is_ip_address_for_redaction(host_to_check):
-            netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)
-        else:
-            netloc_parts.append(host_to_check)
-    else:
-        netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)
-    if parsed_url.port:
-        netloc_parts.append(f":{parsed_url.port}")
-    return "".join(netloc_parts)
+    norm_sensitive = normalize_unique_id_component(sensitive_raw_value)
+    if norm_sensitive in normalize_unique_id_component(unique_id):
+        _LOGGER.debug(
+            "Redacting sensitive component '%s' in unique_id '%s'.",
+            format_for_log(sensitive_raw_value),
+            format_for_log(unique_id),
+        )
+        return unique_id.replace(norm_sensitive, placeholder)
+    return unique_id
 
 
-def _redact_api_client_base_url(
-    api_client: HdgApiClient, sensitive_host_ip: str | None
-) -> str:
-    """Redact sensitive parts (host IP or general IP addresses) from the API client's base URL.
-
-    Args:
-        api_client: The HdgApiClient instance.
-        sensitive_host_ip: The specific host IP or hostname to redact, if known.
-
-    Returns:
-        The redacted base URL string, or "Unknown" if the base URL cannot be determined.
-
-    """
-    if not (base_url := getattr(api_client, "base_url", None)):
+def _redact_api_client_base_url(api_client: Any, sensitive_host_ip: str | None) -> str:
+    """Redact sensitive parts from the API client's base URL."""
+    base_url = getattr(api_client, "base_url", None)
+    if not base_url:
         return "Unknown"
 
     try:
         parsed = urlparse(base_url)
         redacted_netloc = _build_redacted_netloc(parsed, sensitive_host_ip)
-
         redacted_path = (
             DIAGNOSTICS_REDACTED_PLACEHOLDER
             if parsed.path and parsed.path != "/"
             else parsed.path
         )
-        redacted_query = DIAGNOSTICS_REDACTED_PLACEHOLDER if parsed.query else ""
-
         return cast(
             str,
             urlunparse(
                 parsed._replace(
                     netloc=redacted_netloc,
                     path=redacted_path,
-                    query=redacted_query,
+                    query=DIAGNOSTICS_REDACTED_PLACEHOLDER if parsed.query else "",
                     params="",
                     fragment="",
                 )
             ),
         )
     except Exception as e:
-        _LOGGER.warning(f"Error redacting API client base_url '{base_url}': {e}")
-        return cast(str, DIAGNOSTICS_REDACTED_PLACEHOLDER)
+        _LOGGER.warning("Error redacting base_url '%s': %s", base_url, e)
+        return DIAGNOSTICS_REDACTED_PLACEHOLDER
 
 
-def _get_api_client_diagnostics(
-    api_client: HdgApiClient | None, sensitive_host_ip: str | None
-) -> dict[str, Any]:
-    """Gather diagnostic information about the HdgApiClient.
-
-    Args:
-        api_client: The HdgApiClient instance. Can be None if not initialized.
-        sensitive_host_ip: The specific host IP or hostname to redact from the base URL.
-
-    Returns:
-        A dictionary containing API client diagnostics (the redacted base URL),
-        or an error message if the API client is not found.
-
-    """
-    if not api_client:
-        return {"error": "API Client not found or not initialized."}
-    base_url_display = _redact_api_client_base_url(api_client, sensitive_host_ip)
-    return {"base_url": base_url_display}
-
-
-async def _get_entity_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
-) -> list[dict[str, Any]]:
-    """Retrieve information about entities associated with this config entry.
-
-    Args:
-        hass: The Home Assistant instance.
-        entry: The config entry whose entities are to be listed.
-
-    Returns:
-        A list of dictionaries, where each dictionary represents an entity
-        and contains its diagnostic information.
-
-    """
-    entity_registry = er.async_get(hass)
-    entities = er.async_entries_for_config_entry(entity_registry, entry.entry_id)
-
-    diagnostics_entities = []
-    sensitive_host_ip_for_redaction = entry.data.get(CONF_HOST_IP)
-
-    for entity in entities:
-        unique_id_display = _get_redacted_unique_id(
-            entity.unique_id,
-            sensitive_host_ip_for_redaction,
-            DIAGNOSTICS_REDACTED_PLACEHOLDER,
+def _build_redacted_netloc(
+    parsed_url: ParseResult, sensitive_host_ip: str | None
+) -> str:
+    """Build a redacted network location (netloc) string."""
+    netloc_parts = []
+    if parsed_url.username:
+        netloc_parts.append(
+            f"{DIAGNOSTICS_REDACTED_PLACEHOLDER}@{DIAGNOSTICS_REDACTED_PLACEHOLDER}"
         )
 
-        diagnostics_entities.append(
-            {
-                "entity_id": entity.entity_id,
-                "unique_id": unique_id_display,
-                "platform": entity.platform,
-                "disabled_by": entity.disabled_by,
-            }
-        )
-    return diagnostics_entities
+    if hostname := parsed_url.hostname:
+        is_ip_address: bool
+        try:
+            ipaddress.ip_address(hostname)
+            is_ip_address = True
+        except ValueError:
+            is_ip_address = False
+
+        if (
+            sensitive_host_ip and hostname.lower() == sensitive_host_ip.lower()
+        ) or is_ip_address:
+            netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)
+        else:
+            netloc_parts.append(hostname)
+    else:
+        netloc_parts.append(DIAGNOSTICS_REDACTED_PLACEHOLDER)
+
+    if parsed_url.port:
+        netloc_parts.append(f":{parsed_url.port}")
+
+    return "".join(netloc_parts)

@@ -5,10 +5,14 @@ coordinator for all API requests to the HDG boiler. It ensures that requests
 are processed based on their priority (HIGH, MEDIUM, LOW) and handles
 concurrency control to prevent API flooding and ensure responsiveness for
 critical operations.
-
 """
 
 from __future__ import annotations
+
+from __future__ import annotations
+
+__version__ = "0.9.0"
+__all__ = ["HdgApiAccessManager", "ApiPriority"]
 
 import asyncio
 import logging
@@ -26,24 +30,17 @@ from ..api import HdgApiClient
 from ..const import (
     API_LOGGER_NAME,
     API_REQUEST_TYPE_SET_NODE_VALUE,
-    DOMAIN,
     LIFECYCLE_LOGGER_NAME,
     SET_VALUE_RETRY_ATTEMPTS,
     SET_VALUE_RETRY_DELAY_S,
 )
 
-__version__ = "0.7.0"
-
-_LOGGER = logging.getLogger(DOMAIN)
 _LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
 _API_LOGGER = logging.getLogger(API_LOGGER_NAME)
 
 
 class ApiPriority(Enum):
-    """Defines the priority levels for API requests.
-
-    Lower enum value indicates higher priority (used for queue ordering).
-    """
+    """Defines the priority levels for API requests."""
 
     HIGH = auto()
     MEDIUM = auto()
@@ -68,7 +65,6 @@ class ApiRequest:
     context_key: str | None
     args: tuple[Any, ...] = field(default_factory=tuple)
     kwargs: dict[str, Any] = field(default_factory=dict)
-    start_time: float = 0.0
     is_superseded: bool = field(default=False, compare=False)
     retry_count: int = 0
 
@@ -80,32 +76,19 @@ class HdgApiAccessManager:
         self,
         hass: HomeAssistant,
         api_client: HdgApiClient,
-        polling_preemption_timeout: float = 1.0,
     ) -> None:
-        """Initialize the API access manager.
-
-        Args:
-            hass: The HomeAssistant instance.
-            api_client: The low-level API client for direct communication.
-            polling_preemption_timeout: Max time (seconds) a LOW priority polling
-                                        request is allowed to run if a higher
-                                        priority request is pending.
-
-        """
+        """Initialize the API access manager."""
         self.hass = hass
         self._api_client = api_client
-        self._polling_preemption_timeout = polling_preemption_timeout
-
-        self._request_queue: asyncio.PriorityQueue[tuple[int, int, ApiRequest]] = (
-            asyncio.PriorityQueue()
-        )
+        self._request_queue: asyncio.PriorityQueue[
+            tuple[ApiPriority, int, ApiRequest]
+        ] = asyncio.PriorityQueue()
         self._request_id_counter = 0
-
-        self._api_execution_lock = asyncio.Lock()
+        # This lock is crucial to prevent race conditions when multiple coroutines
+        # check for and create pending requests for the same context key simultaneously.
+        self._submit_lock = asyncio.Lock()
         self._pending_requests: dict[str, ApiRequest] = {}
-
         self._worker_task: Task[None] | None = None
-
         _LIFECYCLE_LOGGER.debug("HdgApiAccessManager initialized.")
 
     def start(self, entry: ConfigEntry) -> None:
@@ -119,73 +102,80 @@ class HdgApiAccessManager:
     async def stop(self) -> None:
         """Stop the background worker task gracefully."""
         if self._worker_task and not self._worker_task.done():
-            _LIFECYCLE_LOGGER.debug("HdgApiAccessManager: Cancelling worker task...")
+            _LIFECYCLE_LOGGER.debug("Cancelling API worker task...")
             self._worker_task.cancel()
             with suppress(asyncio.CancelledError):
                 await self._worker_task
-            _LIFECYCLE_LOGGER.debug("HdgApiAccessManager: Worker task stopped.")
+            _LIFECYCLE_LOGGER.debug("API worker task stopped.")
+        await self._drain_queue()
+        self._worker_task = None
 
-        # Drain the queue and set exceptions on all pending futures
+    async def _drain_queue(self) -> None:
+        """Cancel all pending requests in the queue."""
         while not self._request_queue.empty():
-            _priority_value, _request_id, request = await self._request_queue.get()
+            _, _, request = self._request_queue.get_nowait()
             if not request.future.done():
                 request.future.set_exception(
                     asyncio.CancelledError("API access manager is shutting down.")
                 )
-            # Clean up from the pending requests dict as well
-            if request.context_key and request.context_key in self._pending_requests:
+            if request.context_key:
                 self._pending_requests.pop(request.context_key, None)
+        _LIFECYCLE_LOGGER.debug("API request queue drained.")
 
-            self._request_queue.task_done()
-        _LIFECYCLE_LOGGER.debug("HdgApiAccessManager: Request queue drained.")
-
-        self._worker_task = None
-
-    async def _handle_preemption_check(
-        self,
-        current_request: ApiRequest,
-        current_request_task: Task,
-    ) -> bool:
-        """Check if the currently running request should be preempted.
-
-        Returns True if preemption occurred, False otherwise.
-        """
-        try:
-            _priority_value, _request_id, next_request = (
-                self._request_queue.get_nowait()
-            )
-            self._request_queue.put_nowait(
-                (_priority_value, _request_id, next_request)
-            )  # Put it back
-        except asyncio.QueueEmpty:
-            next_request = None
-
-        if (
-            next_request
-            and next_request.priority < current_request.priority
-            and current_request.request_type == "get_nodes_data"
-            and current_request.priority == ApiPriority.LOW
-            and (asyncio.get_event_loop().time() - current_request.start_time)
-            > self._polling_preemption_timeout
-        ):
+    def _handle_existing_request(
+        self, existing_request: ApiRequest, new_request_type: str
+    ) -> Future[Any]:
+        """Handle logic for an existing pending request."""
+        _API_LOGGER.debug(
+            "Found existing pending request for context '%s' (Type: %s).",
+            existing_request.context_key,
+            existing_request.request_type,
+        )
+        # If the new request is a high-priority SET, supersede the old one.
+        if new_request_type == API_REQUEST_TYPE_SET_NODE_VALUE:
             _API_LOGGER.warning(
-                "Preempting low-priority polling request (Context: %s) due to higher priority request (Type: %s, Context: %s). Re-queuing request.",
-                current_request.context_key,
-                next_request.request_type,
-                next_request.context_key,
+                "Superseding pending SET request for context '%s'.",
+                existing_request.context_key,
             )
-            current_request_task.cancel()
-            async with self._api_execution_lock:
-                self._request_id_counter += 1
-                await self._request_queue.put(
-                    (
-                        current_request.priority.value,
-                        self._request_id_counter,
-                        current_request,
-                    )
+            existing_request.is_superseded = True
+            # Return a new future for the new request.
+            future: asyncio.Future[Any] = self.hass.loop.create_future()
+            return future
+        # Otherwise, the caller should wait on the existing future.
+        return existing_request.future
+
+    async def _create_and_queue_request(
+        self,
+        priority: ApiPriority,
+        coroutine: Callable[..., Awaitable[Any]],
+        request_type: str,
+        context_key: str | None,
+        future: Future[Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """Create a new ApiRequest and add it to the priority queue."""
+        self._request_id_counter += 1
+        request = ApiRequest(
+            request_id=self._request_id_counter,
+            priority=priority,
+            coroutine=coroutine,
+            args=args,
+            kwargs=kwargs,
+            future=future,
+            request_type=request_type,
+            context_key=context_key,
+        )
+
+        if context_key:
+            self._pending_requests[context_key] = request
+            future.add_done_callback(
+                lambda fut: self._cleanup_pending_request(
+                    context_key, request.request_id
                 )
-            return True
-        return False
+            )
+
+        await self._request_queue.put((priority, self._request_id_counter, request))
 
     async def submit_request(
         self,
@@ -196,93 +186,65 @@ class HdgApiAccessManager:
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        """Submit an API request to the manager for prioritized processing.
-
-        Args:
-            priority: The priority of this request.
-            coroutine: The async function to call (e.g., self._api_client.async_get_nodes_data).
-            request_type: A descriptive string for logging.
-            context_key: Optional key for context (e.g., polling group key).
-            *args: Positional arguments to pass to the coroutine.
-            **kwargs: Keyword arguments to pass to the coroutine.
-
-        Returns:
-            The result of the API call.
-
-        Raises:
-            Exception: Any exception raised by the underlying API call.
-
-        """
-        # The lock ensures that checking for and creating requests is atomic.
-        async with self._api_execution_lock:
-            # Check for an existing, pending request for the same context key.
+        """Submit an API request for prioritized processing."""
+        async with self._submit_lock:
             if context_key and (
                 existing_request := self._pending_requests.get(context_key)
             ):
-                _API_LOGGER.debug(
-                    "Found existing pending request for context '%s' (Type: %s).",
-                    context_key,
-                    existing_request.request_type,
-                )
-
-                # "Last Write Wins" logic for set_node_value requests.
-                if request_type == API_REQUEST_TYPE_SET_NODE_VALUE:
-                    _API_LOGGER.warning(
-                        "Superseding pending SET request for context '%s'. New value will be processed.",
+                future = self._handle_existing_request(existing_request, request_type)
+                # If the future is different, a new request must be queued.
+                if future is not existing_request.future:
+                    await self._create_and_queue_request(
+                        priority,
+                        coroutine,
+                        request_type,
                         context_key,
+                        future,
+                        *args,
+                        **kwargs,
                     )
-                    existing_request.is_superseded = True
-                    # The new request will adopt the future of the old one.
-                    future_to_use = existing_request.future
-                else:
-                    # For all other request types (e.g., polling), just await the existing future.
-                    return await existing_request.future
             else:
-                # No pending request for this context, create a new future.
-                future_to_use = self.hass.loop.create_future()
-
-            # Create and queue the new request.
-            self._request_id_counter += 1
-            request = ApiRequest(
-                request_id=self._request_id_counter,
-                priority=priority,
-                coroutine=coroutine,
-                args=args,
-                kwargs=kwargs,
-                future=future_to_use,
-                request_type=request_type,
-                context_key=context_key,
-            )
-
-            if context_key:
-                self._pending_requests[context_key] = request
-
-                def _cleanup_request(fut: Future, key: str, req_id: int) -> None:
-                    """Remove the request from the pending dict once its future is done."""
-                    # Only remove if the completed request is the one we are tracking.
-                    # This prevents a new request's callback from removing an even newer one.
-                    pending_req = self._pending_requests.get(key)
-                    if pending_req and pending_req.request_id == req_id:
-                        self._pending_requests.pop(key, None)
-                        _API_LOGGER.debug(
-                            "Cleaned up pending request for context key '%s' (ID: %s)",
-                            key,
-                            req_id,
-                        )
-
-                request.future.add_done_callback(
-                    lambda fut: _cleanup_request(fut, context_key, request.request_id)
+                future = self.hass.loop.create_future()
+                await self._create_and_queue_request(
+                    priority,
+                    coroutine,
+                    request_type,
+                    context_key,
+                    future,
+                    *args,
+                    **kwargs,
                 )
+        return await future
 
-            await self._request_queue.put(
-                (priority.value, self._request_id_counter, request)
+    def _cleanup_pending_request(self, key: str, req_id: int) -> None:
+        """Remove a request from the pending dict once its future is done."""
+        pending_req = self._pending_requests.get(key)
+        if pending_req and pending_req.request_id == req_id:
+            self._pending_requests.pop(key, None)
+            _API_LOGGER.debug(
+                "Cleaned up pending request for context key '%s' (ID: %s)", key, req_id
             )
-        return await future_to_use
+
+    async def _retry_request(self, request: ApiRequest) -> None:
+        """Place a failed, retryable request back into the queue."""
+        request.retry_count += 1
+        _API_LOGGER.warning(
+            "Retrying set value request for context '%s'. Attempt %d of %d.",
+            request.context_key,
+            request.retry_count,
+            SET_VALUE_RETRY_ATTEMPTS,
+        )
+        await asyncio.sleep(SET_VALUE_RETRY_DELAY_S)
+        async with self._submit_lock:
+            self._request_id_counter += 1
+            await self._request_queue.put(
+                (request.priority, self._request_id_counter, request)
+            )
 
     async def _handle_request_failure(
         self, request: ApiRequest, exception: Exception
     ) -> None:
-        """Handle a failed API request, including retry logic for set_value."""
+        """Handle a failed API request, including retry logic."""
         _API_LOGGER.error(
             "API request failed: Type='%s', Context='%s', Error: %s",
             request.request_type,
@@ -296,103 +258,47 @@ class HdgApiAccessManager:
         )
 
         if is_retryable:
-            request.retry_count += 1
-            _API_LOGGER.warning(
-                "Retrying set value request for context '%s'. Attempt %s of %s.",
-                request.context_key,
-                request.retry_count,
-                SET_VALUE_RETRY_ATTEMPTS,
-            )
-            await asyncio.sleep(SET_VALUE_RETRY_DELAY_S)
-            # Re-queue the request for another attempt.
-            async with self._api_execution_lock:
-                self._request_id_counter += 1
-                await self._request_queue.put(
-                    (
-                        request.priority.value,
-                        self._request_id_counter,
-                        request,
-                    )
-                )
+            await self._retry_request(request)
         elif not request.future.done():
-            # If not retryable or retries exhausted, fail the future.
             request.future.set_exception(exception)
 
     async def _worker_loop(self) -> None:
         """Background task that processes API requests from the queue."""
-        current_request: ApiRequest | None = None
-        current_request_task: Task | None = None
-
         while True:
             try:
-                if (
-                    current_request
-                    and current_request_task
-                    and not current_request_task.done()
-                ) and await self._handle_preemption_check(
-                    current_request, current_request_task
-                ):
-                    current_request = None
-                    current_request_task = None
-                    continue  # Preempted, so skip to next loop iteration
+                _, _, request = await self._request_queue.get()
 
-                if not current_request:
-                    (
-                        _priority_value,
-                        _request_id,
-                        request,
-                    ) = await self._request_queue.get()
-                    current_request = request
-
-                    # Check if this request was superseded while in the queue.
-                    if current_request.is_superseded:
-                        _API_LOGGER.debug(
-                            "Skipping superseded request for context '%s'",
-                            current_request.context_key,
-                        )
-                        self._request_queue.task_done()
-                        current_request = None
-                        continue
-
+                if request.is_superseded:
                     _API_LOGGER.debug(
-                        "Processing API request: Type='%s', Priority='%s', Context='%s'",
-                        current_request.request_type,
-                        current_request.priority.name,
-                        current_request.context_key,
+                        "Skipping superseded request for context '%s'",
+                        request.context_key,
                     )
+                    self._request_queue.task_done()
+                    continue
 
-                    async with self._api_execution_lock:
-                        current_request_task = self.hass.loop.create_task(
-                            current_request.coroutine(
-                                *current_request.args, **current_request.kwargs
-                            )
-                        )
-                        current_request.start_time = asyncio.get_event_loop().time()
-
-                if current_request_task:
-                    try:
-                        result = await current_request_task
-                        if not current_request.future.done():
-                            current_request.future.set_result(result)
-                    except asyncio.CancelledError:
-                        # This occurs if the task was preempted by _handle_preemption_check.
-                        # The request has been re-queued, and its future is still pending.
-                        # We just need to log this and let the finally block clean up.
-                        _API_LOGGER.debug(
-                            "Request task for context '%s' was cancelled, likely due to preemption. Moving to next request.",
-                            current_request.context_key,
-                        )
-                    except Exception as e:
-                        await self._handle_request_failure(current_request, e)
-                    finally:
-                        self._request_queue.task_done()
-                        current_request = None
-                        current_request_task = None
+                await self._process_request(request)
 
             except asyncio.CancelledError:
-                _LIFECYCLE_LOGGER.debug("HdgApiAccessManager worker loop cancelled.")
+                _LIFECYCLE_LOGGER.debug("API worker loop cancelled.")
                 break
             except Exception as e:
                 _LIFECYCLE_LOGGER.exception(
-                    "Unexpected error in HdgApiAccessManager worker loop: %s", e
+                    "Unexpected error in API worker loop: %s", e
                 )
+
+    async def _process_request(self, request: ApiRequest) -> None:
+        """Process a single API request."""
+        _API_LOGGER.debug(
+            "Processing API request: Type='%s', Priority='%s', Context='%s'",
+            request.request_type,
+            request.priority.name,
+            request.context_key,
+        )
+        try:
+            result = await request.coroutine(*request.args, **request.kwargs)
+            if not request.future.done():
+                request.future.set_result(result)
+        except Exception as e:
+            await self._handle_request_failure(request, e)
+        finally:
+            self._request_queue.task_done()

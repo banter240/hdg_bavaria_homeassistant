@@ -1,74 +1,72 @@
 """Utility functions for creating Home Assistant entities.
 
-This module centralizes the logic for creating entity descriptions and entities,
-ensuring consistency and adhering to the DRY (Don't Repeat Yourself) principle
-across different platforms (sensor, number, etc.).
+This module centralizes the logic for creating entity descriptions, ensuring
+consistency and adhering to the DRY (Don't Repeat Yourself) principle across
+different platforms (sensor, number, select, etc.).
 """
 
 from __future__ import annotations
 
-__version__ = "0.1.1"
+__version__ = "0.3.0"
 
 import logging
-
-from typing import cast
+from typing import Any, cast
 
 from homeassistant.components.number import NumberEntityDescription, NumberMode
+from homeassistant.components.select import SelectEntityDescription
 from homeassistant.components.sensor import SensorEntityDescription
+from homeassistant.helpers.entity import EntityDescription
 
+from ..const import DOMAIN
 from ..models import SensorDefinition
-from ..const import DOMAIN, ENTITY_DETAIL_LOGGER_NAME
 
 _LOGGER = logging.getLogger(DOMAIN)
-_ENTITY_DETAIL_LOGGER = logging.getLogger(ENTITY_DETAIL_LOGGER_NAME)
+
+__all__ = ["create_entity_description"]
 
 
-def create_entity_description[T: (SensorEntityDescription, NumberEntityDescription)](
-    description_class: type[T],
-    translation_key: str,
-    entity_definition: SensorDefinition,
-    native_step: float | None = None,
-) -> T:
-    """Create a sensor or number entity description from a node definition.
-
-    Args:
-        description_class: The HA entity description class (e.g., SensorEntityDescription).
-        translation_key: The base translation key for the entity.
-        entity_definition: The detailed definition for the entity.
-        native_step: The step value for number entities, passed explicitly.
-
-    Returns:
-        A fully populated entity description instance.
-
-    """
-    # Common attributes for both Sensor and Number entities
-    description_kwargs = {
+def create_entity_description(
+    platform: str, translation_key: str, entity_definition: SensorDefinition
+) -> EntityDescription:
+    """Create a platform-specific EntityDescription from a sensor definition."""
+    base_kwargs = {
         "key": translation_key,
         "name": None,  # Use translation key for localization
         "translation_key": translation_key,
         "icon": entity_definition.get("icon"),
-        "device_class": entity_definition.get("device_class"),
+        "device_class": entity_definition.get("ha_device_class"),
         "native_unit_of_measurement": entity_definition.get(
-            "native_unit_of_measurement"
+            "ha_native_unit_of_measurement"
         ),
-        "entity_category": entity_definition.get("entity_category"),
     }
+    if entity_category := entity_definition.get("entity_category"):
+        base_kwargs["entity_category"] = entity_category
 
-    # Platform-specific attributes
-    if description_class is SensorEntityDescription:
-        description_kwargs["state_class"] = entity_definition.get("state_class")
-    elif description_class is NumberEntityDescription:
-        min_val = cast(float, entity_definition.get("setter_min_val"))
-        max_val = cast(float, entity_definition.get("setter_max_val"))
+    platform_specific_kwargs: dict[str, Any] = {}
+    description_class: type[EntityDescription]
 
-        description_kwargs |= {
-            "native_min_value": min_val,
-            "native_max_value": max_val,
-            "native_step": native_step,
+    if platform == "sensor":
+        platform_specific_kwargs["state_class"] = entity_definition.get(
+            "ha_state_class"
+        )
+        description_class = SensorEntityDescription
+    elif platform == "number":
+        platform_specific_kwargs |= {
+            "native_min_value": cast(float, entity_definition.get("setter_min_val")),
+            "native_max_value": cast(float, entity_definition.get("setter_max_val")),
+            "native_step": entity_definition.get("setter_step", 1.0),
             "mode": NumberMode.BOX,
         }
+        description_class = NumberEntityDescription
+    elif platform == "select":
+        platform_specific_kwargs["options"] = entity_definition.get("options", [])
+        description_class = SelectEntityDescription
+    else:
+        raise ValueError(f"Unsupported platform for entity description: {platform}")
 
-    # Filter out None values to avoid overriding defaults in the description class
-    filtered_kwargs = {k: v for k, v in description_kwargs.items() if v is not None}
-
-    return description_class(**filtered_kwargs)
+    final_kwargs = {
+        k: v
+        for k, v in (base_kwargs | platform_specific_kwargs).items()
+        if v is not None
+    }
+    return description_class(**final_kwargs)
