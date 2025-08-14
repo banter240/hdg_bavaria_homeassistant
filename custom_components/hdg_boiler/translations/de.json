@@ -31,31 +31,35 @@
         "description": "Optionen für den HDG Kessel.",
         "data": {
           "device_alias": "Geräte-Alias",
-          "scan_interval_group_1_realtime_core": "Scan-Intervall: Echtzeit-Kernwerte (Sekunden)",
-          "scan_interval_group_2_status_general": "Scan-Intervall: Status-Werte Allgemein (Sekunden)",
-          "scan_interval_group_3_config_counters_1": "Scan-Intervall: Konfig/Zähler Teil 1 (Sekunden)",
-          "scan_interval_group_4_config_counters_2": "Scan-Intervall: Konfig/Zähler Teil 2 (Sekunden)",
-          "scan_interval_group_5_config_counters_3": "Scan-Intervall: Konfig/Zähler Teil 3 (Sekunden)",
+          "scan_interval_group_1": "Scan-Intervall: Echtzeit-Kernwerte (Sekunden)",
+          "scan_interval_group_2": "Scan-Intervall: Status-Werte Allgemein (Sekunden)",
+          "scan_interval_group_3": "Scan-Intervall: Konfig/Zähler 1 (Sekunden)",
+          "scan_interval_group_4": "Scan-Intervall: Konfig/Zähler 2 (Sekunden)",
+          "scan_interval_group_5": "Scan-Intervall: Konfig/Zähler 3 (Sekunden)",
           "log_level": "Protokollierungsstufe",
           "advanced_logging": "Erweiterte Protokollierung aktivieren",
           "source_timezone": "Quell-Zeitzone (IANA-Format)",
           "api_timeout": "API-Timeout (Sekunden)",
+          "connect_timeout": "Verbindungs-Timeout (Sekunden)",
           "polling_preemption_timeout": "Polling-Vorrang-Timeout (Sekunden)",
+          "recently_set_poll_ignore_window_s": "Ignorier-Fenster für gesetzte Werte (Sekunden)",
           "log_level_threshold_for_connection_errors": "Fehler-Schwellenwert für Verbindungsprobleme"
         },
         "data_description": {
           "device_alias": "Ein optionaler, benutzerfreundlicher Name für diesen Kessel in Home Assistant. Wenn leer, wird ein Standardname verwendet.",
+          "scan_interval_group_1": "Intervall für die Abfrage der wichtigsten Echtzeitdaten (z.B. Temperaturen, Status). Standard: {default_scan_interval_group_1}s.",
+          "scan_interval_group_2": "Intervall für die Abfrage allgemeiner Statusinformationen. Standard: {default_scan_interval_group_2}s.",
+          "scan_interval_group_3": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 1). Standard: {default_scan_interval_group_3}s.",
+          "scan_interval_group_4": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 2). Standard: {default_scan_interval_group_4}s.",
+          "scan_interval_group_5": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 3). Standard: {default_scan_interval_group_5}s.",
           "log_level": "Legt die Detailtiefe der Protokolle für diese Integration fest. 'DEBUG' ist sehr ausführlich und nützlich für die Fehlersuche. 'INFO' ist der Standard für den normalen Betrieb.",
           "advanced_logging": "Aktiviert zusätzliche INFO-Level-Protokolle für wichtige Aktionen (z.B. das Setzen von Werten), auch wenn die Protokollierungsstufe auf INFO steht. Nützlich, um Aktionen zu verfolgen, ohne die vollständige DEBUG-Protokollierung zu aktivieren.",
           "source_timezone": "Die Zeitzone, in der der Kessel seine Zeitdaten liefert (z.B. 'Europe/Berlin'). Dies ist wichtig für die korrekte Interpretation von Datums-/Zeitwerten vom Kessel.",
           "api_timeout": "Die maximale Wartezeit (in Sekunden) auf eine Antwort vom Kessel für jede API-Anfrage. Ein höherer Wert kann bei instabilen Netzwerken helfen, aber auch zu längeren Wartezeiten führen. Bereich: {min_api_timeout}-{max_api_timeout}s.",
-          "polling_preemption_timeout": "Die maximale Zeit (in Sekunden), die eine Abfrageanfrage niedriger Priorität ausgeführt werden darf, wenn eine höher priorisierte Anfrage (z.B. eine Einstellungsänderung) in die Warteschlange gestellt wird. Ein niedrigerer Wert sorgt für schnellere Reaktion auf Einstellungsänderungen, kann aber bei langsamen Kesselantworten zu häufigeren Abbrüchen führen. Bereich: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
-          "log_level_threshold_for_connection_errors": "Die Anzahl aufeinanderfolgender Verbindungsfehler, nach der die Protokollierung dieser Fehler eskaliert wird. Liegt die Anzahl unter diesem Schwellenwert, werden Fehler als INFO geloggt. Bei Erreichen oder Überschreiten des Schwellenwerts werden Verbindungsfehler als ERROR und andere API-Fehler als WARNING geloggt. Bereich: 1-60",
-          "scan_interval_group_1_realtime_core": "Das Intervall (in Sekunden) für die Abfrage der wichtigsten Echtzeitdaten des Kessels (z.B. Temperaturen, Betriebsstatus). Standard: {default_scan_interval_group_1_realtime_core}s.",
-          "scan_interval_group_2_status_general": "Das Intervall (in Sekunden) für die Abfrage allgemeiner Statusinformationen des Kessels. Standard: {default_scan_interval_group_2_status_general}s.",
-          "scan_interval_group_3_config_counters_1": "Das Intervall (in Sekunden) für die Abfrage von Konfigurations- und Zählerdaten des Kessels (Gruppe 1). Diese Daten ändern sich seltener. Standard: {default_scan_interval_group_3_config_counters_1}s.",
-          "scan_interval_group_4_config_counters_2": "Das Intervall (in Sekunden) für die Abfrage von Konfigurations- und Zählerdaten des Kessels (Gruppe 2). Standard: {default_scan_interval_group_4_config_counters_2}s.",
-          "scan_interval_group_5_config_counters_3": "Das Intervall (in Sekunden) für die Abfrage von Konfigurations- und Zählerdaten des Kessels (Gruppe 3). Standard: {default_scan_interval_group_5_config_counters_3}s."
+          "connect_timeout": "Die maximale Wartezeit (in Sekunden) für den Verbindungsaufbau zum Kessel. Bereich: {min_connect_timeout}-{max_connect_timeout}s.",
+          "polling_preemption_timeout": "Die maximale Zeit (in Sekunden), die eine Abfrageanfrage niedriger Priorität ausgeführt werden darf, wenn eine höher priorisierte Anfrage (z.B. eine Einstellungsänderung) in die Warteschlange gestellt wird. Ein niedrigerer Wert sorgt für schnellere Reaktion auf Einstellungsänderungen, kann aber bei langsamen Kesselantworten zu häufigeren Abbrüchen führen. Dieser Wert muss eine ganze Zahl sein. Bereich: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
+          "recently_set_poll_ignore_window_s": "Zeitfenster (in Sekunden), in dem Aktualisierungen für Werte ignoriert werden, die kürzlich über Home Assistant gesetzt wurden. Verhindert, dass eine Benutzereingabe sofort wieder mit einem alten Wert vom Kessel überschrieben wird. Standard: {default_ignore_window}s, Bereich: {min_ignore_window}-{max_ignore_window}s.",
+          "log_level_threshold_for_connection_errors": "Die Anzahl aufeinanderfolgender Verbindungsfehler, nach der die Protokollierung dieser Fehler eskaliert wird. Liegt die Anzahl unter diesem Schwellenwert, werden Fehler als INFO geloggt. Bei Erreichen oder Überschreiten des Schwellenwerts werden Verbindungsfehler als ERROR und andere API-Fehler als WARNING geloggt. Bereich: 1-60"
         }
       }
     },
@@ -250,8 +254,7 @@
           "party": "Partybetrieb",
           "sommer": "Sommerbetrieb",
           "standard": "Standard",
-          "tag": "Tagbetrieb",
-          "urlaub": "Urlaubsbetrieb"
+          "tag": "Tagbetrieb"
         }
       },
       "sprache": {

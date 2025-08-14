@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __all__ = ["HdgDataUpdateCoordinator", "async_create_and_refresh_coordinator"]
 
 import asyncio
@@ -58,6 +58,7 @@ class PollingState(TypedDict):
     """State related to polling and error handling."""
 
     consecutive_failures: int
+    consecutive_connection_failures: int
     failed_group_retry_info: dict[str, RetryInfo]
     last_update_times: dict[str, float]
     boiler_is_online: bool
@@ -88,6 +89,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         api_access_manager: HdgApiAccessManager,
         entry: ConfigEntry,
         log_level_threshold_for_connection_errors: int,
+        error_threshold: int,
         hdg_entity_registry: HdgEntityRegistry,
     ):
         """Initialize the HdgDataUpdateCoordinator."""
@@ -97,6 +99,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.entry = entry
         self.hdg_entity_registry = hdg_entity_registry
         self._log_level_threshold = log_level_threshold_for_connection_errors
+        self._error_threshold = error_threshold
 
         self._initialize_state()
         self._validate_polling_config()
@@ -129,6 +132,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Initialize the state attributes for the coordinator."""
         self._polling_state: PollingState = {
             "consecutive_failures": 0,
+            "consecutive_connection_failures": 0,
             "failed_group_retry_info": {},
             "last_update_times": dict.fromkeys(
                 self.hdg_entity_registry.get_polling_group_order(), 0.0
@@ -227,38 +231,40 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _sequentially_fetch_groups(
         self, groups: list[tuple[str, str]], priority: ApiPriority
-    ) -> tuple[bool, bool]:
+    ) -> bool:
         """Fetch data for multiple polling groups concurrently with a limit."""
         semaphore = asyncio.Semaphore(5)  # Limit to 5 concurrent requests
 
         async def fetch_with_semaphore(
             group_key: str, payload_str: str
-        ) -> tuple[str, bool, bool]:
+        ) -> tuple[str, bool]:
             async with semaphore:
                 try:
                     success = await self._fetch_group_data(
                         group_key, payload_str, priority
                     )
-                    return group_key, success, False
+                    return group_key, success
                 except HdgApiConnectionError:
-                    return group_key, False, True
+                    raise  # Re-raise to be caught by the gather call
                 except Exception:
                     _LOGGER.exception(
                         "Unhandled exception fetching group '%s'.", group_key
                     )
-                    return group_key, False, True
+                    return group_key, False
 
         tasks = [fetch_with_semaphore(gk, ps) for gk, ps in groups]
-        results = await asyncio.gather(*tasks)
+        try:
+            results = await asyncio.gather(*tasks)
+        except HdgApiConnectionError:
+            raise  # Propagate the connection error to the caller
 
         any_success = any(r[1] for r in results)
-        any_conn_error = any(r[2] for r in results)
 
-        for group_key, success, _ in results:
+        for group_key, success in results:
             if success:
                 self._polling_state["last_update_times"][group_key] = time.monotonic()
 
-        return any_success, any_conn_error
+        return any_success
 
     async def async_config_entry_first_refresh(self) -> None:
         """Perform initial sequential data refresh for all polling groups."""
@@ -267,16 +273,16 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             (gk, p["payload_str"])
             for gk, p in self.hdg_entity_registry.get_polling_group_payloads().items()
         ]
-        any_success, any_conn_error = await self._sequentially_fetch_groups(
-            all_groups, ApiPriority.MEDIUM
-        )
-
-        if not any_success:
-            self._set_boiler_online_status(False)
-            msg = f"Initial data refresh failed for {self.name}."
-            if any_conn_error:
-                msg += " Connection errors encountered."
-            raise UpdateFailed(msg)
+        try:
+            any_success = await self._sequentially_fetch_groups(
+                all_groups, ApiPriority.MEDIUM
+            )
+            if not any_success:
+                raise UpdateFailed(f"Initial data refresh failed for {self.name}.")
+        except HdgApiConnectionError as err:
+            raise UpdateFailed(
+                f"Initial data refresh failed for {self.name} due to connection error: {err}"
+            ) from err
 
         self._set_boiler_online_status(True)
         _LIFECYCLE_LOGGER.info("First data refresh for %s complete.", self.name)
@@ -312,8 +318,10 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._polling_state["consecutive_failures"] > 0:
             _LIFECYCLE_LOGGER.info("Boiler back online. Resetting poll failures.")
         self._polling_state["consecutive_failures"] = 0
-        for group_key in list(self._polling_state["failed_group_retry_info"].keys()):
-            if self._polling_state["last_update_times"].get(group_key, 0.0) > 0.0:
+        self._polling_state["consecutive_connection_failures"] = 0
+        # Clear retry info for groups that have successfully updated.
+        for group_key in list(self._polling_state["failed_group_retry_info"]):
+            if self._polling_state["last_update_times"].get(group_key, 0.0) > 0:
                 del self._polling_state["failed_group_retry_info"][group_key]
         if self.update_interval == self._fallback_update_interval:
             self.update_interval = self._original_update_interval
@@ -322,13 +330,16 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self.update_interval,
             )
 
-    def _handle_failed_poll(self, groups_in_cycle: list[str]) -> None:
-        """Handle the state update after a failed poll."""
+    def _update_polling_status(self, success: bool, groups_in_cycle: list[str]) -> None:
+        """Update polling status, manage failures, and schedule retries."""
+        if success:
+            self._handle_successful_poll()
+            return
+
         self._polling_state["consecutive_failures"] += 1
         failures = self._polling_state["consecutive_failures"]
         threshold = self._log_level_threshold
 
-        # Log a single, general message if the threshold is newly crossed
         if failures == threshold:
             _LOGGER.warning(
                 "Connection to host appears to be lost (failed %d consecutive times). Suppressing further group errors.",
@@ -350,7 +361,6 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             info["next_retry_time"] = time.monotonic() + delay
             self._polling_state["failed_group_retry_info"][group_key] = info
 
-            # Log detailed per-group errors only at a lower level
             _LOGGER.log(
                 log_level_for_details,
                 "Error for group '%s'. Attempt %s, next retry in %.0fs.",
@@ -365,20 +375,49 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
 
         if failures >= COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK:
-            self.update_interval = self._fallback_update_interval
-            _LIFECYCLE_LOGGER.warning(
-                "Boiler offline. Switching to fallback interval: %s",
-                self.update_interval,
-            )
+            if self.update_interval != self._fallback_update_interval:
+                self.update_interval = self._fallback_update_interval
+                _LIFECYCLE_LOGGER.warning(
+                    "Boiler offline. Switching to fallback interval: %s",
+                    self.update_interval,
+                )
             raise UpdateFailed("Persistent connection errors.")
 
-    def _update_polling_status(self, success: bool, groups_in_cycle: list[str]) -> None:
-        """Update coordinator state based on the polling cycle outcome."""
-        self._set_boiler_online_status(success)
-        if success:
-            self._handle_successful_poll()
-        else:
-            self._handle_failed_poll(groups_in_cycle)
+    def _handle_update_failure(
+        self, failure_type: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
+        """Handle all polling and connection failures centrally."""
+        context = context or {}
+        self._set_boiler_online_status(False)
+
+        if failure_type == "connection":
+            self._polling_state["consecutive_connection_failures"] += 1
+            failures = self._polling_state["consecutive_connection_failures"]
+            threshold = self._error_threshold
+            err = context.get("error")
+
+            if failures < threshold:
+                _LOGGER.debug(
+                    "Connection error #%d of %d occurred. Suppressing error, will retry on next cycle.",
+                    failures,
+                    threshold,
+                )
+                return self.data  # Silently fail
+
+            _LOGGER.warning(
+                "Connection error threshold of %d reached after %d failures.",
+                threshold,
+                failures,
+            )
+            self._polling_state["consecutive_connection_failures"] = 0  # Reset
+            raise UpdateFailed(f"Connection to boiler failed: {err}") from err
+        elif failure_type == "poll":
+            self._update_polling_status(
+                success=False,
+                groups_in_cycle=context.get("groups_in_cycle", []),
+            )
+
+        return None
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data for all due polling groups."""
@@ -386,10 +425,19 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not groups_to_fetch:
             return self.data
 
-        any_success, _ = await self._sequentially_fetch_groups(
-            list(groups_to_fetch.items()), ApiPriority.LOW
-        )
-        self._update_polling_status(any_success, list(groups_to_fetch.keys()))
+        try:
+            any_success = await self._sequentially_fetch_groups(
+                list(groups_to_fetch.items()), ApiPriority.LOW
+            )
+            self._set_boiler_online_status(any_success)
+            self._update_polling_status(any_success, list(groups_to_fetch.keys()))
+
+        except HdgApiConnectionError as err:
+            result = self._handle_update_failure("connection", context={"error": err})
+            if result is not None:
+                return result
+
+        self._polling_state["consecutive_connection_failures"] = 0
         return self.data
 
     async def async_set_node_value(
@@ -526,6 +574,7 @@ async def async_create_and_refresh_coordinator(
     api_access_manager: HdgApiAccessManager,
     entry: ConfigEntry,
     log_level_threshold_for_connection_errors: int,
+    error_threshold: int,
     hdg_entity_registry: HdgEntityRegistry,
 ) -> HdgDataUpdateCoordinator:
     """Create, initialize, and perform the first data refresh for the coordinator."""
@@ -535,6 +584,7 @@ async def async_create_and_refresh_coordinator(
         api_access_manager,
         entry,
         log_level_threshold_for_connection_errors,
+        error_threshold,
         hdg_entity_registry,
     )
     await coordinator.async_config_entry_first_refresh()
