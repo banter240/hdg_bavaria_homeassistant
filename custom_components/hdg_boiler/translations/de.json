@@ -43,7 +43,9 @@
           "connect_timeout": "Verbindungs-Timeout (Sekunden)",
           "polling_preemption_timeout": "Polling-Vorrang-Timeout (Sekunden)",
           "recently_set_poll_ignore_window_s": "Ignorier-Fenster für gesetzte Werte (Sekunden)",
-          "log_level_threshold_for_connection_errors": "Fehler-Schwellenwert für Verbindungsprobleme"
+          "log_level_threshold_for_connection_errors": "Fehler-Schwellenwert für Verbindungsprobleme",
+          "error_threshold": "Fehlerschwelle",
+          "log_level_threshold_for_preemption_errors": "Fehler-Schwellenwert für Vorrang-Unterbrechungen"
         },
         "data_description": {
           "device_alias": "Ein optionaler, benutzerfreundlicher Name für diesen Kessel in Home Assistant. Wenn leer, wird ein Standardname verwendet.",
@@ -59,7 +61,9 @@
           "connect_timeout": "Die maximale Wartezeit (in Sekunden) für den Verbindungsaufbau zum Kessel. Bereich: {min_connect_timeout}-{max_connect_timeout}s.",
           "polling_preemption_timeout": "Die maximale Zeit (in Sekunden), die eine Abfrageanfrage niedriger Priorität ausgeführt werden darf, wenn eine höher priorisierte Anfrage (z.B. eine Einstellungsänderung) in die Warteschlange gestellt wird. Ein niedrigerer Wert sorgt für schnellere Reaktion auf Einstellungsänderungen, kann aber bei langsamen Kesselantworten zu häufigeren Abbrüchen führen. Dieser Wert muss eine ganze Zahl sein. Bereich: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
           "recently_set_poll_ignore_window_s": "Zeitfenster (in Sekunden), in dem Aktualisierungen für Werte ignoriert werden, die kürzlich über Home Assistant gesetzt wurden. Verhindert, dass eine Benutzereingabe sofort wieder mit einem alten Wert vom Kessel überschrieben wird. Standard: {default_ignore_window}s, Bereich: {min_ignore_window}-{max_ignore_window}s.",
-          "log_level_threshold_for_connection_errors": "Die Anzahl aufeinanderfolgender Verbindungsfehler, nach der die Protokollierung dieser Fehler eskaliert wird. Liegt die Anzahl unter diesem Schwellenwert, werden Fehler als INFO geloggt. Bei Erreichen oder Überschreiten des Schwellenwerts werden Verbindungsfehler als ERROR und andere API-Fehler als WARNING geloggt. Bereich: 1-60"
+          "log_level_threshold_for_connection_errors": "Die Anzahl aufeinanderfolgender Verbindungsfehler, nach der die Protokollierung dieser Fehler eskaliert wird. Liegt die Anzahl unter diesem Schwellenwert, werden Fehler als INFO geloggt. Bei Erreichen oder Überschreiten des Schwellenwerts werden Verbindungsfehler als ERROR und andere API-Fehler als WARNING geloggt. Bereich: 1-60",
+          "error_threshold": "Die Anzahl der aufeinanderfolgenden Fehler, bevor die Integration einen `UpdateFailed`-Fehler auslöst und für eine Weile keine neuen Verbindungsversuche unternimmt. Bereich: {min_error_threshold}-{max_error_threshold}.",
+          "log_level_threshold_for_preemption_errors": "Die Anzahl aufeinanderfolgender Vorrang-Unterbrechungsfehler, nach der die Protokollierung eskaliert. Darunter werden Fehler als INFO, darüber als WARNING protokolliert. Bereich: {min_preemption_threshold}-{max_preemption_threshold}."
         }
       }
     },

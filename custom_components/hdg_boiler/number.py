@@ -80,8 +80,32 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         self._update_number_state()
         super()._handle_coordinator_update()
 
+    def _handle_optimistic_update(self) -> bool:
+        """Handle the optimistic update logic.
+
+        Returns True if the optimistic value should be kept, False otherwise.
+        """
+        optimistic_value = self.coordinator._setter_state["optimistic_values"].get(
+            self._node_id
+        )
+        if optimistic_value is None:
+            return False
+
+        raw_value = self.coordinator.data.get(self._node_id)
+        parsed_value = self._parse_value(raw_value)
+
+        if parsed_value != optimistic_value:
+            return True
+
+        self.coordinator._setter_state["optimistic_values"].pop(self._node_id, None)
+        self.coordinator._setter_state["optimistic_times"].pop(self._node_id, None)
+        return False
+
     def _update_number_state(self) -> None:
         """Update the entity's internal state from coordinator data."""
+        if self._handle_optimistic_update():
+            return
+
         if not self.available:
             self._attr_native_value = None
             return
@@ -90,38 +114,37 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
         parsed_value = self._parse_value(raw_value)
         self._attr_native_value = parsed_value
 
-    def _parse_value(self, raw_value: Any) -> float | None:
-        """Parse the raw value from the API into a float."""
+    def _parse_value(self, raw_value: Any) -> float | int | None:
+        """Parse the raw value from the API into a float or int."""
         parsed = parse_sensor_value(
             raw_value=raw_value,
             entity_definition=cast(dict[str, Any], self._entity_definition),
             node_id_for_log=self._node_id,
             entity_id_for_log=self.entity_id,
         )
-        if isinstance(parsed, int | float):
-            return float(parsed)
-        if parsed is None:
+        if not isinstance(parsed, int | float):
+            if parsed is not None:
+                _LOGGER.warning(
+                    "%s: Parsed value '%s' for node %s is not a number.",
+                    self.entity_id,
+                    parsed,
+                    self._node_id,
+                )
             return None
-        _LOGGER.warning(
-            "%s: Parsed value '%s' for node %s is not a number.",
-            self.entity_id,
-            parsed,
-            self._node_id,
-        )
-        return None
+        return int(parsed) if self.native_step == 1.0 else float(parsed)
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the new native value and initiate a debounced API call."""
         _USER_ACTION_LOGGER.debug(
             "%s: async_set_native_value called with: %s", self.entity_id, value
         )
-        # Optimistically update the state
-        self._attr_native_value = value
+
+        self._attr_native_value = int(value) if self.native_step == 1.0 else value
         self.async_write_ha_state()
 
         await self.coordinator.async_set_node_value(
             node_id=self._node_id,
-            value=str(value),
+            value=str(self._attr_native_value),
             entity_name_for_log=self.name or self.entity_id,
             debounce_delay=0.5,
         )

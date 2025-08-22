@@ -22,8 +22,10 @@ from .classes.polling_response_processor import HdgPollingResponseProcessor
 from .const import (
     API_REQUEST_TYPE_GET_NODES_DATA,
     API_REQUEST_TYPE_SET_NODE_VALUE,
+    CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
     COORDINATOR_FALLBACK_UPDATE_INTERVAL_MINUTES,
     COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK,
+    DEFAULT_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
     DOMAIN,
     MIN_SCAN_INTERVAL,
     POLLING_RETRY_BACKOFF_FACTOR,
@@ -59,6 +61,7 @@ class PollingState(TypedDict):
 
     consecutive_failures: int
     consecutive_connection_failures: int
+    consecutive_preemption_failures: int
     failed_group_retry_info: dict[str, RetryInfo]
     last_update_times: dict[str, float]
     boiler_is_online: bool
@@ -133,6 +136,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._polling_state: PollingState = {
             "consecutive_failures": 0,
             "consecutive_connection_failures": 0,
+            "consecutive_preemption_failures": 0,
             "failed_group_retry_info": {},
             "last_update_times": dict.fromkeys(
                 self.hdg_entity_registry.get_polling_group_order(), 0.0
@@ -215,11 +219,20 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._polling_response_processor.process_api_items(
                     group_key, fetched_data
                 )
+                self._polling_state["consecutive_preemption_failures"] = 0
                 return True
             return False
         except HdgApiPreemptedError as err:
-            _LOGGER.debug("Fetch for group '%s' preempted: %s", group_key, err)
-            raise
+            self._polling_state["consecutive_preemption_failures"] += 1
+            threshold = self.entry.options.get(
+                CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
+                DEFAULT_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
+            )
+            if self._polling_state["consecutive_preemption_failures"] >= threshold:
+                _LOGGER.warning("Fetch for group '%s' preempted: %s", group_key, err)
+            else:
+                _LOGGER.info("Fetch for group '%s' preempted: %s", group_key, err)
+            return False
         except (HdgApiResponseError, HdgApiError) as err:
             _LOGGER.warning("API error fetching group '%s': %s", group_key, err)
             return False
