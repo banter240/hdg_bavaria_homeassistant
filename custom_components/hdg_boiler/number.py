@@ -139,7 +139,7 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
             "%s: async_set_native_value called with: %s", self.entity_id, value
         )
 
-        self._attr_native_value = int(value) if self.native_step == 1.0 else value
+        self._attr_native_value = round(value) if self.native_step == 1.0 else value
         self.async_write_ha_state()
 
         await self.coordinator.async_set_node_value(
