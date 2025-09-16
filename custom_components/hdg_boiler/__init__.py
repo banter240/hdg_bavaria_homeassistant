@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __all__ = ["async_setup_entry", "async_unload_entry"]
 
 import logging
@@ -27,7 +27,7 @@ from .const import (
     DOMAIN,
     LIFECYCLE_LOGGER_NAME,
 )
-from .coordinator import async_create_and_refresh_coordinator
+from .coordinator import HdgDataUpdateCoordinator, async_create_and_refresh_coordinator
 from .definitions import POLLING_GROUP_DEFINITIONS, SENSOR_DEFINITIONS
 from .helpers.api_access_manager import HdgApiAccessManager
 from .helpers.logging_utils import configure_loggers
@@ -122,6 +122,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
+        coordinator: HdgDataUpdateCoordinator = integration_data["coordinator"]
+        await coordinator.async_stop_api_access_manager()
         api_access_manager: HdgApiAccessManager = integration_data["api_access_manager"]
         await api_access_manager.stop()
         hass.data[DOMAIN].pop(entry.entry_id)

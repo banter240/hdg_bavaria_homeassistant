@@ -31,6 +31,7 @@ from .const import (
     CONF_CONNECT_TIMEOUT,
     CONF_DEVICE_ALIAS,
     CONF_ERROR_THRESHOLD,
+    CONF_FALLBACK_PING_INTERVAL,
     CONF_HOST_IP,
     CONF_LOG_LEVEL,
     CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
@@ -44,6 +45,7 @@ from .const import (
     DEFAULT_API_TIMEOUT,
     DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_ERROR_THRESHOLD,
+    DEFAULT_FALLBACK_PING_INTERVAL,
     DEFAULT_LOG_LEVEL,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
@@ -55,6 +57,7 @@ from .const import (
     MAX_API_TIMEOUT,
     MAX_CONNECT_TIMEOUT,
     MAX_ERROR_THRESHOLD,
+    MAX_FALLBACK_PING_INTERVAL,
     MAX_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     MAX_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
     MAX_POLLING_PREEMPTION_TIMEOUT,
@@ -63,6 +66,7 @@ from .const import (
     MIN_API_TIMEOUT,
     MIN_CONNECT_TIMEOUT,
     MIN_ERROR_THRESHOLD,
+    MIN_FALLBACK_PING_INTERVAL,
     MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     MIN_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
     MIN_POLLING_PREEMPTION_TIMEOUT,
@@ -307,6 +311,16 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
                     "unit_of_measurement": "s",
                 },
             ),
+            (
+                CONF_FALLBACK_PING_INTERVAL,
+                DEFAULT_FALLBACK_PING_INTERVAL,
+                {
+                    "min": MIN_FALLBACK_PING_INTERVAL,
+                    "max": MAX_FALLBACK_PING_INTERVAL,
+                    "step": 1,
+                    "unit_of_measurement": "s",
+                },
+            ),
         ]
 
         for key, default, config in number_schema_definitions:
@@ -337,6 +351,9 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
             "min_ignore_window": MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
             "max_ignore_window": MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
             "default_ignore_window": DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+            "min_fallback_ping_interval": MIN_FALLBACK_PING_INTERVAL,
+            "max_fallback_ping_interval": MAX_FALLBACK_PING_INTERVAL,
+            "default_fallback_ping_interval": DEFAULT_FALLBACK_PING_INTERVAL,
         }
         placeholders = {k: str(v) for k, v in placeholders_map.items()}
 
