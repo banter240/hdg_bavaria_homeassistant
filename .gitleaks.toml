@@ -20,10 +20,9 @@
       ]
 
     [[rules.allowlists]]
-      description = "Allow translation_key assignments in const.py"
-      paths = ['''custom_components/hdg_boiler/const\.py''']
-      # This targets the values of "translation_key" if they were in const.py (which they are not based on current structure)
-      # Keeping it general for now, but might be too broad or unnecessary if translation_keys are only in definitions.py
+      description = "Allow translation_key assignments in const.py and definitions.py"
+      paths = ['''custom_components/hdg_boiler/const\.py''', '''custom_components/hdg_boiler/definitions\.py''']
+      # This targets the values of "translation_key"
       regexes = [
           '''^[a-z0-9_]+$''' # Matches generic key-like strings
       ]
@@ -36,13 +35,13 @@
       ]
 
     [[rules.allowlists]]
-      description = "Allow specific translation_key values in definitions.py"
-      paths = ['''custom_components/hdg_boiler/definitions\.py''']
-      # This regex targets the values of "translation_key"
-      regexes = ['''^[a-z0-9_]+$''']
-
-    [[rules.allowlists]]
       description = "Allow HdgApiAccessManager class name in log messages"
       paths = ['''custom_components/hdg_boiler/helpers/api_access_manager\.py''']
       # This allows the specific class name that is being flagged as a false positive.
-      regexes = ['''HdgApiAccessManager''']
+            regexes = ['''HdgApiAccessManager''']
+
+    [[rules.allowlists]]
+      description = "Allow internal variable _ping_unsub which is not an API key"
+      regexes = [
+          '_ping_unsub'
+      ]

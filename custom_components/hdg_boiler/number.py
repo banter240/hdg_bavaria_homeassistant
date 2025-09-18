@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.2.3"
 __all__ = ["async_setup_entry"]
 
 import logging
+import math
 from typing import Any, cast
 
 from homeassistant.components.number import NumberEntity, NumberEntityDescription
@@ -131,7 +132,9 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
                     self._node_id,
                 )
             return None
-        return int(parsed) if self.native_step == 1.0 else float(parsed)
+        return (
+            int(math.floor(parsed + 0.5)) if self.native_step == 1.0 else float(parsed)
+        )
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the new native value and initiate a debounced API call."""
@@ -139,7 +142,10 @@ class HdgBoilerNumber(HdgNodeEntity, NumberEntity):
             "%s: async_set_native_value called with: %s", self.entity_id, value
         )
 
-        self._attr_native_value = int(value) if self.native_step == 1.0 else value
+        # If native_step is 1.0, values are expected to be integers. Round half up.
+        self._attr_native_value = (
+            math.floor(value + 0.5) if self.native_step == 1.0 else value
+        )
         self.async_write_ha_state()
 
         await self.coordinator.async_set_node_value(

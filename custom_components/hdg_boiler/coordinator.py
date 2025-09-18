@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.3.1"
+__version__ = "0.3.6"
 __all__ = ["HdgDataUpdateCoordinator", "async_create_and_refresh_coordinator"]
 
 import asyncio
@@ -11,10 +11,14 @@ import logging
 import time
 from datetime import datetime, timedelta
 from typing import Any, TypedDict
+from urllib.parse import urlparse
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant
-from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.event import (
+    async_call_later,
+    async_track_time_interval,
+)
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import HdgApiClient
@@ -22,11 +26,15 @@ from .classes.polling_response_processor import HdgPollingResponseProcessor
 from .const import (
     API_REQUEST_TYPE_GET_NODES_DATA,
     API_REQUEST_TYPE_SET_NODE_VALUE,
+    CONF_FALLBACK_PING_INTERVAL,
     CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
     COORDINATOR_FALLBACK_UPDATE_INTERVAL_MINUTES,
     COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK,
+    DEFAULT_FALLBACK_PING_INTERVAL,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
     DOMAIN,
+    MAX_FALLBACK_PING_INTERVAL,
+    MIN_FALLBACK_PING_INTERVAL,
     MIN_SCAN_INTERVAL,
     POLLING_RETRY_BACKOFF_FACTOR,
     POLLING_RETRY_INITIAL_DELAY_S,
@@ -46,6 +54,7 @@ from .helpers.logging_utils import (
     _LOGGER,
     _USER_ACTION_LOGGER,
 )
+from .helpers.network_utils import async_execute_icmp_ping
 from .registry import HdgEntityRegistry
 
 
@@ -126,6 +135,10 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             minutes=COORDINATOR_FALLBACK_UPDATE_INTERVAL_MINUTES
         )
         self._polling_response_processor = HdgPollingResponseProcessor(self)
+
+        self._hostname = urlparse(self.api_client.base_url).hostname
+        self._ping_unsub: CALLBACK_TYPE | None = None
+
         _LOGGER.debug(
             "HdgDataUpdateCoordinator initialized. Update interval: %s",
             shortest_interval,
@@ -233,11 +246,11 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             else:
                 _LOGGER.info("Fetch for group '%s' preempted: %s", group_key, err)
             return False
+        except HdgApiConnectionError:
+            raise
         except (HdgApiResponseError, HdgApiError) as err:
             _LOGGER.warning("API error fetching group '%s': %s", group_key, err)
             return False
-        except HdgApiConnectionError:
-            raise
         except Exception:
             _LOGGER.exception("Unexpected error polling group '%s'.", group_key)
             raise
@@ -293,6 +306,9 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if not any_success:
                 raise UpdateFailed(f"Initial data refresh failed for {self.name}.")
         except HdgApiConnectionError as err:
+            self._set_boiler_online_status(
+                False
+            )  # Mark boiler offline on initial connection error
             raise UpdateFailed(
                 f"Initial data refresh failed for {self.name} due to connection error: {err}"
             ) from err
@@ -422,7 +438,8 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 threshold,
                 failures,
             )
-            self._polling_state["consecutive_connection_failures"] = 0  # Reset
+            # The consecutive_connection_failures counter is reset in _handle_successful_poll
+            # when a successful poll occurs, ensuring the fallback logic persists during outages.
             raise UpdateFailed(f"Connection to boiler failed: {err}") from err
         elif failure_type == "poll":
             self._update_polling_status(
@@ -446,11 +463,11 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._update_polling_status(any_success, list(groups_to_fetch.keys()))
 
         except HdgApiConnectionError as err:
+            self._on_connection_failure()
             result = self._handle_update_failure("connection", context={"error": err})
             if result is not None:
                 return result
 
-        self._polling_state["consecutive_connection_failures"] = 0
         return self.data
 
     async def async_set_node_value(
@@ -576,9 +593,49 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     node_id, final_value, entity_name_for_log
                 )
 
+    def _unsubscribe_ping_callback(self) -> None:
+        """Unsubscribe ping callback if set and reset the reference."""
+        if self._ping_unsub:
+            self._ping_unsub()
+            self._ping_unsub = None
+
     async def async_stop_api_access_manager(self) -> None:
         """Gracefully stop the background HdgApiAccessManager task."""
         await self.api_access_manager.stop()
+        self._unsubscribe_ping_callback()
+
+    def _on_connection_failure(self) -> None:
+        """Schedule a recurring ping when we lose connection."""
+        interval = self.entry.options.get(
+            CONF_FALLBACK_PING_INTERVAL, DEFAULT_FALLBACK_PING_INTERVAL
+        )
+        # If interval is zero, fallback pings are disabled.
+        # This is intentional: setting CONF_FALLBACK_PING_INTERVAL to 0 disables pings.
+        # nothing to do if user has disabled pings or we’re already scheduled
+        if not interval or self._ping_unsub or not self._hostname:
+            return
+
+        # clamp once here if you still want min/max enforcement:
+        interval = max(
+            min(interval, MAX_FALLBACK_PING_INTERVAL), MIN_FALLBACK_PING_INTERVAL
+        )
+        self._ping_unsub = async_track_time_interval(
+            self.hass, self._async_ping_and_refresh, timedelta(seconds=interval)
+        )
+
+    async def _async_ping_and_refresh(self, now: datetime) -> None:
+        """Ping the boiler; on success cancel the track and force a refresh."""
+        if self._hostname is None:
+            _LOGGER.warning("Cannot ping: hostname is not available.")
+            return
+        try:
+            if await async_execute_icmp_ping(self._hostname, timeout=3):
+                _LIFECYCLE_LOGGER.info("Ping succeeded; forcing immediate refresh")
+                # cancel further pings
+                self._unsubscribe_ping_callback()
+                await self.async_request_refresh()
+        except Exception:
+            _LOGGER.exception("Ping task failed; will retry on next interval")
 
 
 async def async_create_and_refresh_coordinator(

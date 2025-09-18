@@ -45,7 +45,8 @@
           "recently_set_poll_ignore_window_s": "Recently Set Ignore Window (seconds)",
           "log_level_threshold_for_connection_errors": "Connection Error Threshold",
           "error_threshold": "Error Threshold",
-          "log_level_threshold_for_preemption_errors": "Preemption Error Threshold"
+          "log_level_threshold_for_preemption_errors": "Preemption Error Threshold",
+          "fallback_ping_interval": "Fallback Ping Interval (seconds)"
         },
         "data_description": {
           "device_alias": "An optional, user-friendly name for this boiler in Home Assistant. If left empty, a default name will be used.",
@@ -63,7 +64,8 @@
           "recently_set_poll_ignore_window_s": "Time window (in seconds) to ignore updates for values that have been recently set via Home Assistant. This prevents the integration from immediately overwriting a user's change with an old value from the boiler. Default: {default_ignore_window}s, Range: {min_ignore_window}-{max_ignore_window}s.",
           "log_level_threshold_for_connection_errors": "The number of consecutive connection failures after which the logging level for connection errors escalates. For example, if set to 5, the first 4 connection errors will be logged as INFO, and the 5th and subsequent errors will be logged as ERROR. Non-connection API errors will be logged as WARNING after this threshold. Range: 1-60",
           "error_threshold": "The number of consecutive errors before the integration raises an `UpdateFailed` error and stops trying to reconnect for a while. Range: {min_error_threshold}-{max_error_threshold}.",
-          "log_level_threshold_for_preemption_errors": "The number of consecutive preemption errors before logging escalates. Below this, errors are logged as INFO. At or above, they are logged as WARNING. Range: {min_preemption_threshold}-{max_preemption_threshold}."
+          "log_level_threshold_for_preemption_errors": "The number of consecutive preemption errors before logging escalates. Below this, errors are logged as INFO. At or above, they are logged as WARNING. Range: {min_preemption_threshold}-{max_preemption_threshold}.",
+          "fallback_ping_interval": "The interval in seconds to ping the host when it is considered offline. A successful ping will trigger an immediate refresh attempt. Range: {min_fallback_ping_interval}-{max_fallback_ping_interval}s, Default: {default_fallback_ping_interval}s."
         }
       }
     },
