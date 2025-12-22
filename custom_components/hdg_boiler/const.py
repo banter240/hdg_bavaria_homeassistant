@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import Final
 
+from homeassistant.const import UnitOfMass
+
 from .models import PollingGroupStaticDefinition
 
 __all__: Final[list[str]] = [
@@ -12,6 +14,7 @@ __all__: Final[list[str]] = [
     "DEFAULT_NAME",
     "MANUFACTURER",
     "MODEL_PREFIX",
+    "UNIT_MASS_TONNES",
     "CONF_DEVICE_ALIAS",
     "CONF_HOST_IP",
     "CONF_SOURCE_TIMEZONE",
@@ -96,6 +99,12 @@ __all__: Final[list[str]] = [
 ]
 
 __version__: Final[str] = "1.2.5"
+
+# --------------------------------------------------------------------------------
+# Compatibility Shims
+# --------------------------------------------------------------------------------
+# Home Assistant versions before 2025.x might not have TONNES in UnitOfMass
+UNIT_MASS_TONNES: Final[str] = getattr(UnitOfMass, "TONNES", "t")
 
 # --------------------------------------------------------------------------------
 # Core Integration Constants
