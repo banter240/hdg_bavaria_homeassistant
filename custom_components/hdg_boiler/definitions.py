@@ -9,7 +9,7 @@ corresponding Home Assistant entity configurations.
 
 from __future__ import annotations
 
-__version__ = "0.1.15"
+__version__ = "0.1.20"
 
 from typing import Final, cast
 
@@ -31,6 +31,18 @@ from .const import (
     UNIT_MASS_TONNES,
 )
 from .models import SensorDefinition  # Import from new models.py
+
+
+# --------------------------------------------------------------------------------
+# Global Constants & Derived Keys
+# --------------------------------------------------------------------------------
+POLLING_GROUP_KEYS: dict[str, str] = {
+    f"POLLING_GROUP_{i + 1}": group["key"]  # type: ignore[misc]
+    for i, group in enumerate(POLLING_GROUP_DEFINITIONS)
+}
+
+# Standard options for heating circuit operating modes
+HK_OPERATING_MODE_OPTIONS: Final = ["normal", "tag", "nacht", "party", "sommer"]
 
 
 #
@@ -91,7 +103,13 @@ def _create_sensor_definition(
     uppercase_value: bool | None = None,
     entity_registry_enabled_default: bool = True,
 ) -> SensorDefinition:
-    """Create a SensorDefinition dictionary. Avoid using directly."""
+    """Create a SensorDefinition dictionary. Avoid using directly.
+
+    The 'entity_registry_enabled_default' parameter controls if the entity is
+    enabled by default when the integration is first set up. Advanced or optional
+    entities (like HK2 or secondary buffers) should set this to False to prevent
+    cluttering the Home Assistant UI for users without those components.
+    """
     definition: dict[str, object | None] = {
         "hdg_node_id": hdg_node_id,
         "translation_key": translation_key,
@@ -529,15 +547,6 @@ def create_select_entity(
         ha_device_class=SensorDeviceClass.ENUM,
         entity_registry_enabled_default=entity_registry_enabled_default,
     )
-
-
-POLLING_GROUP_KEYS: dict[str, str] = {
-    f"POLLING_GROUP_{i + 1}": group["key"]  # type: ignore[misc]
-    for i, group in enumerate(POLLING_GROUP_DEFINITIONS)
-}
-
-# Standard options for heating circuit operating modes
-HK_OPERATING_MODE_OPTIONS: Final = ["normal", "tag", "nacht", "party", "sommer"]
 
 
 # Master dictionary defining all sensors and entities for the integration.
