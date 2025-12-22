@@ -176,3 +176,6 @@ GEMINI.md
 
 # Temporary files
 .old/*
+
+# Local testing directory
+testing_config/
