@@ -1,4 +1,4 @@
-## [0.13.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v0.12.0...v0.13.0-dev.1) (2025-12-22)
+## [0.13.0](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v0.12.0...v0.13.0) (2025-12-22)
 
 ### ✨ New Features
 

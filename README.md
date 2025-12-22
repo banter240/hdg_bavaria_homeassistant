@@ -65,13 +65,14 @@ This custom component allows you to integrate your HDG Bavaria boiler (e.g., HDG
 - **Dynamic Entity Creation**: Entities are created based on a comprehensive `SENSOR_DEFINITIONS` map in `definitions.py`, which also dictates their polling group assignment. This ensures that only relevant entities for your boiler model are exposed.
 - **Internationalization**: Supports multiple languages for entity names and states via Home Assistant's translation system.
 - **Comprehensive Sensor Data**: Access a wide range of data points from your boiler, including:
-  - Temperatures (boiler, buffer, flue gas, outside, heating circuits, etc.)
-    - Status information (boiler state, pump status, operating modes)
-    - Operational values (oxygen levels, air flap positions, fan speeds)
-    - Counters and statistics (operating hours, energy consumption)
-    - **New:** Support for Heating Circuit 2 (HK2), Domestic Hot Water 1 (WW1), Buffer 2 and pellet storage sensors (Note: These additional entities are disabled by default and must be enabled in Home Assistant).
-   - **Control Capabilities**: Adjust specific boiler settings through Home Assistant:
-     - Heating circuit target temperatures (e.g., day/night setpoints) via Number entities.  - Parallel shift for heating curves via Number entities.
+  - Temperatures (boiler, buffer, flue gas, outside, heating circuits, etc.).
+  - Status information (boiler state, pump status, operating modes).
+  - Operational values (oxygen levels, air flap positions, fan speeds).
+  - Counters and statistics (operating hours, energy consumption).
+  - **New:** Support for Heating Circuit 2 (HK2), Domestic Hot Water 1 (WW1), Buffer 2 and pellet storage sensors (Note: These additional entities are disabled by default and must be enabled in Home Assistant).
+- **Control Capabilities**: Adjust specific boiler settings through Home Assistant:
+  - Heating circuit target temperatures (e.g., day/night setpoints) via Number entities.
+  - Parallel shift for heating curves via Number entities.
   - Other configurable parameters (depending on your boiler model and `SENSOR_DEFINITIONS`) via Number entities.
   - Operational modes (e.g., Normal, Party, Summer) via Select entities.
 - **Improved Writable Entity Handling**: Number and Select entities now leverage `setter_type`, `setter_min_val`, `setter_max_val`, and `setter_step` (for numbers) and `options` (for selects) from `SENSOR_DEFINITIONS` for precise validation and control, ensuring values sent to the boiler are always within expected ranges and formats.
