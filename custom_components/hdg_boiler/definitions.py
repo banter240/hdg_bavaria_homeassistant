@@ -9,7 +9,7 @@ corresponding Home Assistant entity configurations.
 
 from __future__ import annotations
 
-__version__ = "0.1.20"
+__version__ = "0.1.21"
 
 from typing import Final, cast
 
@@ -101,14 +101,14 @@ def _create_sensor_definition(
     setter_step: float | None = None,
     options: list[str] | None = None,
     uppercase_value: bool | None = None,
-    entity_registry_enabled_default: bool = True,
+    entity_registry_enabled_default: bool | None = None,
 ) -> SensorDefinition:
     """Create a SensorDefinition dictionary. Avoid using directly.
 
     The 'entity_registry_enabled_default' parameter controls if the entity is
-    enabled by default when the integration is first set up. Advanced or optional
-    entities (like HK2 or secondary buffers) should set this to False to prevent
-    cluttering the Home Assistant UI for users without those components.
+    enabled by default when the integration is first set up. Defaults to True.
+    Advanced or optional entities (like HK2 or secondary buffers) should set
+    this to False to prevent cluttering the Home Assistant UI.
     """
     definition: dict[str, object | None] = {
         "hdg_node_id": hdg_node_id,
@@ -118,7 +118,9 @@ def _create_sensor_definition(
         "parse_as_type": parse_as_type,
         "ha_platform": ha_platform,
         "writable": writable,
-        "entity_registry_enabled_default": entity_registry_enabled_default,
+        "entity_registry_enabled_default": entity_registry_enabled_default
+        if entity_registry_enabled_default is not None
+        else True,
     }
     # Add optional fields only if they are not None
     if hdg_formatter is not None:
