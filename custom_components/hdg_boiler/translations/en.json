@@ -191,6 +191,51 @@
       "puffer_temperatur_unten": {
         "name": "Buffer Temperature Bottom"
       },
+      "puffer_2_temperatur_oben": {
+        "name": "Buffer 2 Temperature Top"
+      },
+      "puffer_2_temperatur_mitte": {
+        "name": "Buffer 2 Temperature Middle"
+      },
+      "puffer_2_temperatur_unten": {
+        "name": "Buffer 2 Temperature Bottom"
+      },
+      "puffer_2_soll_oben": {
+        "name": "Buffer 2 Target Top"
+      },
+      "puffer_2_rucklauf_soll": {
+        "name": "Buffer 2 Target Return"
+      },
+      "puffer_2_status": {
+        "name": "Buffer 2 Status"
+      },
+      "puffer_2_energie_max": {
+        "name": "Buffer 2 Energy Max"
+      },
+      "puffer_2_energie_aktuell": {
+        "name": "Buffer 2 Energy Current"
+      },
+      "puffer_2_ladezustand_alt": {
+        "name": "Buffer 2 Charge State Alt."
+      },
+      "puffer_2_energie_gesamt_zahler": {
+        "name": "Buffer 2 Energy Total (Counter)"
+      },
+      "puffer_2_energie_ist": {
+        "name": "Buffer 2 Energy Actual"
+      },
+      "puffer_2_energie_aufnehmbar": {
+        "name": "Buffer 2 Energy Receivable"
+      },
+      "puffer_2_ladezustand": {
+        "name": "Buffer 2 Charge State"
+      },
+      "puffer_2_vorlauf_extern": {
+        "name": "Buffer 2 Flow External"
+      },
+      "puffer_2_rucklauf_extern": {
+        "name": "Buffer 2 Return External"
+      },
       "puffer_ladezustand": {
         "name": "Buffer Charge State"
       },
@@ -584,6 +629,78 @@
           "aus": "Off"
         }
       },
+      "puffer_2_bezeichnung": {
+        "name": "Buffer 2 Label"
+      },
+      "puffer_2_ladung_abbruch_temperatur_oben": {
+        "name": "Buffer 2 Charge Stop Temp Top"
+      },
+      "puffer_2_fuhler_quelle": {
+        "name": "Buffer 2 Sensor Source",
+        "state": {
+          "puffer_mitte": "Accumulator middle",
+          "puffer_mitte_oben": "Accumulator middle upper",
+          "puffer_mitte_unten": "Accumulator middle lower",
+          "puffer_oben": "Accumulator top",
+          "puffer_unten": "Accumulator bottom"
+        }
+      },
+      "puffer_2_energieberechnung_aktivieren": {
+        "name": "Buffer 2 Activate Energy Calc.",
+        "state": {
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
+        }
+      },
+      "puffer_2_temperatur_kalt": {
+        "name": "Buffer 2 Temperature Cold"
+      },
+      "puffer_2_temperatur_warm": {
+        "name": "Buffer 2 Temperature Warm"
+      },
+      "puffer_2_nachlegemenge_optimieren": {
+        "name": "Buffer 2 Optimize Refill Quantity",
+        "state": {
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
+        }
+      },
+      "puffer_2_grosse": {
+        "name": "Buffer 2 Size"
+      },
+      "puffer_2_umladesystem_aktivieren": {
+        "name": "Buffer 2 Activate Reloading System",
+        "state": {
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
+        }
+      },
+      "puffer_2_beladeventil_aktivieren": {
+        "name": "Buffer 2 Activate Load Valve",
+        "state": {
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
+        }
+      },
+      "puffer_2_zonenventil_aktivieren": {
+        "name": "Buffer 2 Activate Zone Valve",
+        "state": {
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
+        }
+      },
+      "puffer_2_y2_ventil_aktivieren": {
+        "name": "Buffer 2 Activate Y2 Valve",
+        "state": {
+          "ein": "On",
+          "aus": "Off"
+        }
+      },
       "puffer_art": {
         "name": "Buffer Type",
         "state": {
@@ -813,8 +930,143 @@
       "puffer_rucklauf_extern": {
         "name": "Buffer Return External"
       },
+      "lager_pelletverbrauch_insgesamt": {
+        "name": "Total Pellet Consumption"
+      },
+      "lager_aktueller_inhalt": {
+        "name": "Current Store Contents"
+      },
+      "lager_verbrauch_seit_fuellung": {
+        "name": "Consumption Since Last Filling"
+      },
+      "lager_letzte_fuellung": {
+        "name": "Last Filling"
+      },
       "hk1_temp_quelle_status_wert": {
         "name": "HC1 Temp Source Status Value"
+      },
+      "hk2_vorlauftemperatur_ist": {
+        "name": "HC2 Flow Temperature Actual"
+      },
+      "hk2_vorlauftemperatur_soll": {
+        "name": "HC2 Flow Temperature Target"
+      },
+      "hk2_mischer_status_text": {
+        "name": "HC2 Mixer Status"
+      },
+      "hk2_pumpe_status_text": {
+        "name": "HC2 Pump Status"
+      },
+      "hk2_aktuelle_betriebsart": {
+        "name": "HC2 Current Operating Mode",
+        "state": {
+          "abgesenkt": "Reduced",
+          "aus": "Off",
+          "nacht": "Night mode",
+          "party": "Party mode",
+          "sommer": "Summer mode",
+          "standard": "Standard",
+          "tag": "Day mode",
+          "urlaub": "Holiday mode"
+        }
+      },
+      "heizkreis_2_system": {
+        "name": "Heating Circuit 2 System",
+        "state": {
+          "fussboden": "Underfloor heat",
+          "heizkoerper": "Radiators",
+          "keines": "None",
+          "konstant": "Constant",
+          "ungeregelt": "Uncontrolled"
+        }
+      },
+      "hk2_bezeichnung": {
+        "name": "HC2 Label"
+      },
+      "hk2_soll_normal": {
+        "name": "HC2 Target Normal"
+      },
+      "hk2_parallelverschiebung": {
+        "name": "HC2 Parallel Shift"
+      },
+      "hk2_raumeinflussfaktor": {
+        "name": "HC2 Room Influence Factor"
+      },
+      "hk2_vorlauftemperatur_minimum": {
+        "name": "HC2 Flow Temperature Minimum"
+      },
+      "hk2_vorlauftemperatur_maximum": {
+        "name": "HC2 Flow Temperature Maximum"
+      },
+      "hk2_raumeinheit_status": {
+        "name": "HC2 Room Unit Status",
+        "state": {
+          "keine": "None",
+          "raumbedien_geraet_bus": "Room control unit BUS",
+          "raumbedien_geraet_bus_nlm": "Raumbedien- gerät BUS NLM",
+          "raumbedien_geraet_light": "Room control unit LIGHT",
+          "raumtempera_turfuehler": "Indoor thermostat unit"
+        }
+      },
+      "hk2_offset_raumfuhler": {
+        "name": "HC2 Room Sensor Offset"
+      },
+      "hk2_warmequelle": {
+        "name": "HC2 Heat Source",
+        "state": {
+          "keine": "None",
+          "kessel": "Boiler",
+          "netzpumpe_1": "Network pump 1",
+          "netzpumpe_2": "Network pump 2",
+          "netzpumpe_3": "Network pump 3",
+          "puffer_1": "Accumulator 1",
+          "puffer_2": "Accumulator 2",
+          "verband": "Master"
+        }
+      },
+      "hk2_mischerlaufzeit_maximum": {
+        "name": "HC2 Mixer Max Runtime"
+      },
+      "hk2_pumpe_ein_freigabetemperatur": {
+        "name": "HC2 Pump On Enable Temperature"
+      },
+      "hk2_frostschutz_temp": {
+        "name": "HC2 Frost Protection Temp"
+      },
+      "hk2_heizgrenze_sommer": {
+        "name": "HC2 Heating Limit Summer"
+      },
+      "hk2_heizgrenze_winter": {
+        "name": "HC2 Heating Limit Winter"
+      },
+      "hk2_restwarme_aufnehmen": {
+        "name": "HC2 Use Residual Heat",
+        "state": {
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
+        }
+      },
+      "hk2_temp_quelle_status_wert": {
+        "name": "HC2 Temp Source Status Value"
+      },
+      "ww1_temperatur_ist": {
+        "name": "DHW Temperature Actual"
+      },
+      "ww1_ladungspumpe_status_text": {
+        "name": "DHW Pump Status"
+      },
+      "ww1_erhitzen_an_schwelle": {
+        "name": "DHW Heat ON Threshold"
+      },
+      "ww1_erhitzen_aus_schwelle": {
+        "name": "DHW Heat OFF Threshold"
+      },
+      "ww1_temperatur_vorlauf_solar_ist": {
+        "name": "DHW Solar Flow Temperature Actual"
+      },
+      "ww1_angeforderte_temperatur_status": {
+        "name": "DHW Requested Temperature Status"
       }
     },
     "number": {
@@ -835,17 +1087,52 @@
       },
       "hk1_eco_absenken_aus_aussentemperatur": {
         "name": "HC1 Eco Reduced Off Outside Temp"
+      },
+      "hk2_soll_normal": {
+        "name": "HC2 Daytime Room Temperature Target"
+      },
+      "hk2_parallelverschiebung": {
+        "name": "HC2 Parallel Shift"
+      },
+      "hk2_steilheit": {
+        "name": "HC2 Heating Curve Slope"
+      },
+      "hk2_pumpe_aus_aussentemperatur": {
+        "name": "HC2 Pump Off Outside Temperature"
+      },
+      "hk2_soll_absenk": {
+        "name": "HC2 Target Reduced"
+      },
+      "hk2_eco_absenken_aus_aussentemperatur": {
+        "name": "HC2 Eco Reduced Off Outside Temp"
+      },
+      "ww1_erhitzen_an_schwelle": {
+        "name": "DHW Heat ON Threshold"
+      },
+      "ww1_erhitzen_aus_schwelle": {
+        "name": "DHW Heat OFF Threshold"
       }
     },
     "select": {
       "betriebsart": {
-        "name": "Operating Mode",
+        "name": "HC1 Operating Mode",
         "state": {
           "normal": "Normal",
           "tag": "Day mode",
           "nacht": "Night mode",
           "party": "Party mode",
           "sommer": "Summer mode"
+        }
+      },
+      "hk2_betriebsart": {
+        "name": "HC2 Operating Mode",
+        "state": {
+          "normal": "Normal",
+          "tag": "Day mode",
+          "nacht": "Night mode",
+          "party": "Party mode",
+          "sommer": "Summer mode",
+          "urlaub": "Holiday mode"
         }
       }
     }
