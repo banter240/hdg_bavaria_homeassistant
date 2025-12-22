@@ -1,3 +1,22 @@
+## [0.13.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v0.12.0...v0.13.0-dev.1) (2025-12-22)
+
+### ✨ New Features
+
+* feat(entities): add support for HK2, WW1, Buffer 2 and pellet sensors
+
+- Add definition for pellet storage sensors (level, consumption) using new mass sensor type.
+- Add definition for Heating Circuit 2 (HK2) sensors and controls.
+- Add definition for Domestic Hot Water 1 (WW1) sensors and controls.
+- Add definition for Buffer 2 sensors and controls.
+- All new entities are disabled by default to keep the entity list clean for users without these components.
+- Update translations (DE/EN) for all new entities.
+- Rename 'Betriebsart' translation to 'HK1 Betriebsart' / 'HC1 Operating Mode' for clarity.
+- Enable 'dev' branch in semantic-release workflow for automated beta releases.
+- Refactor entity definitions using 'create_disabled_*' helper factories to reduce duplication.
+- Extract 'HK_OPERATING_MODE_OPTIONS' as a shared constant.
+- Improve type safety for 'entity_registry_enabled_default' in models.
+- Map 'entity_registry_enabled_default' in entity description helper.
+
 ## [0.12.0](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v0.11.0...v0.12.0) (2025-09-18)
 
 ### ✨ New Features
