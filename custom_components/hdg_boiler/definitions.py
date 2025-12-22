@@ -28,6 +28,7 @@ from homeassistant.helpers.entity import EntityCategory
 
 from .const import (
     POLLING_GROUP_DEFINITIONS,  # We will derive the keys from here
+    UNIT_MASS_TONNES,
 )
 from .models import SensorDefinition  # Import from new models.py
 
@@ -2199,7 +2200,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
         icon="mdi:chart-histogram",
         hdg_formatter="iT",
-        unit="t",
+        unit=UNIT_MASS_TONNES,
         ha_state_class=SensorStateClass.TOTAL_INCREASING,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
