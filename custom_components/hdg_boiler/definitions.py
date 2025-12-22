@@ -9,7 +9,7 @@ corresponding Home Assistant entity configurations.
 
 from __future__ import annotations
 
-__version__ = "0.1.16"
+__version__ = "0.1.17"
 
 from typing import Final, cast
 
@@ -2198,8 +2198,8 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         node_id="21005T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
         icon="mdi:chart-histogram",
-        hdg_formatter="iTONNE",
-        unit=UnitOfMass.TONNES,
+        hdg_formatter="iT",
+        unit="t",
         ha_state_class=SensorStateClass.TOTAL_INCREASING,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),

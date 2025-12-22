@@ -3,6 +3,6 @@
   "homeassistant": "2023.9.0",
   "render_readme": true,
   "zip_release": true,
-  "filename": "hdg_boiler_0.12.0.zip",
+  "filename": "hdg_boiler_0.13.0-dev.1.zip",
   "content_in_root": false
 }
