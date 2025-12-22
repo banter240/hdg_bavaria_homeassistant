@@ -9,7 +9,7 @@ corresponding Home Assistant entity configurations.
 
 from __future__ import annotations
 
-__version__ = "0.1.17"
+__version__ = "0.1.18"
 
 from typing import Final, cast
 
@@ -542,80 +542,106 @@ HK_OPERATING_MODE_OPTIONS: Final = ["normal", "tag", "nacht", "party", "sommer"]
 
 def create_disabled_temp_sensor(*args, **kwargs) -> SensorDefinition:
     """Create a temperature sensor that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_temp_sensor(*args, **kwargs)
+
+    return create_temp_sensor(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_enum_sensor(*args, **kwargs) -> SensorDefinition:
     """Create an enum sensor that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_enum_sensor(*args, **kwargs)
+
+    return create_enum_sensor(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_number_entity(*args, **kwargs) -> SensorDefinition:
     """Create a number entity that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_number_entity(*args, **kwargs)
+
+    return create_number_entity(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_mass_sensor(*args, **kwargs) -> SensorDefinition:
     """Create a mass sensor that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_mass_sensor(*args, **kwargs)
+
+    return create_mass_sensor(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_kelvin_sensor(*args, **kwargs) -> SensorDefinition:
     """Create a kelvin sensor that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_kelvin_sensor(*args, **kwargs)
+
+    return create_kelvin_sensor(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_general_sensor(*args, **kwargs) -> SensorDefinition:
     """Create a general sensor that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_general_sensor(*args, **kwargs)
+
+    return create_general_sensor(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_diagnostic_enum_sensor(*args, **kwargs) -> SensorDefinition:
     """Create a diagnostic enum sensor that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_diagnostic_enum_sensor(*args, **kwargs)
+
+    return create_diagnostic_enum_sensor(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_diagnostic_text_sensor(*args, **kwargs) -> SensorDefinition:
     """Create a diagnostic text sensor that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_diagnostic_text_sensor(*args, **kwargs)
+
+    return create_diagnostic_text_sensor(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_percentage_sensor(*args, **kwargs) -> SensorDefinition:
     """Create a percentage sensor that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_percentage_sensor(*args, **kwargs)
+
+    return create_percentage_sensor(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_duration_sensor(*args, **kwargs) -> SensorDefinition:
     """Create a duration sensor that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_duration_sensor(*args, **kwargs)
+
+    return create_duration_sensor(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_energy_sensor(*args, **kwargs) -> SensorDefinition:
     """Create an energy sensor that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_energy_sensor(*args, **kwargs)
+
+    return create_energy_sensor(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_text_sensor(*args, **kwargs) -> SensorDefinition:
     """Create a text sensor that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_text_sensor(*args, **kwargs)
+
+    return create_text_sensor(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 def create_disabled_select_entity(*args, **kwargs) -> SensorDefinition:
     """Create a select entity that is disabled by default."""
-    kwargs["entity_registry_enabled_default"] = False
-    return create_select_entity(*args, **kwargs)
+
+    return create_select_entity(
+        *args, **{**kwargs, "entity_registry_enabled_default": False}
+    )
 
 
 # Master dictionary defining all sensors and entities for the integration.
