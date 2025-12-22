@@ -9,7 +9,7 @@ availability and attributes.
 
 from __future__ import annotations
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 __all__ = ["HdgBaseEntity", "HdgNodeEntity"]
 
 import logging
@@ -162,10 +162,11 @@ class HdgNodeEntity(HdgBaseEntity):
             )
         if hasattr(description, "icon"):
             self._attr_icon = description.icon
-        if description.entity_registry_enabled_default is not None:
-            self._attr_entity_registry_enabled_default = (
-                description.entity_registry_enabled_default
-            )
+
+        # Safely propagate registry enabled default if present on the description
+        enabled_default = getattr(description, "entity_registry_enabled_default", None)
+        if enabled_default is not None:
+            self._attr_entity_registry_enabled_default = enabled_default
 
     async def async_added_to_hass(self) -> None:
         """Handle entity being added to Home Assistant."""
