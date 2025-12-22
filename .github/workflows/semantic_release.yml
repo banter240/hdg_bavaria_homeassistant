@@ -8,7 +8,7 @@ on:
     branches:
       - 'main'
       - 'release-test'
-      # - 'dev'
+      - 'dev'
 
 jobs:
   # -- Prerequisite Job: Linting --

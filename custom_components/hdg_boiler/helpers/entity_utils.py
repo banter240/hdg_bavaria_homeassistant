@@ -38,6 +38,9 @@ def create_entity_description(
         "native_unit_of_measurement": entity_definition.get(
             "ha_native_unit_of_measurement"
         ),
+        "entity_registry_enabled_default": entity_definition.get(
+            "entity_registry_enabled_default"
+        ),
     }
     if entity_category := entity_definition.get("entity_category"):
         base_kwargs["entity_category"] = entity_category
