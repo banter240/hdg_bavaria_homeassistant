@@ -78,6 +78,7 @@ class SensorDefinition(TypedDict, total=False):
     options: list[str] | None
     normalize_internal_whitespace: bool | None
     uppercase_value: bool | None
+    entity_registry_enabled_default: bool | None
 
 
 class NodeGroupPayload(TypedDict):

@@ -69,6 +69,7 @@ This custom component allows you to integrate your HDG Bavaria boiler (e.g., HDG
   - Status information (boiler state, pump status, operating modes)
   - Operational values (oxygen levels, air flap positions, fan speeds)
   - Counters and statistics (operating hours, energy consumption)
+  - **New:** Support for Heating Circuit 2 (HK2), Domestic Hot Water 1 (WW1), Buffer 2 and Pellet storage sensors (Note: These additional entities are disabled by default and must be enabled in Home Assistant).
 - **Control Capabilities**: Adjust specific boiler settings through Home Assistant:
   - Heating circuit target temperatures (e.g., day/night setpoints) via Number entities.
   - Parallel shift for heating curves via Number entities.
@@ -188,6 +189,18 @@ Select entities allow you to choose from a predefined list of options, typically
 
 - **`select.hdg_boiler_<alias>_betriebsart`**: Main operational mode of the boiler (e.g., Normal, Party, Summer).
 - Other configurable options as defined in `SENSOR_DEFINITIONS` with `ha_platform: "select"` and `writable: true`.
+
+## Enabling Additional Entities (HK2, Pellets, etc.)
+
+To keep your Home Assistant instance clean, advanced entities for additional heating circuits (HK2), the second buffer (Buffer 2), or pellet storage monitoring are **disabled by default**.
+
+If your system includes these components, you can easily enable them:
+1.  Go to **Settings** -> **Devices & Services**.
+2.  Click on the **HDG Bavaria Boiler** integration.
+3.  Click on **Entities**.
+4.  Filter for "disabled" entities or search for `hk2`, `ww1`, `puffer_2` or `lager`.
+5.  Select the desired entities and click **ENABLE SELECTED**.
+6.  Wait a few seconds for Home Assistant to start polling these new data points.
 
 ## Services
 
