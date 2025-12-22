@@ -7,7 +7,7 @@ different platforms (sensor, number, select, etc.).
 
 from __future__ import annotations
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 import logging
 from typing import Any, cast
@@ -37,6 +37,9 @@ def create_entity_description(
         "device_class": entity_definition.get("ha_device_class"),
         "native_unit_of_measurement": entity_definition.get(
             "ha_native_unit_of_measurement"
+        ),
+        "entity_registry_enabled_default": entity_definition.get(
+            "entity_registry_enabled_default"
         ),
     }
     if entity_category := entity_definition.get("entity_category"):
