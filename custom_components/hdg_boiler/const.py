@@ -98,7 +98,7 @@ __all__: Final[list[str]] = [
     "POLLING_GROUP_DEFINITIONS",
 ]
 
-__version__: Final[str] = "0.13.0"
+__version__: Final[str] = "1.2.5"
 
 # --------------------------------------------------------------------------------
 # Compatibility Shims

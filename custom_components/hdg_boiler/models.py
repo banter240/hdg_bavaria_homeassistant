@@ -7,7 +7,7 @@ API polling group configurations, and enumeration options.
 
 from __future__ import annotations
 
-__version__ = "0.1.7"
+__version__ = "0.1.6"
 
 
 from typing import TypedDict

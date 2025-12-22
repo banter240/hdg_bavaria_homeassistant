@@ -9,7 +9,7 @@ corresponding Home Assistant entity configurations.
 
 from __future__ import annotations
 
-__version__ = "0.13.0"
+__version__ = "0.1.15"
 
 from collections.abc import Callable
 from typing import Any, Final, cast
