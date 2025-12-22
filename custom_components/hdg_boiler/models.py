@@ -7,7 +7,7 @@ API polling group configurations, and enumeration options.
 
 from __future__ import annotations
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 
 
 from typing import TypedDict
@@ -78,7 +78,7 @@ class SensorDefinition(TypedDict, total=False):
     options: list[str] | None
     normalize_internal_whitespace: bool | None
     uppercase_value: bool | None
-    entity_registry_enabled_default: bool
+    entity_registry_enabled_default: bool | None
 
 
 class NodeGroupPayload(TypedDict):
