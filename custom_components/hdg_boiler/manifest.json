@@ -9,6 +9,7 @@
     "http"
   ],
   "documentation": "https://github.com/banter240/hdg_bavaria_homeassistant",
+  "brand": true,
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/banter240/hdg_bavaria_homeassistant/issues",
   "requirements": [],

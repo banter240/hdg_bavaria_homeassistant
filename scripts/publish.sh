@@ -50,7 +50,6 @@ readonly DIST_DIR="dist"
 readonly ZIP_FILENAME="${DOMAIN}_${NEXT_RELEASE_VERSION}.zip"
 readonly SOURCE_DIR="custom_components/${DOMAIN}"
 readonly COMPONENT_MANIFEST_PATH="${SOURCE_DIR}/manifest.json"
-readonly HACS_MANIFEST_PATH="hacs.json"
 
 log_info "Starting release asset preparation for version ${NEXT_RELEASE_VERSION}..."
 
@@ -78,16 +77,6 @@ zip -r "../../${DIST_DIR}/${ZIP_FILENAME}" . -x "*/__pycache__/*" "*.pyc" ".DS_S
 # Go back to the original root directory
 cd ../..
 log_success "ZIP archive with correct HACS structure created successfully."
-
-
-# 4. Update hacs.json
-if [ -f "$HACS_MANIFEST_PATH" ]; then
-  log_info "Updating filename in '${HACS_MANIFEST_PATH}'..."
-  jq ".filename = \"${ZIP_FILENAME}\"" "$HACS_MANIFEST_PATH" > temp.json && mv temp.json "$HACS_MANIFEST_PATH"
-  log_success "'${HACS_MANIFEST_PATH}' updated."
-else
-  log_warn "'${HACS_MANIFEST_PATH}' not found. Skipping update."
-fi
 
 # --- DIAGNOSTIC STEP ---
 log_info "Running 'git status' to check for modified files before exiting script..."

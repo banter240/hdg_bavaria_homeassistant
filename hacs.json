@@ -1,8 +1,6 @@
 {
   "name": "HDG Bavaria Boiler",
+  "category": "integration",
   "homeassistant": "2023.9.0",
-  "render_readme": true,
-  "zip_release": true,
-  "filename": "hdg_boiler_1.0.0-dev.1.zip",
-  "content_in_root": false
+  "render_readme": true
 }

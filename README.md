@@ -85,27 +85,22 @@ This custom component allows you to integrate your HDG Bavaria boiler (e.g., HDG
 
 ## Installation
 
-### Via HACS (Recommended)
+### Via HACS (Official Store)
 
-1.  **Ensure HACS is installed.** If not, follow the HACS installation guide.
-2.  **Add as a custom repository:**
-    - Go to HACS in your Home Assistant.
-    - Click on "Integrations".
-    - Click the three dots in the top right corner and select "Custom repositories".
-    - In the "Repository" field, enter the URL of this GitHub repository: `https://github.com/banter240/hdg_bavaria_homeassistant` (replace `banter240` with your actual GitHub username or the correct path if forked).
-    - Select "Integration" as the category.
-    - Click "Add".
-3.  **Install the integration:**
-    - Search for "HDG Bavaria Boiler" in HACS.
-    - Click on the integration.
-    - Click "Download" and follow the prompts.
-4.  **Restart Home Assistant.** This is important for the integration to be loaded.
+The easiest way to install this integration is via HACS (Home Assistant Community Store), where it is available in the default repository.
+
+1.  Open **HACS** in Home Assistant.
+2.  Click on **Integrations**.
+3.  Click the **Explore & Download Repositories** button (usually a blue button or a generic search bar depending on your HACS version).
+4.  Search for **"HDG Bavaria Boiler"**.
+5.  Select the integration card and click **Download**.
+6.  **Restart Home Assistant** to load the new component.
 
 ### Manual Installation
 
-1.  Download the latest release from the Releases page
-2.  Extract the downloaded archive.
-3.  Copy the `custom_components/hdg_boiler` directory into your Home Assistant `config/custom_components/` directory. If `custom_components` doesn't exist, create it.
+1.  Download the latest `hdg_boiler_*.zip` from the [Releases page](https://github.com/banter240/hdg_bavaria_homeassistant/releases).
+2.  Extract the archive.
+3.  Copy the `custom_components/hdg_boiler` folder to your Home Assistant `config/custom_components/` directory.
 4.  Restart Home Assistant.
 
 ## Configuration
@@ -176,9 +171,9 @@ A variety of sensor entities are created, including:
 
 Number entities allow you to view and adjust specific numeric settings on your boiler. These typically correspond to configurable parameters defined as writable in `SENSOR_DEFINITIONS`. Examples include:
 
-- **`number.hdg_boiler_<alias>_tagbetrieb_raumtemperatur_soll`**: Target room temperature for day mode (Heating Circuit 1).
-- **`number.hdg_boiler_<alias>_hk1_parallelverschiebung`**: Parallel shift for the heating curve (Heating Circuit 1) in Kelvin.
-- **`number.hdg_boiler_<alias>_hk1_steilheit`**: Slope of the heating curve (Heating Circuit 1).
+- **`number.hdg_boiler_<alias>_hc1_daytime_room_temperature_target`**: Target room temperature for day mode (Heating Circuit 1).
+- **`number.hdg_boiler_<alias>_hc1_parallel_shift`**: Parallel shift for the heating curve (Heating Circuit 1) in Kelvin.
+- **`number.hdg_boiler_<alias>_hc1_heating_curve_slope`**: Slope of the heating curve (Heating Circuit 1).
 - Other setpoints or configuration values as defined in `SENSOR_DEFINITIONS` with `ha_platform: "number"` and `writable: true`.
 
 These entities will appear under the device for your HDG boiler and can be added to your dashboards.
@@ -187,7 +182,7 @@ These entities will appear under the device for your HDG boiler and can be added
 
 Select entities allow you to choose from a predefined list of options, typically used for operational modes or settings with discrete choices. Examples include:
 
-- **`select.hdg_boiler_<alias>_hk1_betriebsart`**: Main operational mode of the boiler (e.g., Normal, Party, Summer).
+- **`select.hdg_boiler_<alias>_hc1_operating_mode`**: Main operational mode of the boiler (e.g., Normal, Party, Summer).
 - Other configurable options as defined in `SENSOR_DEFINITIONS` with `ha_platform: "select"` and `writable: true`.
 
 ## Enabling Additional Entities (HK2, Pellets, etc.)
