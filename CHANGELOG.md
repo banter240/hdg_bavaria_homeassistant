@@ -1,3 +1,40 @@
+## [1.0.0](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v0.12.0...v1.0.0) (2025-12-23)
+
+### ⚠ BREAKING CHANGES
+
+* comprehensive update for HACS submission and v1.0.0 transition
+
+### ✨ New Features
+
+* feat!: comprehensive update for HACS submission and v1.0.0 transition
+
+This commit marks the major version transition to v1.0.0:
+
+### ⚠ BREAKING CHANGES
+- **translations/entities:** Renamed entity key 'betriebsart' to 'hk1_betriebsart' for consistency across all heating circuits.
+- **translations/entities:** Remapped node 22000 from 'brennraumtemperatur_soll' (Target) to 'brennraumtemperatur' (Actual) to correctly reflect its function.
+
+### ✨ Features & Optimizations
+- **dynamic polling:** Implemented dynamic node registration in the coordinator. Only enabled entities are now included in the API polling requests, significantly reducing boiler API load and network traffic.
+- **enum mapping:** Refactored the enum parser in 'parsers.py' to perform case-insensitive lookups, ensuring robust mapping of API values like 'normal' vs 'Normal'.
+- **registry:** Extracted hardcoded platform suffixes into a centralized constant and simplified payload generation logic.
+- **HACS/CI:** Fixed manifest.json and hacs.json by removing invalid/deprecated keys ('brand', 'category', 'zip_release') to pass official Home Assistant and HACS validation checks.
+- **translations:** Standardized 'HC1' naming prefix in English and added support for holiday mode translations in status sensors.
+
+* feat(entities): add support for HK2, WW1, Buffer 2 and pellet sensors
+
+- Add comprehensive sensor and control support for Heating Circuit 2 (HK2), Domestic Hot Water 1 (WW1), Buffer 2, and pellet storage monitoring.
+- Introduce 'create_mass_sensor' factory for weight-based data points.
+- Implement 'entity_registry_enabled_default' logic to keep advanced entities disabled by default, ensuring a clean UI for new users.
+- Add full translations (DE/EN) for all new entities and rename 'Betriebsart' to 'HK1 Betriebsart' for clarity.
+- Major refactor of 'definitions.py': factory functions now use explicit, type-safe parameters instead of generic **kwargs, and redundant wrappers have been removed in favor of a centralized 'create_disabled' logic.
+- Enhance 'entity.py' with safe attribute propagation and guards to ensure compatibility with various Home Assistant versions.
+- Implement a compatibility shim for 'UnitOfMass.TONNES' in 'const.py' to support older Home Assistant environments.
+- Reorganize global constants and improve internal documentation/docstrings for better maintainability.
+- Fix list formatting and content in 'README.md' and update release documentation.
+- Update CI/CD workflow to enable automated semantic releases from the 'dev' branch.
+- Address all Sourcery code quality, architecture, and performance review suggestions.
+
 ## [0.13.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v0.12.0...v0.13.0-dev.1) (2025-12-22)
 
 ### ✨ New Features
