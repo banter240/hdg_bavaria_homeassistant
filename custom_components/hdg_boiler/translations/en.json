@@ -82,6 +82,9 @@
       "aussentemperatur": {
         "name": "Outside Temperature"
       },
+      "brennraumtemperatur": {
+        "name": "Combustion Chamber Temp."
+      },
       "brennraumtemperatur_soll": {
         "name": "Target Combustion Chamber Temp."
       },
@@ -773,10 +776,10 @@
         "name": "HC1 Frost Protection Temp"
       },
       "heizgrenze_sommer": {
-        "name": "Heating Limit Summer"
+        "name": "HC1 Heating Limit Summer"
       },
       "heizgrenze_winter": {
-        "name": "Heating Limit Winter"
+        "name": "HC1 Heating Limit Winter"
       },
       "hk1_restwarme_aufnehmen": {
         "name": "HC1 Use Residual Heat",
@@ -1071,7 +1074,7 @@
     },
     "number": {
       "hk1_soll_normal": {
-        "name": "Daytime Room Temperature Target"
+        "name": "HC1 Daytime Room Temperature Target"
       },
       "hk1_parallelverschiebung": {
         "name": "HC1 Parallel Shift"
@@ -1114,14 +1117,15 @@
       }
     },
     "select": {
-      "betriebsart": {
+      "hk1_betriebsart": {
         "name": "HC1 Operating Mode",
         "state": {
           "normal": "Normal",
           "tag": "Day mode",
           "nacht": "Night mode",
           "party": "Party mode",
-          "sommer": "Summer mode"
+          "sommer": "Summer mode",
+          "urlaub": "Holiday mode"
         }
       },
       "hk2_betriebsart": {

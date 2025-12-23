@@ -7,7 +7,7 @@ locale-specific number formats, unit stripping, and various data types.
 
 from __future__ import annotations
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 import html
 import logging
@@ -66,6 +66,9 @@ def _normalize_numeric_string(value_str: str) -> str:
 
 def _extract_numeric_string(raw_value: str, log_prefix: str) -> str | None:
     """Extract a normalized numeric string from a raw value."""
+    if raw_value.strip() == "---":
+        return None
+
     value_no_units = _COMMON_UNITS_REGEX.sub("", raw_value).strip()
     if value_no_units != raw_value:
         _HEURISTICS_LOGGER.debug(
@@ -165,7 +168,9 @@ def _convert_enum_text_to_key(
     if not enum_map:
         return value
 
-    if key := next((k for text, k in enum_map.items() if text == value), None):
+    if key := next(
+        (k for text, k in enum_map.items() if text.lower() == value.lower()), None
+    ):
         _LOGGER.debug("%sMapped enum '%s' to key '%s'.", log_prefix, value, key)
         return key
 

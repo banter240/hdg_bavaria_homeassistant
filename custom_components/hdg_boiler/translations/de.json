@@ -82,6 +82,9 @@
       "aussentemperatur": {
         "name": "Außentemperatur"
       },
+      "brennraumtemperatur": {
+        "name": "Brennraumtemperatur"
+      },
       "brennraumtemperatur_soll": {
         "name": "Brennraumtemperatur Soll"
       },
@@ -305,7 +308,8 @@
           "party": "Partybetrieb",
           "sommer": "Sommerbetrieb",
           "standard": "Standard",
-          "tag": "Tagbetrieb"
+          "tag": "Tagbetrieb",
+          "urlaub": "Urlaubsbetrieb"
         }
       },
       "sprache": {
@@ -772,10 +776,10 @@
         "name": "HK1 Frostschutz Temperatur"
       },
       "heizgrenze_sommer": {
-        "name": "Heizgrenze Sommer"
+        "name": "HK1 Heizgrenze Sommer"
       },
       "heizgrenze_winter": {
-        "name": "Heizgrenze Winter"
+        "name": "HK1 Heizgrenze Winter"
       },
       "hk1_restwarme_aufnehmen": {
         "name": "HK1 Restwärme Aufnehmen",
@@ -965,7 +969,8 @@
           "party": "Partybetrieb",
           "sommer": "Sommerbetrieb",
           "standard": "Standard",
-          "tag": "Tagbetrieb"
+          "tag": "Tagbetrieb",
+          "urlaub": "Urlaubsbetrieb"
         }
       },
       "heizkreis_2_system": {
@@ -1112,7 +1117,7 @@
       }
     },
     "select": {
-      "betriebsart": {
+      "hk1_betriebsart": {
         "name": "HK1 Betriebsart",
         "state": {
           "normal": "Normal",

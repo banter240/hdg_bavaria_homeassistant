@@ -9,13 +9,14 @@ availability and attributes.
 
 from __future__ import annotations
 
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 __all__ = ["HdgBaseEntity", "HdgNodeEntity"]
 
 import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -171,10 +172,41 @@ class HdgNodeEntity(HdgBaseEntity):
     async def async_added_to_hass(self) -> None:
         """Handle entity being added to Home Assistant."""
         await super().async_added_to_hass()
+
+        if self.enabled:
+            self.coordinator.register_node(self._node_id)
+
         _LIFECYCLE_LOGGER.debug(
-            "HdgNodeEntity added to HASS: %s (Node ID: %s)",
+            "HdgNodeEntity added to HASS: %s (Node ID: %s, Enabled: %s)",
             self.unique_id,
             self._node_id,
+            self.enabled,
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Handle entity being removed from Home Assistant."""
+        await super().async_will_remove_from_hass()
+        if self.enabled:
+            self.coordinator.unregister_node(self._node_id)
+        _LIFECYCLE_LOGGER.debug(
+            "HdgNodeEntity removed from HASS and unregistered: %s (Node ID: %s)",
+            self.unique_id,
+            self._node_id,
+        )
+
+    @callback
+    def async_registry_entry_updated(self) -> None:
+        """Handle entity registry update (e.g. enabled/disabled)."""
+        if self.enabled:
+            self.coordinator.register_node(self._node_id)
+        else:
+            self.coordinator.unregister_node(self._node_id)
+
+        _LIFECYCLE_LOGGER.debug(
+            "HdgNodeEntity registry updated: %s (Node ID: %s, Enabled: %s)",
+            self.unique_id,
+            self._node_id,
+            self.enabled,
         )
 
     def _is_value_unavailable(self, raw_value: Any) -> bool:

@@ -82,7 +82,6 @@
       {
         "message": "chore(release): 🚀 publish version ${nextRelease.version}\n\n${nextRelease.notes}\n\n[skip ci]",
         "assets": [
-          "hacs.json",
           "CHANGELOG.md",
           "custom_components/hdg_boiler/manifest.json"
         ]

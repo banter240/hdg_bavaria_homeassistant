@@ -18,6 +18,15 @@ An unofficial Home Assistant integration to monitor and control HDG Bavaria heat
 
 ---
 
+### ⚠️ Breaking Changes
+
+- **Renamed Entity Keys**:
+  - The internal key for the combustion chamber temperature sensor (node 22000) was renamed from `brennraumtemperatur_soll` to `brennraumtemperatur` to correctly reflect that it provides the *actual* temperature reading. A new node 2605 was added as `brennraumtemperatur_soll` for the target temperature.
+  - The internal key for the primary operating mode was renamed from `betriebsart` to `hk1_betriebsart` to ensure consistency across all heating circuits (HK1-HK6).
+- **Automation & Dashboard Updates**: Any custom dashboards or automations using these specific entity IDs (e.g., `sensor.hdg_boiler_..._brennraumtemperatur_soll` or `select.hdg_boiler_..._betriebsart`) will need to be updated to use the new keys.
+
+---
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
@@ -58,8 +67,10 @@ This custom component allows you to integrate your HDG Bavaria boiler (e.g., HDG
   - **Robust Startup**: Critical fixes ensure Home Assistant starts reliably without timeouts, even with background API tasks.
   - **Accurate Device Information**: `config_url` and other device details are now consistently determined, eliminating previous warnings.
   - **Smart Recovery**: When the boiler goes offline, the integration enters a low-power fallback mode. It will then periodically ping the device and, upon successful response, immediately trigger a full refresh to bring the system back online faster.
-- **Dynamic Polling Group Management**: Data is fetched in distinct groups (e.g., Realtime, Status, Config/Counters) with individually configurable scan intervals via the integration options. These groups are dynamically built based on entity definitions, making the integration more flexible and extensible.
-- **Intelligent Data Parsing**: Handles various data formats, including locale-specific numbers, enumerations, and datetimes, with specific logic for HDG API quirks.
+    - **Selective Polling**: To minimize the load on your boiler's controller, the integration dynamically determines which nodes to poll based on the entities you have *enabled* in Home Assistant. Disabled entities are automatically excluded from the polling payload, even during the initial setup refresh.
+  - **Dynamic Polling Group Management**: Data is fetched in distinct groups (e.g., Realtime, Status, Config/Counters) with individually configurable scan intervals via the integration options. These groups are dynamically built based on entity definitions, making the integration more flexible and extensible.
+  - **Intelligent Data Parsing**:
+   Handles various data formats, including locale-specific numbers, enumerations, and datetimes, with specific logic for HDG API quirks.
 - **API Connection Management**: Includes ICMP ping pre-checks and API response validation to ensure reliable communication and detect boiler online/offline status.
 - **Custom Services**: Provides `set_node_value` to directly set values for specific HDG nodes and `get_node_value` to retrieve raw values from the integration's data cache.
 - **Dynamic Entity Creation**: Entities are created based on a comprehensive `SENSOR_DEFINITIONS` map in `definitions.py`, which also dictates their polling group assignment. This ensures that only relevant entities for your boiler model are exposed.
@@ -85,27 +96,22 @@ This custom component allows you to integrate your HDG Bavaria boiler (e.g., HDG
 
 ## Installation
 
-### Via HACS (Recommended)
+### Via HACS (Official Store)
 
-1.  **Ensure HACS is installed.** If not, follow the HACS installation guide.
-2.  **Add as a custom repository:**
-    - Go to HACS in your Home Assistant.
-    - Click on "Integrations".
-    - Click the three dots in the top right corner and select "Custom repositories".
-    - In the "Repository" field, enter the URL of this GitHub repository: `https://github.com/banter240/hdg_bavaria_homeassistant` (replace `banter240` with your actual GitHub username or the correct path if forked).
-    - Select "Integration" as the category.
-    - Click "Add".
-3.  **Install the integration:**
-    - Search for "HDG Bavaria Boiler" in HACS.
-    - Click on the integration.
-    - Click "Download" and follow the prompts.
-4.  **Restart Home Assistant.** This is important for the integration to be loaded.
+The easiest way to install this integration is via HACS (Home Assistant Community Store), where it is available in the default repository.
+
+1.  Open **HACS** in Home Assistant.
+2.  Click on **Integrations**.
+3.  Click the **Explore & Download Repositories** button (usually a blue button or a generic search bar depending on your HACS version).
+4.  Search for **"HDG Bavaria Boiler"**.
+5.  Select the integration card and click **Download**.
+6.  **Restart Home Assistant** to load the new component.
 
 ### Manual Installation
 
-1.  Download the latest release from the Releases page
-2.  Extract the downloaded archive.
-3.  Copy the `custom_components/hdg_boiler` directory into your Home Assistant `config/custom_components/` directory. If `custom_components` doesn't exist, create it.
+1.  Download the latest `hdg_boiler_*.zip` from the [Releases page](https://github.com/banter240/hdg_bavaria_homeassistant/releases).
+2.  Extract the archive.
+3.  Copy the `custom_components/hdg_boiler` folder to your Home Assistant `config/custom_components/` directory. If this directory doesn't exist, you'll need to create it first.
 4.  Restart Home Assistant.
 
 ## Configuration
@@ -176,9 +182,9 @@ A variety of sensor entities are created, including:
 
 Number entities allow you to view and adjust specific numeric settings on your boiler. These typically correspond to configurable parameters defined as writable in `SENSOR_DEFINITIONS`. Examples include:
 
-- **`number.hdg_boiler_<alias>_tagbetrieb_raumtemperatur_soll`**: Target room temperature for day mode (Heating Circuit 1).
-- **`number.hdg_boiler_<alias>_hk1_parallelverschiebung`**: Parallel shift for the heating curve (Heating Circuit 1) in Kelvin.
-- **`number.hdg_boiler_<alias>_hk1_steilheit`**: Slope of the heating curve (Heating Circuit 1).
+- **`number.hdg_boiler_<alias>_hc1_daytime_room_temperature_target`**: Target room temperature for day mode (Heating Circuit 1).
+- **`number.hdg_boiler_<alias>_hc1_parallel_shift`**: Parallel shift for the heating curve (Heating Circuit 1) in Kelvin.
+- **`number.hdg_boiler_<alias>_hc1_heating_curve_slope`**: Slope of the heating curve (Heating Circuit 1).
 - Other setpoints or configuration values as defined in `SENSOR_DEFINITIONS` with `ha_platform: "number"` and `writable: true`.
 
 These entities will appear under the device for your HDG boiler and can be added to your dashboards.
@@ -187,7 +193,7 @@ These entities will appear under the device for your HDG boiler and can be added
 
 Select entities allow you to choose from a predefined list of options, typically used for operational modes or settings with discrete choices. Examples include:
 
-- **`select.hdg_boiler_<alias>_betriebsart`**: Main operational mode of the boiler (e.g., Normal, Party, Summer).
+- **`select.hdg_boiler_<alias>_hc1_operating_mode`**: Main operational mode of the boiler (e.g., Normal, Party, Summer).
 - Other configurable options as defined in `SENSOR_DEFINITIONS` with `ha_platform: "select"` and `writable: true`.
 
 ## Enabling Additional Entities (HK2, Pellets, etc.)
