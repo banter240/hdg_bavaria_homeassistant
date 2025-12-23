@@ -270,9 +270,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Return True if the boiler is considered online."""
         return self._polling_state["boiler_is_online"]
 
-    async def _fetch_group_data(
-        self, group_key: str, payload_str: str, priority: ApiPriority
-    ) -> bool:
+    async def _fetch_group_data(self, group_key: str, priority: ApiPriority) -> bool:
         """Fetch and process data for a single polling group."""
         optimized_payload, active_count, total_count = (
             self.hdg_entity_registry.get_optimized_payload_for_group(
@@ -339,9 +337,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         ) -> tuple[str, bool]:
             async with semaphore:
                 try:
-                    success = await self._fetch_group_data(
-                        group_key, payload_str, priority
-                    )
+                    success = await self._fetch_group_data(group_key, priority)
                     return group_key, success
                 except HdgApiConnectionError:
                     raise  # Re-raise to be caught by the gather call

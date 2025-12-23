@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 __all__ = ["HdgEntityRegistry"]
 
 import logging
@@ -19,6 +19,8 @@ from .models import NodeGroupPayload, PollingGroupStaticDefinition, SensorDefini
 
 _LOGGER = logging.getLogger(DOMAIN)
 _LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
+
+_PLATFORM_SUFFIXES: Final = ["_sensor", "_number", "_select"]
 
 
 class HdgEntityRegistry:
@@ -195,7 +197,7 @@ class HdgEntityRegistry:
             return None
 
         suffix = parts[2]
-        for plat in ["_sensor", "_number", "_select"]:
+        for plat in _PLATFORM_SUFFIXES:
             if suffix.endswith(plat):
                 suffix = suffix[: -len(plat)]
                 break
