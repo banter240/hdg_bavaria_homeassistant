@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 __all__ = ["HdgEntityRegistry"]
 
 import logging
@@ -86,8 +86,7 @@ class HdgEntityRegistry:
                 "payload_str": self.generate_payload_str(nodes_in_group),
                 "default_scan_interval": group_def["default_interval"],
             }
-        else:
-            return None
+        return None
 
     def _process_polling_group(
         self, group_key: str, group_iter: Iterable[SensorDefinition]
