@@ -111,7 +111,7 @@ The easiest way to install this integration is via HACS (Home Assistant Communit
 
 1.  Download the latest `hdg_boiler_*.zip` from the [Releases page](https://github.com/banter240/hdg_bavaria_homeassistant/releases).
 2.  Extract the archive.
-3.  Copy the `custom_components/hdg_boiler` folder to your Home Assistant `config/custom_components/` directory.
+3.  Copy the `custom_components/hdg_boiler` folder to your Home Assistant `config/custom_components/` directory. If this directory doesn't exist, you'll need to create it first.
 4.  Restart Home Assistant.
 
 ## Configuration
