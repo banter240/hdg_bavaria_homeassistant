@@ -9,7 +9,7 @@ corresponding Home Assistant entity configurations.
 
 from __future__ import annotations
 
-__version__ = "0.1.21"
+__version__ = "0.1.22"
 
 from typing import Final, cast
 
@@ -2227,8 +2227,8 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         icon="mdi:calendar-clock",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "betriebsart": create_select_entity(
-        key="betriebsart",
+    "hk1_betriebsart": create_select_entity(
+        key="hk1_betriebsart",
         node_id="6008T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
         icon="mdi:thermostat",

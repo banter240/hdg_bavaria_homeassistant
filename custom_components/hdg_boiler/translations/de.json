@@ -772,10 +772,10 @@
         "name": "HK1 Frostschutz Temperatur"
       },
       "heizgrenze_sommer": {
-        "name": "Heizgrenze Sommer"
+        "name": "HK1 Heizgrenze Sommer"
       },
       "heizgrenze_winter": {
-        "name": "Heizgrenze Winter"
+        "name": "HK1 Heizgrenze Winter"
       },
       "hk1_restwarme_aufnehmen": {
         "name": "HK1 Restwärme Aufnehmen",
@@ -1112,7 +1112,7 @@
       }
     },
     "select": {
-      "betriebsart": {
+      "hk1_betriebsart": {
         "name": "HK1 Betriebsart",
         "state": {
           "normal": "Normal",

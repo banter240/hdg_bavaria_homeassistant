@@ -187,7 +187,7 @@ These entities will appear under the device for your HDG boiler and can be added
 
 Select entities allow you to choose from a predefined list of options, typically used for operational modes or settings with discrete choices. Examples include:
 
-- **`select.hdg_boiler_<alias>_betriebsart`**: Main operational mode of the boiler (e.g., Normal, Party, Summer).
+- **`select.hdg_boiler_<alias>_hk1_betriebsart`**: Main operational mode of the boiler (e.g., Normal, Party, Summer).
 - Other configurable options as defined in `SENSOR_DEFINITIONS` with `ha_platform: "select"` and `writable: true`.
 
 ## Enabling Additional Entities (HK2, Pellets, etc.)
