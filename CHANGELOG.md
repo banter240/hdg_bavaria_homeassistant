@@ -1,3 +1,17 @@
+## [1.0.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v0.13.0-dev.1...v1.0.0-dev.1) (2025-12-23)
+
+### ⚠ BREAKING CHANGES
+
+* **translations:** standardize naming for heating circuits
+
+### 🐛 Bug Fixes
+
+* fix(translations)!: standardize naming for heating circuits
+
+- Standardize naming for heating circuits (HK1/HC1 prefixes)
+- Rename 'betriebsart' to 'hk1_betriebsart' (BREAKING CHANGE)
+- Update German translations for 'Heizgrenze'
+
 ## [0.13.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v0.12.0...v0.13.0-dev.1) (2025-12-22)
 
 ### ✨ New Features
