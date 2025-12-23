@@ -9,7 +9,7 @@ corresponding Home Assistant entity configurations.
 
 from __future__ import annotations
 
-__version__ = "0.1.22"
+__version__ = "0.1.23"
 
 from typing import Final, cast
 
@@ -1403,9 +1403,15 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
         icon="mdi:hydraulic-oil-level",
     ),
+    "brennraumtemperatur": create_temp_sensor(
+        key="brennraumtemperatur",
+        node_id="22000T",
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+        icon="mdi:thermometer-lines",
+    ),
     "brennraumtemperatur_soll": create_temp_sensor(
         key="brennraumtemperatur_soll",
-        node_id="22000T",
+        node_id="2605T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
         icon="mdi:thermometer-lines",
     ),

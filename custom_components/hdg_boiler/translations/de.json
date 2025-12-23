@@ -82,6 +82,9 @@
       "aussentemperatur": {
         "name": "Außentemperatur"
       },
+      "brennraumtemperatur": {
+        "name": "Brennraumtemperatur"
+      },
       "brennraumtemperatur_soll": {
         "name": "Brennraumtemperatur Soll"
       },
@@ -305,7 +308,8 @@
           "party": "Partybetrieb",
           "sommer": "Sommerbetrieb",
           "standard": "Standard",
-          "tag": "Tagbetrieb"
+          "tag": "Tagbetrieb",
+          "urlaub": "Urlaubsbetrieb"
         }
       },
       "sprache": {
@@ -965,7 +969,8 @@
           "party": "Partybetrieb",
           "sommer": "Sommerbetrieb",
           "standard": "Standard",
-          "tag": "Tagbetrieb"
+          "tag": "Tagbetrieb",
+          "urlaub": "Urlaubsbetrieb"
         }
       },
       "heizkreis_2_system": {

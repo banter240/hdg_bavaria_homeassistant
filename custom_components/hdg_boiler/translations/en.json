@@ -82,6 +82,9 @@
       "aussentemperatur": {
         "name": "Outside Temperature"
       },
+      "brennraumtemperatur": {
+        "name": "Combustion Chamber Temp."
+      },
       "brennraumtemperatur_soll": {
         "name": "Target Combustion Chamber Temp."
       },
@@ -1121,7 +1124,8 @@
           "tag": "Day mode",
           "nacht": "Night mode",
           "party": "Party mode",
-          "sommer": "Summer mode"
+          "sommer": "Summer mode",
+          "urlaub": "Holiday mode"
         }
       },
       "hk2_betriebsart": {

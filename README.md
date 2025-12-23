@@ -18,6 +18,15 @@ An unofficial Home Assistant integration to monitor and control HDG Bavaria heat
 
 ---
 
+### ⚠️ Breaking Changes
+
+- **Renamed Entity Keys**:
+  - The internal key for the combustion chamber temperature sensor (node 22000) was renamed from `brennraumtemperatur_soll` to `brennraumtemperatur` to correctly reflect that it provides the *actual* temperature reading. A new node 2605 was added as `brennraumtemperatur_soll` for the target temperature.
+  - The internal key for the primary operating mode was renamed from `betriebsart` to `hk1_betriebsart` to ensure consistency across all heating circuits (HK1-HK6).
+- **Automation & Dashboard Updates**: Any custom dashboards or automations using these specific entity IDs (e.g., `sensor.hdg_boiler_..._brennraumtemperatur_soll` or `select.hdg_boiler_..._betriebsart`) will need to be updated to use the new keys.
+
+---
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
@@ -58,8 +67,10 @@ This custom component allows you to integrate your HDG Bavaria boiler (e.g., HDG
   - **Robust Startup**: Critical fixes ensure Home Assistant starts reliably without timeouts, even with background API tasks.
   - **Accurate Device Information**: `config_url` and other device details are now consistently determined, eliminating previous warnings.
   - **Smart Recovery**: When the boiler goes offline, the integration enters a low-power fallback mode. It will then periodically ping the device and, upon successful response, immediately trigger a full refresh to bring the system back online faster.
-- **Dynamic Polling Group Management**: Data is fetched in distinct groups (e.g., Realtime, Status, Config/Counters) with individually configurable scan intervals via the integration options. These groups are dynamically built based on entity definitions, making the integration more flexible and extensible.
-- **Intelligent Data Parsing**: Handles various data formats, including locale-specific numbers, enumerations, and datetimes, with specific logic for HDG API quirks.
+    - **Selective Polling**: To minimize the load on your boiler's controller, the integration dynamically determines which nodes to poll based on the entities you have *enabled* in Home Assistant. Disabled entities are automatically excluded from the polling payload, even during the initial setup refresh.
+  - **Dynamic Polling Group Management**: Data is fetched in distinct groups (e.g., Realtime, Status, Config/Counters) with individually configurable scan intervals via the integration options. These groups are dynamically built based on entity definitions, making the integration more flexible and extensible.
+  - **Intelligent Data Parsing**:
+   Handles various data formats, including locale-specific numbers, enumerations, and datetimes, with specific logic for HDG API quirks.
 - **API Connection Management**: Includes ICMP ping pre-checks and API response validation to ensure reliable communication and detect boiler online/offline status.
 - **Custom Services**: Provides `set_node_value` to directly set values for specific HDG nodes and `get_node_value` to retrieve raw values from the integration's data cache.
 - **Dynamic Entity Creation**: Entities are created based on a comprehensive `SENSOR_DEFINITIONS` map in `definitions.py`, which also dictates their polling group assignment. This ensures that only relevant entities for your boiler model are exposed.

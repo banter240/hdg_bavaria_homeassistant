@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.3.6"
+__version__ = "0.3.8"
 __all__ = ["HdgDataUpdateCoordinator", "async_create_and_refresh_coordinator"]
 
 import asyncio
@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HassJob, HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import (
     async_call_later,
     async_track_time_interval,
@@ -55,6 +56,7 @@ from .helpers.logging_utils import (
     _USER_ACTION_LOGGER,
 )
 from .helpers.network_utils import async_execute_icmp_ping
+from .helpers.string_utils import strip_hdg_node_suffix
 from .registry import HdgEntityRegistry
 
 
@@ -114,6 +116,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._error_threshold = error_threshold
 
         self._initialize_state()
+        self._setup_initial_active_nodes()
         self._validate_polling_config()
         self.scan_intervals = self._initialize_scan_intervals()
         shortest_interval = (
@@ -168,6 +171,57 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "locks": {},
             "initial_values": {},
         }
+        self._active_node_ids: set[str] = set()
+
+    def _setup_initial_active_nodes(self) -> None:
+        """Populate initial active node IDs from the entity registry or defaults."""
+        ent_reg = er.async_get(self.hass)
+        entries = er.async_entries_for_config_entry(ent_reg, self.entry.entry_id)
+
+        if not entries:
+            self._active_node_ids = (
+                self.hdg_entity_registry.get_default_active_node_ids()
+            )
+            _LOGGER.debug(
+                "First-time setup: Pre-populated %d default active nodes.",
+                len(self._active_node_ids),
+            )
+            return
+
+        for entry in entries:
+            if not entry.disabled:
+                if (
+                    node_id
+                    := self.hdg_entity_registry.resolve_node_id_from_entity_entry(entry)
+                ):
+                    self._active_node_ids.add(node_id)
+
+        _LOGGER.debug(
+            "Pre-populated %d active nodes from Entity Registry.",
+            len(self._active_node_ids),
+        )
+
+    def register_node(self, node_id: str) -> None:
+        """Register a node ID as active (canonicalized)."""
+        canonical = strip_hdg_node_suffix(node_id)
+        self._active_node_ids.add(canonical)
+        _LOGGER.debug(
+            "Registered node '%s' (canonical: '%s'). Total active: %d",
+            node_id,
+            canonical,
+            len(self._active_node_ids),
+        )
+
+    def unregister_node(self, node_id: str) -> None:
+        """Unregister a node ID."""
+        canonical = strip_hdg_node_suffix(node_id)
+        self._active_node_ids.discard(canonical)
+        _LOGGER.debug(
+            "Unregistered node '%s' (canonical: '%s'). Total active: %d",
+            node_id,
+            canonical,
+            len(self._active_node_ids),
+        )
 
     def _set_boiler_online_status(self, is_online: bool) -> None:
         """Set and log the boiler's online status."""
@@ -220,6 +274,25 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self, group_key: str, payload_str: str, priority: ApiPriority
     ) -> bool:
         """Fetch and process data for a single polling group."""
+        optimized_payload, active_count, total_count = (
+            self.hdg_entity_registry.get_optimized_payload_for_group(
+                group_key, self._active_node_ids
+            )
+        )
+
+        if optimized_payload is None:
+            _LOGGER.debug("Skipping poll for group '%s': no active nodes.", group_key)
+            return True
+
+        payload_str = optimized_payload
+
+        _LOGGER.debug(
+            "Payload for group '%s': %d/%d nodes active.",
+            group_key,
+            active_count,
+            total_count,
+        )
+
         try:
             fetched_data = await self.api_access_manager.submit_request(
                 priority=priority,
