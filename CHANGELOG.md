@@ -1,3 +1,16 @@
+## [1.0.0-dev.2](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v1.0.0-dev.1...v1.0.0-dev.2) (2026-01-03)
+
+### 🐛 Bug Fixes
+
+* fix: resolve diagnostics AttributeError and refactor coordinator state
+
+- Fix AttributeError/HTTP 500 during diagnostics download by implementing robust data retrieval.
+- Refactor internal coordinator polling state to a type-safe dataclass (PollingState).
+- Implement public get_diagnostics_state() accessor to avoid private attribute exposure.
+- Improve diagnostics with real UTC timestamps and properly labeled monotonic values.
+- Clean up code duplication, syntax errors, and satisfy MyPy/Ruff requirements.
+- Revert version string in manifest to 0.13.0-dev.2.
+
 ## [1.0.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v0.13.0-dev.1...v1.0.0-dev.1) (2025-12-23)
 
 ### ⚠ BREAKING CHANGES
