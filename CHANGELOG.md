@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v1.0.0...v1.0.1) (2026-01-03)
+
+### 🐛 Bug Fixes
+
+* fix: resolve diagnostics AttributeError and refactor coordinator state
+
+Refactored the internal coordinator polling state to use a dataclass for better type safety and centralized state management. This resolves the reported AttributeError during diagnostics download. Improved robustness of diagnostic data by introducing a public accessor with real UTC timestamps and monotonic values, and implemented a factory method for clean state initialization.
+
 ## [1.0.0](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v0.12.0...v1.0.0) (2025-12-23)
 
 ### ⚠ BREAKING CHANGES
