@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-__version__ = "0.3.8"
+__version__ = "0.3.16"
 __all__ = ["HdgDataUpdateCoordinator", "async_create_and_refresh_coordinator"]
 
 import asyncio
+from dataclasses import dataclass, field
 import functools
 import logging
 import time
@@ -21,6 +22,7 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api import HdgApiClient
 from .classes.polling_response_processor import HdgPollingResponseProcessor
@@ -67,16 +69,26 @@ class RetryInfo(TypedDict):
     next_retry_time: float
 
 
-class PollingState(TypedDict):
+@dataclass(slots=True)
+class PollingState:
     """State related to polling and error handling."""
 
-    consecutive_failures: int
-    consecutive_connection_failures: int
-    consecutive_preemption_failures: int
-    failed_group_retry_info: dict[str, RetryInfo]
-    last_update_times: dict[str, float]
-    boiler_is_online: bool
-    boiler_online_event: asyncio.Event
+    consecutive_failures: int = 0
+    consecutive_connection_failures: int = 0
+    consecutive_preemption_failures: int = 0
+    failed_group_retry_info: dict[str, RetryInfo] = field(default_factory=dict)
+    last_update_times: dict[str, float] = field(default_factory=dict)
+    last_update_success_time: datetime | None = None
+    boiler_is_online: bool = True
+    boiler_online_event: asyncio.Event = field(default_factory=asyncio.Event)
+
+    @classmethod
+    def create_initial(cls, group_keys: list[str]) -> PollingState:
+        """Create a new PollingState instance with initialized dictionaries."""
+        state = cls()
+        state.last_update_times = dict.fromkeys(group_keys, 0.0)
+        state.boiler_online_event.set()
+        return state
 
 
 class SetterState(TypedDict):
@@ -149,18 +161,9 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _initialize_state(self) -> None:
         """Initialize the state attributes for the coordinator."""
-        self._polling_state: PollingState = {
-            "consecutive_failures": 0,
-            "consecutive_connection_failures": 0,
-            "consecutive_preemption_failures": 0,
-            "failed_group_retry_info": {},
-            "last_update_times": dict.fromkeys(
-                self.hdg_entity_registry.get_polling_group_order(), 0.0
-            ),
-            "boiler_is_online": True,
-            "boiler_online_event": asyncio.Event(),
-        }
-        self._polling_state["boiler_online_event"].set()
+        self._polling_state = PollingState.create_initial(
+            self.hdg_entity_registry.get_polling_group_order()
+        )
 
         self._setter_state: SetterState = {
             "last_set_times": {},
@@ -225,16 +228,16 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _set_boiler_online_status(self, is_online: bool) -> None:
         """Set and log the boiler's online status."""
-        if self._polling_state["boiler_is_online"] != is_online:
+        if self._polling_state.boiler_is_online != is_online:
             _LIFECYCLE_LOGGER.info(
                 "HDG Boiler transitioning to %s state.",
                 "ONLINE" if is_online else "OFFLINE",
             )
-            self._polling_state["boiler_is_online"] = is_online
+            self._polling_state.boiler_is_online = is_online
             if is_online:
-                self._polling_state["boiler_online_event"].set()
+                self._polling_state.boiler_online_event.set()
             else:
-                self._polling_state["boiler_online_event"].clear()
+                self._polling_state.boiler_online_event.clear()
 
     def _initialize_scan_intervals(self) -> dict[str, timedelta]:
         """Initialize scan intervals for each polling group."""
@@ -263,12 +266,48 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @property
     def last_update_times_public(self) -> dict[str, float]:
         """Return last successful update times for polling groups."""
-        return self._polling_state["last_update_times"]
+        return self._polling_state.last_update_times
 
     @property
     def boiler_is_online(self) -> bool:
         """Return True if the boiler is considered online."""
-        return self._polling_state["boiler_is_online"]
+        return self._polling_state.boiler_is_online
+
+    def get_diagnostics_state(self) -> dict[str, Any]:
+        """Return a dictionary of internal state for diagnostics."""
+        now_monotonic = time.monotonic()
+        now_utc = dt_util.utcnow()
+
+        def _monotonic_to_utc_iso(monotonic_time: float) -> str | None:
+            if monotonic_time <= 0:
+                return None
+            dt = now_utc - timedelta(seconds=(now_monotonic - monotonic_time))
+            iso_str: str = dt.isoformat()
+            return iso_str
+
+        return {
+            "last_update_time_successful": (
+                self._polling_state.last_update_success_time.isoformat()
+                if self._polling_state.last_update_success_time
+                else None
+            ),
+            "consecutive_poll_failures": self._polling_state.consecutive_failures,
+            "boiler_considered_online": self._polling_state.boiler_is_online,
+            "last_update_times_per_group_monotonic": self._polling_state.last_update_times.copy(),
+            "last_update_times_per_group_utc": {
+                k: _monotonic_to_utc_iso(v)
+                for k, v in self._polling_state.last_update_times.items()
+            },
+            "failed_poll_group_retry_info": {
+                k: {
+                    "attempts": v["attempts"],
+                    "next_retry_monotonic": v["next_retry_time"],
+                    "next_retry_utc": _monotonic_to_utc_iso(v["next_retry_time"]),
+                }
+                for k, v in self._polling_state.failed_group_retry_info.items()
+                if v["next_retry_time"] > 0
+            },
+        }
 
     async def _fetch_group_data(self, group_key: str, priority: ApiPriority) -> bool:
         """Fetch and process data for a single polling group."""
@@ -303,16 +342,16 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._polling_response_processor.process_api_items(
                     group_key, fetched_data
                 )
-                self._polling_state["consecutive_preemption_failures"] = 0
+                self._polling_state.consecutive_preemption_failures = 0
                 return True
             return False
         except HdgApiPreemptedError as err:
-            self._polling_state["consecutive_preemption_failures"] += 1
+            self._polling_state.consecutive_preemption_failures += 1
             threshold = self.entry.options.get(
                 CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
                 DEFAULT_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
             )
-            if self._polling_state["consecutive_preemption_failures"] >= threshold:
+            if self._polling_state.consecutive_preemption_failures >= threshold:
                 _LOGGER.warning("Fetch for group '%s' preempted: %s", group_key, err)
             else:
                 _LOGGER.info("Fetch for group '%s' preempted: %s", group_key, err)
@@ -357,7 +396,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         for group_key, success in results:
             if success:
-                self._polling_state["last_update_times"][group_key] = time.monotonic()
+                self._polling_state.last_update_times[group_key] = time.monotonic()
 
         return any_success
 
@@ -393,12 +432,12 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         due_groups = {
             key: payloads[key]["payload_str"]
             for key, interval in self.scan_intervals.items()
-            if (current_time - self._polling_state["last_update_times"].get(key, 0.0))
+            if (current_time - self._polling_state.last_update_times.get(key, 0.0))
             >= interval.total_seconds()
         }
         retry_groups = {
             key: payloads[key]["payload_str"]
-            for key, info in self._polling_state["failed_group_retry_info"].items()
+            for key, info in self._polling_state.failed_group_retry_info.items()
             if current_time >= info["next_retry_time"]
         }
         return due_groups | retry_groups
@@ -407,20 +446,21 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Determine the appropriate log level based on consecutive failures."""
         return (
             logging.WARNING
-            if self._polling_state["consecutive_failures"] >= self._log_level_threshold
+            if self._polling_state.consecutive_failures >= self._log_level_threshold
             else logging.INFO
         )
 
     def _handle_successful_poll(self) -> None:
         """Handle the state update after a successful poll."""
-        if self._polling_state["consecutive_failures"] > 0:
+        if self._polling_state.consecutive_failures > 0:
             _LIFECYCLE_LOGGER.info("Boiler back online. Resetting poll failures.")
-        self._polling_state["consecutive_failures"] = 0
-        self._polling_state["consecutive_connection_failures"] = 0
+        self._polling_state.consecutive_failures = 0
+        self._polling_state.consecutive_connection_failures = 0
+        self._polling_state.last_update_success_time = dt_util.utcnow()
         # Clear retry info for groups that have successfully updated.
-        for group_key in list(self._polling_state["failed_group_retry_info"]):
-            if self._polling_state["last_update_times"].get(group_key, 0.0) > 0:
-                del self._polling_state["failed_group_retry_info"][group_key]
+        for group_key in list(self._polling_state.failed_group_retry_info):
+            if self._polling_state.last_update_times.get(group_key, 0.0) > 0:
+                del self._polling_state.failed_group_retry_info[group_key]
         if self.update_interval == self._fallback_update_interval:
             self.update_interval = self._original_update_interval
             _LIFECYCLE_LOGGER.info(
@@ -434,8 +474,8 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._handle_successful_poll()
             return
 
-        self._polling_state["consecutive_failures"] += 1
-        failures = self._polling_state["consecutive_failures"]
+        self._polling_state.consecutive_failures += 1
+        failures = self._polling_state.consecutive_failures
         threshold = self._log_level_threshold
 
         if failures == threshold:
@@ -447,7 +487,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         log_level_for_details = logging.DEBUG if failures >= threshold else logging.INFO
 
         for group_key in groups_in_cycle:
-            info = self._polling_state["failed_group_retry_info"].get(
+            info = self._polling_state.failed_group_retry_info.get(
                 group_key, {"attempts": 0, "next_retry_time": 0.0}
             )
             info["attempts"] += 1
@@ -457,7 +497,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 POLLING_RETRY_MAX_DELAY_S,
             )
             info["next_retry_time"] = time.monotonic() + delay
-            self._polling_state["failed_group_retry_info"][group_key] = info
+            self._polling_state.failed_group_retry_info[group_key] = info
 
             _LOGGER.log(
                 log_level_for_details,
@@ -489,8 +529,8 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._set_boiler_online_status(False)
 
         if failure_type == "connection":
-            self._polling_state["consecutive_connection_failures"] += 1
-            failures = self._polling_state["consecutive_connection_failures"]
+            self._polling_state.consecutive_connection_failures += 1
+            failures = self._polling_state.consecutive_connection_failures
             threshold = self._error_threshold
             err = context.get("error")
 

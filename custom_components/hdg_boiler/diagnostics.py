@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.2.2"
+__version__ = "0.2.9"
 __all__ = ["async_get_config_entry_diagnostics"]
 
 import ipaddress
@@ -14,7 +14,6 @@ from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_HOST_IP,
@@ -79,36 +78,15 @@ def _get_coordinator_diagnostics(
     if not coordinator:
         return "Coordinator not found or not initialized."
 
-    # Access internal polling state if available
-    polling_state = getattr(coordinator, "_polling_state", {})
-
-    # Try to find last update success time (not standard in DataUpdateCoordinator)
-    last_update_success_time = getattr(coordinator, "last_update_success_time", None)
+    # Access internal state via public accessor
+    coordinator_state = coordinator.get_diagnostics_state()
 
     coordinator_diag: dict[str, Any] = {
         "last_update_success": coordinator.last_update_success,
-        "last_update_time_successful": (
-            last_update_success_time.isoformat() if last_update_success_time else None
-        ),
         "scan_intervals_used": {
             k: v.total_seconds() for k, v in coordinator.scan_intervals.items()
         },
-        "last_update_times_per_group": {
-            k: dt_util.utc_from_timestamp(v).isoformat()
-            for k, v in coordinator.last_update_times_public.items()
-        },
-        "consecutive_poll_failures": polling_state.get("consecutive_failures"),
-        "boiler_considered_online": coordinator.boiler_is_online,
-        "failed_poll_group_retry_info": {
-            k: {
-                "attempts": v["attempts"],
-                "next_retry_time_utc": dt_util.utc_from_timestamp(
-                    v["next_retry_time"]
-                ).isoformat(),
-            }
-            for k, v in polling_state.get("failed_group_retry_info", {}).items()
-            if v["next_retry_time"] > 0
-        },
+        **coordinator_state,
     }
     if coordinator.data:
         redacted_data = async_redact_data(
