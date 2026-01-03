@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.2.2"
 __all__ = ["async_get_config_entry_diagnostics"]
 
 import ipaddress
@@ -79,12 +79,16 @@ def _get_coordinator_diagnostics(
     if not coordinator:
         return "Coordinator not found or not initialized."
 
+    # Access internal polling state if available
+    polling_state = getattr(coordinator, "_polling_state", {})
+
+    # Try to find last update success time (not standard in DataUpdateCoordinator)
+    last_update_success_time = getattr(coordinator, "last_update_success_time", None)
+
     coordinator_diag: dict[str, Any] = {
         "last_update_success": coordinator.last_update_success,
         "last_update_time_successful": (
-            coordinator.last_update_success_time.isoformat()
-            if coordinator.last_update_success_time
-            else None
+            last_update_success_time.isoformat() if last_update_success_time else None
         ),
         "scan_intervals_used": {
             k: v.total_seconds() for k, v in coordinator.scan_intervals.items()
@@ -93,8 +97,8 @@ def _get_coordinator_diagnostics(
             k: dt_util.utc_from_timestamp(v).isoformat()
             for k, v in coordinator.last_update_times_public.items()
         },
-        "consecutive_poll_failures": coordinator._consecutive_poll_failures,
-        "boiler_considered_online": coordinator._boiler_considered_online,
+        "consecutive_poll_failures": polling_state.get("consecutive_failures"),
+        "boiler_considered_online": coordinator.boiler_is_online,
         "failed_poll_group_retry_info": {
             k: {
                 "attempts": v["attempts"],
@@ -102,7 +106,7 @@ def _get_coordinator_diagnostics(
                     v["next_retry_time"]
                 ).isoformat(),
             }
-            for k, v in coordinator._failed_poll_group_retry_info.items()
+            for k, v in polling_state.get("failed_group_retry_info", {}).items()
             if v["next_retry_time"] > 0
         },
     }
