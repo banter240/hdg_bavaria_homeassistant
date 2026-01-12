@@ -79,8 +79,111 @@
   },
   "entity": {
     "sensor": {
+      "abgasleitwert_ist": {
+        "name": "Abgasleitwert Ist"
+      },
+      "abgasleitwert_soll": {
+        "name": "Abgasleitwert Soll"
+      },
+      "angeforderte_temperatur_abnehmer": {
+        "name": "Angeforderte Temperatur Abnehmer"
+      },
+      "anheizen_zeitdauer": {
+        "name": "Anheizen Zeitdauer"
+      },
+      "anlage_betriebsart": {
+        "name": "Anlage Betriebsart",
+        "state": {
+          "frostschutz": "Frostschutz",
+          "normal": "Normal",
+          "sommerbetrieb": "Sommerbetrieb",
+          "urlaubs_betrieb": "Urlaubsbetrieb"
+        }
+      },
+      "anlage_status_text": {
+        "name": "Anlage Status",
+        "state": {
+          "aus": "Aus",
+          "ein": "Ein",
+          "frostschutz": "Frostschutz",
+          "sommerbetrieb": "Sommerbetrieb",
+          "urlaubs_betrieb": "Urlaubsbetrieb"
+        }
+      },
+      "anlagenbezeichnung_sn": {
+        "name": "Anlagenbezeichnung/SN"
+      },
+      "anzahl_rostkippungen": {
+        "name": "Anzahl Rostkippungen"
+      },
+      "anzunden_primarluft": {
+        "name": "Anzünden Primärluft"
+      },
+      "anzunden_sekundarluft": {
+        "name": "Anzünden Sekundärluft"
+      },
+      "anzunden_zeitdauer": {
+        "name": "Anzünden Zeitdauer"
+      },
+      "ausbrennen_bezugsgrosse": {
+        "name": "Ausbrennen Bezugsgröße",
+        "state": {
+          "o2": "O2",
+          "rgt": "RGT"
+        }
+      },
+      "ausbrennen_primarluft": {
+        "name": "Ausbrennen Primärluft"
+      },
+      "ausbrennen_sekundarluft": {
+        "name": "Ausbrennen Sekundärluft"
+      },
       "aussentemperatur": {
         "name": "Außentemperatur"
+      },
+      "auto_zundung_einschaltverzogerung": {
+        "name": "Auto Zündung Einschaltverzögerung"
+      },
+      "auto_zundung_webcontrol_erlauben": {
+        "name": "Auto Zündung WebControl Erlauben",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
+        }
+      },
+      "automatische_zeitumstellung": {
+        "name": "Automatische Zeitumstellung",
+        "state": {
+          "ein": "Ein",
+          "aus": "Aus"
+        }
+      },
+      "automatische_zundung_aktivieren": {
+        "name": "Automatische Zündung Aktivieren",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
+        }
+      },
+      "bauart": {
+        "name": "Bauart",
+        "state": {
+          "hsf": "HSF",
+          "pha": "PHA",
+          "sal": "SAL",
+          "shk": "SHK"
+        }
+      },
+      "betriebsstunden_ascheschnecke": {
+        "name": "Betriebsstunden Ascheschnecke"
+      },
+      "betriebsstunden_rostmotor": {
+        "name": "Betriebsstunden Rostmotor"
+      },
+      "betriebsstunden_stokerschnecke": {
+        "name": "Betriebsstunden Stokerschnecke"
       },
       "brennraumtemperatur": {
         "name": "Brennraumtemperatur"
@@ -88,26 +191,733 @@
       "brennraumtemperatur_soll": {
         "name": "Brennraumtemperatur Soll"
       },
+      "brennstoff": {
+        "name": "Brennstoff",
+        "state": {
+          "material_1": "Material 1",
+          "material_2": "Material 2",
+          "material_3": "Material 3",
+          "material_4": "Material 4"
+        }
+      },
+      "einstiegsbild": {
+        "name": "Einstiegsbild",
+        "state": {
+          "heizkessel": "Heizkessel",
+          "puffer_1": "Puffer 1"
+        }
+      },
+      "extra_version_info": {
+        "name": "Extra Version Info"
+      },
+      "festwertvorgabe_primarluft": {
+        "name": "Festwertvorgabe Primärluft"
+      },
+      "festwertvorgabe_sekundarluft": {
+        "name": "Festwertvorgabe Sekundärluft"
+      },
+      "freigabe_abgastemperatur": {
+        "name": "Freigabe Abgastemperatur"
+      },
+      "freigabe_kesseltemperatur": {
+        "name": "Freigabe Kesseltemperatur"
+      },
+      "frostschutz_rlt_groesser": {
+        "name": "Frostschutz RLT größer"
+      },
+      "frostschutz_rlt_kleiner": {
+        "name": "Frostschutz RLT kleiner"
+      },
+      "frostschutz_zirkulation_at_kleiner": {
+        "name": "Frostschutz Zirkulation AT kleiner"
+      },
+      "frostschutzprogramm_aktivieren": {
+        "name": "Frostschutzprogramm aktivieren",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
+        }
+      },
+      "heizgrenze_sommer": {
+        "name": "HK1 Heizgrenze Sommer"
+      },
+      "heizgrenze_winter": {
+        "name": "HK1 Heizgrenze Winter"
+      },
+      "heizkreis_1_system": {
+        "name": "Heizkreis 1 System",
+        "state": {
+          "fussboden": "Fußboden",
+          "heizkoerper": "Heizkörper",
+          "keines": "Keines",
+          "konstant": "Konstant",
+          "ungeregelt": "Ungeregelt"
+        }
+      },
+      "heizkreis_2_system": {
+        "name": "Heizkreis 2 System",
+        "state": {
+          "fussboden": "Fußboden",
+          "heizkoerper": "Heizkörper",
+          "keines": "Keines",
+          "konstant": "Konstant",
+          "ungeregelt": "Ungeregelt"
+        }
+      },
+      "hk1_aktuelle_betriebsart": {
+        "name": "HK1 Aktuelle Betriebsart",
+        "state": {
+          "abgesenkt": "Abgesenkt",
+          "aus": "Aus",
+          "nacht": "Nachtbetrieb",
+          "party": "Partybetrieb",
+          "sommer": "Sommerbetrieb",
+          "standard": "Standard",
+          "tag": "Tagbetrieb",
+          "urlaub": "Urlaubsbetrieb"
+        }
+      },
+      "hk1_bezeichnung": {
+        "name": "HK1 Bezeichnung"
+      },
+      "hk1_frostschutz_temp": {
+        "name": "HK1 Frostschutz Temperatur"
+      },
+      "hk1_mischer_status_text": {
+        "name": "HK1 Mischer Status"
+      },
+      "hk1_mischerlaufzeit_maximum": {
+        "name": "HK1 Mischerlaufzeit Maximum"
+      },
+      "hk1_offset_raumfuhler": {
+        "name": "HK1 Offset Raumfühler"
+      },
+      "hk1_parallelverschiebung": {
+        "name": "HK1 Parallelverschiebung"
+      },
+      "hk1_pumpe_ein_freigabetemperatur": {
+        "name": "HK1 Pumpe Ein Freigabetemperatur"
+      },
+      "hk1_pumpe_status_text": {
+        "name": "HK1 Pumpe Status"
+      },
+      "hk1_raumeinflussfaktor": {
+        "name": "HK1 Raumeinflussfaktor"
+      },
+      "hk1_raumeinheit_status": {
+        "name": "HK1 Raumeinheit Status",
+        "state": {
+          "keine": "Keine",
+          "raumbedien_geraet_bus": "Raumbedien- gerät BUS",
+          "raumbedien_geraet_bus_nlm": "Raumbedien- gerät BUS NLM",
+          "raumbedien_geraet_light": "Raumbedien- gerät LIGHT",
+          "raumtempera_turfuehler": "Raumtempera- turfühler"
+        }
+      },
+      "hk1_restwarme_aufnehmen": {
+        "name": "HK1 Restwärme Aufnehmen",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
+        }
+      },
+      "hk1_soll_normal": {
+        "name": "Tagbetrieb Raumtemperatur Soll"
+      },
+      "hk1_temp_quelle_status_wert": {
+        "name": "HK1 Temp Quelle Status Wert"
+      },
+      "hk1_vorlauftemperatur_ist": {
+        "name": "HK1 Vorlauftemperatur Ist"
+      },
+      "hk1_vorlauftemperatur_maximum": {
+        "name": "HK1 Vorlauftemperatur Maximum"
+      },
+      "hk1_vorlauftemperatur_minimum": {
+        "name": "HK1 Vorlauftemperatur Minimum"
+      },
+      "hk1_vorlauftemperatur_soll": {
+        "name": "HK1 Vorlauftemperatur Soll"
+      },
+      "hk1_warmequelle": {
+        "name": "HK1 Wärmequelle",
+        "state": {
+          "keine": "Keine",
+          "kessel": "Kessel",
+          "netzpumpe_1": "Netzpumpe 1",
+          "netzpumpe_2": "Netzpumpe 2",
+          "netzpumpe_3": "Netzpumpe 3",
+          "puffer_1": "Puffer 1",
+          "puffer_2": "Puffer 2",
+          "verband": "Verband"
+        }
+      },
+      "hk2_aktuelle_betriebsart": {
+        "name": "HK2 Aktuelle Betriebsart",
+        "state": {
+          "abgesenkt": "Abgesenkt",
+          "aus": "Aus",
+          "nacht": "Nachtbetrieb",
+          "party": "Partybetrieb",
+          "sommer": "Sommerbetrieb",
+          "standard": "Standard",
+          "tag": "Tagbetrieb",
+          "urlaub": "Urlaubsbetrieb"
+        }
+      },
+      "hk2_bezeichnung": {
+        "name": "HK2 Bezeichnung"
+      },
+      "hk2_frostschutz_temp": {
+        "name": "HK2 Frostschutz Temperatur"
+      },
+      "hk2_heizgrenze_sommer": {
+        "name": "HK2 Heizgrenze Sommer"
+      },
+      "hk2_heizgrenze_winter": {
+        "name": "HK2 Heizgrenze Winter"
+      },
+      "hk2_mischer_status_text": {
+        "name": "HK2 Mischer Status"
+      },
+      "hk2_mischerlaufzeit_maximum": {
+        "name": "HK2 Mischerlaufzeit Maximum"
+      },
+      "hk2_offset_raumfuhler": {
+        "name": "HK2 Offset Raumfühler"
+      },
+      "hk2_parallelverschiebung": {
+        "name": "HK2 Parallelverschiebung"
+      },
+      "hk2_pumpe_ein_freigabetemperatur": {
+        "name": "HK2 Pumpe Ein Freigabetemperatur"
+      },
+      "hk2_pumpe_status_text": {
+        "name": "HK2 Pumpe Status"
+      },
+      "hk2_raumeinflussfaktor": {
+        "name": "HK2 Raumeinflussfaktor"
+      },
+      "hk2_raumeinheit_status": {
+        "name": "HK2 Raumeinheit Status",
+        "state": {
+          "keine": "Keine",
+          "raumbedien_geraet_bus": "Raumbedien- gerät BUS",
+          "raumbedien_geraet_bus_nlm": "Raumbedien- gerät BUS NLM",
+          "raumbedien_geraet_light": "Raumbedien- gerät LIGHT",
+          "raumtempera_turfuehler": "Raumtempera- turfühler"
+        }
+      },
+      "hk2_restwarme_aufnehmen": {
+        "name": "HK2 Restwärme Aufnehmen",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
+        }
+      },
+      "hk2_soll_normal": {
+        "name": "HK2 Tagbetrieb Raumtemperatur Soll"
+      },
+      "hk2_temp_quelle_status_wert": {
+        "name": "HK2 Temp Quelle Status Wert"
+      },
+      "hk2_vorlauftemperatur_ist": {
+        "name": "HK2 Vorlauftemperatur Ist"
+      },
+      "hk2_vorlauftemperatur_maximum": {
+        "name": "HK2 Vorlauftemperatur Maximum"
+      },
+      "hk2_vorlauftemperatur_minimum": {
+        "name": "HK2 Vorlauftemperatur Minimum"
+      },
+      "hk2_vorlauftemperatur_soll": {
+        "name": "HK2 Vorlauftemperatur Soll"
+      },
+      "hk2_warmequelle": {
+        "name": "HK2 Wärmequelle",
+        "state": {
+          "keine": "Keine",
+          "kessel": "Kessel",
+          "netzpumpe_1": "Netzpumpe 1",
+          "netzpumpe_2": "Netzpumpe 2",
+          "netzpumpe_3": "Netzpumpe 3",
+          "puffer_1": "Puffer 1",
+          "puffer_2": "Puffer 2",
+          "verband": "Verband"
+        }
+      },
+      "hk3_aktuelle_betriebsart": {
+        "name": "HK3 Aktuelle Betriebsart",
+        "state": {
+          "abgesenkt": "Abgesenkt",
+          "aus": "Aus",
+          "nacht": "Nachtbetrieb",
+          "party": "Partybetrieb",
+          "sommer": "Sommerbetrieb",
+          "standard": "Standard",
+          "tag": "Tagbetrieb",
+          "urlaub": "Urlaubsbetrieb"
+        }
+      },
+      "hk3_bezeichnung": {
+        "name": "HK3 Bezeichnung"
+      },
+      "hk3_frostschutz_temp": {
+        "name": "HK3 Frostschutz Temperatur"
+      },
+      "hk3_mischer_status_text": {
+        "name": "HK3 Mischer Status"
+      },
+      "hk3_mischerlaufzeit_maximum": {
+        "name": "HK3 Mischerlaufzeit Maximum"
+      },
+      "hk3_offset_raumfuhler": {
+        "name": "HK3 Offset Raumfühler"
+      },
+      "hk3_parallelverschiebung": {
+        "name": "HK3 Parallelverschiebung"
+      },
+      "hk3_pumpe_ein_freigabetemperatur": {
+        "name": "HK3 Pumpe Ein Freigabetemperatur"
+      },
+      "hk3_pumpe_status_text": {
+        "name": "HK3 Pumpe Status"
+      },
+      "hk3_raumeinflussfaktor": {
+        "name": "HK3 Raumeinflussfaktor"
+      },
+      "hk3_raumeinheit_status": {
+        "name": "HK3 Raumeinheit Status",
+        "state": {
+          "keine": "Keine",
+          "raumbedien_geraet_bus": "Raumbedien- gerät BUS",
+          "raumbedien_geraet_bus_nlm": "Raumbedien- gerät BUS NLM",
+          "raumbedien_geraet_light": "Raumbedien- gerät LIGHT",
+          "raumtempera_turfuehler": "Raumtempera- turfühler"
+        }
+      },
+      "hk3_restwarme_aufnehmen": {
+        "name": "HK3 Restwärme Aufnehmen",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
+        }
+      },
+      "hk3_soll_normal": {
+        "name": "Tagbetrieb Raumtemperatur Soll"
+      },
+      "hk3_temp_quelle_status_wert": {
+        "name": "HK3 Temp Quelle Status Wert"
+      },
+      "hk3_vorlauftemperatur_ist": {
+        "name": "HK3 Vorlauftemperatur Ist"
+      },
+      "hk3_vorlauftemperatur_maximum": {
+        "name": "HK3 Vorlauftemperatur Maximum"
+      },
+      "hk3_vorlauftemperatur_minimum": {
+        "name": "HK3 Vorlauftemperatur Minimum"
+      },
+      "hk3_vorlauftemperatur_soll": {
+        "name": "HK3 Vorlauftemperatur Soll"
+      },
+      "hk3_warmequelle": {
+        "name": "HK3 Wärmequelle",
+        "state": {
+          "keine": "Keine",
+          "kessel": "Kessel",
+          "netzpumpe_1": "Netzpumpe 1",
+          "netzpumpe_2": "Netzpumpe 2",
+          "netzpumpe_3": "Netzpumpe 3",
+          "puffer_1": "Puffer 1",
+          "puffer_2": "Puffer 2",
+          "verband": "Verband"
+        }
+      },
+      "hk4_aktuelle_betriebsart": {
+        "name": "HK4 Aktuelle Betriebsart",
+        "state": {
+          "abgesenkt": "Abgesenkt",
+          "aus": "Aus",
+          "nacht": "Nachtbetrieb",
+          "party": "Partybetrieb",
+          "sommer": "Sommerbetrieb",
+          "standard": "Standard",
+          "tag": "Tagbetrieb",
+          "urlaub": "Urlaubsbetrieb"
+        }
+      },
+      "hk4_bezeichnung": {
+        "name": "HK4 Bezeichnung"
+      },
+      "hk4_frostschutz_temp": {
+        "name": "HK4 Frostschutz Temperatur"
+      },
+      "hk4_mischer_status_text": {
+        "name": "HK4 Mischer Status"
+      },
+      "hk4_mischerlaufzeit_maximum": {
+        "name": "HK4 Mischerlaufzeit Maximum"
+      },
+      "hk4_offset_raumfuhler": {
+        "name": "HK4 Offset Raumfühler"
+      },
+      "hk4_parallelverschiebung": {
+        "name": "HK4 Parallelverschiebung"
+      },
+      "hk4_pumpe_ein_freigabetemperatur": {
+        "name": "HK4 Pumpe Ein Freigabetemperatur"
+      },
+      "hk4_pumpe_status_text": {
+        "name": "HK4 Pumpe Status"
+      },
+      "hk4_raumeinflussfaktor": {
+        "name": "HK4 Raumeinflussfaktor"
+      },
+      "hk4_raumeinheit_status": {
+        "name": "HK4 Raumeinheit Status",
+        "state": {
+          "keine": "Keine",
+          "raumbedien_geraet_bus": "Raumbedien- gerät BUS",
+          "raumbedien_geraet_bus_nlm": "Raumbedien- gerät BUS NLM",
+          "raumbedien_geraet_light": "Raumbedien- gerät LIGHT",
+          "raumtempera_turfuehler": "Raumtempera- turfühler"
+        }
+      },
+      "hk4_restwarme_aufnehmen": {
+        "name": "HK4 Restwärme Aufnehmen",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
+        }
+      },
+      "hk4_soll_normal": {
+        "name": "Tagbetrieb Raumtemperatur Soll"
+      },
+      "hk4_temp_quelle_status_wert": {
+        "name": "HK4 Temp Quelle Status Wert"
+      },
+      "hk4_vorlauftemperatur_ist": {
+        "name": "HK4 Vorlauftemperatur Ist"
+      },
+      "hk4_vorlauftemperatur_maximum": {
+        "name": "HK4 Vorlauftemperatur Maximum"
+      },
+      "hk4_vorlauftemperatur_minimum": {
+        "name": "HK4 Vorlauftemperatur Minimum"
+      },
+      "hk4_vorlauftemperatur_soll": {
+        "name": "HK4 Vorlauftemperatur Soll"
+      },
+      "hk4_warmequelle": {
+        "name": "HK4 Wärmequelle",
+        "state": {
+          "keine": "Keine",
+          "kessel": "Kessel",
+          "netzpumpe_1": "Netzpumpe 1",
+          "netzpumpe_2": "Netzpumpe 2",
+          "netzpumpe_3": "Netzpumpe 3",
+          "puffer_1": "Puffer 1",
+          "puffer_2": "Puffer 2",
+          "verband": "Verband"
+        }
+      },
+      "hk5_aktuelle_betriebsart": {
+        "name": "HK5 Aktuelle Betriebsart",
+        "state": {
+          "abgesenkt": "Abgesenkt",
+          "aus": "Aus",
+          "nacht": "Nachtbetrieb",
+          "party": "Partybetrieb",
+          "sommer": "Sommerbetrieb",
+          "standard": "Standard",
+          "tag": "Tagbetrieb",
+          "urlaub": "Urlaubsbetrieb"
+        }
+      },
+      "hk5_bezeichnung": {
+        "name": "HK5 Bezeichnung"
+      },
+      "hk5_frostschutz_temp": {
+        "name": "HK5 Frostschutz Temperatur"
+      },
+      "hk5_mischer_status_text": {
+        "name": "HK5 Mischer Status"
+      },
+      "hk5_mischerlaufzeit_maximum": {
+        "name": "HK5 Mischerlaufzeit Maximum"
+      },
+      "hk5_offset_raumfuhler": {
+        "name": "HK5 Offset Raumfühler"
+      },
+      "hk5_parallelverschiebung": {
+        "name": "HK5 Parallelverschiebung"
+      },
+      "hk5_pumpe_ein_freigabetemperatur": {
+        "name": "HK5 Pumpe Ein Freigabetemperatur"
+      },
+      "hk5_pumpe_status_text": {
+        "name": "HK5 Pumpe Status"
+      },
+      "hk5_raumeinflussfaktor": {
+        "name": "HK5 Raumeinflussfaktor"
+      },
+      "hk5_raumeinheit_status": {
+        "name": "HK5 Raumeinheit Status",
+        "state": {
+          "keine": "Keine",
+          "raumbedien_geraet_bus": "Raumbedien- gerät BUS",
+          "raumbedien_geraet_bus_nlm": "Raumbedien- gerät BUS NLM",
+          "raumbedien_geraet_light": "Raumbedien- gerät LIGHT",
+          "raumtempera_turfuehler": "Raumtempera- turfühler"
+        }
+      },
+      "hk5_restwarme_aufnehmen": {
+        "name": "HK5 Restwärme Aufnehmen",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
+        }
+      },
+      "hk5_soll_normal": {
+        "name": "Tagbetrieb Raumtemperatur Soll"
+      },
+      "hk5_temp_quelle_status_wert": {
+        "name": "HK5 Temp Quelle Status Wert"
+      },
+      "hk5_vorlauftemperatur_ist": {
+        "name": "HK5 Vorlauftemperatur Ist"
+      },
+      "hk5_vorlauftemperatur_maximum": {
+        "name": "HK5 Vorlauftemperatur Maximum"
+      },
+      "hk5_vorlauftemperatur_minimum": {
+        "name": "HK5 Vorlauftemperatur Minimum"
+      },
+      "hk5_vorlauftemperatur_soll": {
+        "name": "HK5 Vorlauftemperatur Soll"
+      },
+      "hk5_warmequelle": {
+        "name": "HK5 Wärmequelle",
+        "state": {
+          "keine": "Keine",
+          "kessel": "Kessel",
+          "netzpumpe_1": "Netzpumpe 1",
+          "netzpumpe_2": "Netzpumpe 2",
+          "netzpumpe_3": "Netzpumpe 3",
+          "puffer_1": "Puffer 1",
+          "puffer_2": "Puffer 2",
+          "verband": "Verband"
+        }
+      },
+      "hk6_aktuelle_betriebsart": {
+        "name": "HK6 Aktuelle Betriebsart",
+        "state": {
+          "abgesenkt": "Abgesenkt",
+          "aus": "Aus",
+          "nacht": "Nachtbetrieb",
+          "party": "Partybetrieb",
+          "sommer": "Sommerbetrieb",
+          "standard": "Standard",
+          "tag": "Tagbetrieb",
+          "urlaub": "Urlaubsbetrieb"
+        }
+      },
+      "hk6_bezeichnung": {
+        "name": "HK6 Bezeichnung"
+      },
+      "hk6_frostschutz_temp": {
+        "name": "HK6 Frostschutz Temperatur"
+      },
+      "hk6_mischer_status_text": {
+        "name": "HK6 Mischer Status"
+      },
+      "hk6_mischerlaufzeit_maximum": {
+        "name": "HK6 Mischerlaufzeit Maximum"
+      },
+      "hk6_offset_raumfuhler": {
+        "name": "HK6 Offset Raumfühler"
+      },
+      "hk6_parallelverschiebung": {
+        "name": "HK6 Parallelverschiebung"
+      },
+      "hk6_pumpe_ein_freigabetemperatur": {
+        "name": "HK6 Pumpe Ein Freigabetemperatur"
+      },
+      "hk6_pumpe_status_text": {
+        "name": "HK6 Pumpe Status"
+      },
+      "hk6_raumeinflussfaktor": {
+        "name": "HK6 Raumeinflussfaktor"
+      },
+      "hk6_raumeinheit_status": {
+        "name": "HK6 Raumeinheit Status",
+        "state": {
+          "keine": "Keine",
+          "raumbedien_geraet_bus": "Raumbedien- gerät BUS",
+          "raumbedien_geraet_bus_nlm": "Raumbedien- gerät BUS NLM",
+          "raumbedien_geraet_light": "Raumbedien- gerät LIGHT",
+          "raumtempera_turfuehler": "Raumtempera- turfühler"
+        }
+      },
+      "hk6_restwarme_aufnehmen": {
+        "name": "HK6 Restwärme Aufnehmen",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
+        }
+      },
+      "hk6_soll_normal": {
+        "name": "Tagbetrieb Raumtemperatur Soll"
+      },
+      "hk6_temp_quelle_status_wert": {
+        "name": "HK6 Temp Quelle Status Wert"
+      },
+      "hk6_vorlauftemperatur_ist": {
+        "name": "HK6 Vorlauftemperatur Ist"
+      },
+      "hk6_vorlauftemperatur_maximum": {
+        "name": "HK6 Vorlauftemperatur Maximum"
+      },
+      "hk6_vorlauftemperatur_minimum": {
+        "name": "HK6 Vorlauftemperatur Minimum"
+      },
+      "hk6_vorlauftemperatur_soll": {
+        "name": "HK6 Vorlauftemperatur Soll"
+      },
+      "hk6_warmequelle": {
+        "name": "HK6 Wärmequelle",
+        "state": {
+          "keine": "Keine",
+          "kessel": "Kessel",
+          "netzpumpe_1": "Netzpumpe 1",
+          "netzpumpe_2": "Netzpumpe 2",
+          "netzpumpe_3": "Netzpumpe 3",
+          "puffer_1": "Puffer 1",
+          "puffer_2": "Puffer 2",
+          "verband": "Verband"
+        }
+      },
+      "holzart": {
+        "name": "Holzart",
+        "state": {
+          "hartholz": "Hartholz",
+          "holzbriketts": "Holzbriketts",
+          "mischholz": "Mischholz",
+          "saegereste": "Sägereste",
+          "weichholz": "Weichholz"
+        }
+      },
+      "holzfeuchte": {
+        "name": "Holzfeuchte",
+        "state": {
+          "feuchte_qualitaet": "feuchte Qualität",
+          "mittlere_qualitaet": "mittlere Qualität",
+          "trockene_qualitaet": "trockene Qualität"
+        }
+      },
+      "hydraulikschema_nummer": {
+        "name": "Hydraulikschema Nummer"
+      },
       "kessel_abgastemperatur_ist": {
         "name": "Kessel Abgastemperatur Ist"
+      },
+      "kessel_ausbrandgrund": {
+        "name": "Kessel Ausbrandgrund",
+        "state": {
+          "none": "Keiner",
+          "abschaltung": "Abschaltung",
+          "keine_anforderung": "Keine Anforderung",
+          "rostkippung": "Rostkippung"
+        }
+      },
+      "kessel_betriebsphase_text": {
+        "name": "Kessel Betriebsphase",
+        "state": {
+          "ausbrand": "Ausbrand",
+          "brenner_aus": "Brenner aus",
+          "brenner_gesperrt": "Brenner gesperrt",
+          "flammenstabilisierung": "Flammenstabilisierung",
+          "modulation_entaschung": "Modulation Entaschung",
+          "modulation_fixleistung": "Modulation Fixleistung",
+          "modulationsbetrieb": "Modulationsbetrieb",
+          "selbsttest": "Selbsttest",
+          "standby": "Standby",
+          "stoerabschaltung": "Störabschaltung",
+          "vorspuelen": "Vorspülen",
+          "we_ausschalten": "WE ausschalten",
+          "we_einschalten": "WE einschalten",
+          "zuendphase": "Zündphase"
+        }
+      },
+      "kessel_betriebsstunden": {
+        "name": "Kessel Betriebsstunden"
+      },
+      "kessel_energieverbrauch_tag_gesamt": {
+        "name": "Kessel Energieverbrauch Tag/Gesamt"
+      },
+      "kessel_externe_anforderung": {
+        "name": "Kessel Externe Anforderung %"
+      },
+      "kessel_haupt_betriebsart": {
+        "name": "Kessel Haupt-Betriebsart",
+        "state": {
+          "abschaltvorgang": "Abschaltvorgang",
+          "aktoren_anlage": "Aktoren Anlage",
+          "aktoren_zufuehrung": "Aktoren Zuführung",
+          "ausgeschaltet": "Ausgeschaltet",
+          "autobinding": "Autobinding",
+          "eingeschaltet": "Eingeschaltet",
+          "festwert": "Festwert",
+          "schornsteinfeger": "Schornsteinfeger",
+          "unbekannt": "Unbekannt"
+        }
+      },
+      "kessel_nachlegebedarf": {
+        "name": "Kessel Nachlegebedarf %"
+      },
+      "kessel_nachlegemenge": {
+        "name": "Kessel Nachlegemenge %"
+      },
+      "kessel_nachlegen_anzeige_text": {
+        "name": "Kessel Nachlegen Anzeige",
+        "state": {
+          "erlaubt_aber_stillstandszeit": "erlaubt, aber Stillstandszeit",
+          "moeglich_und_sinnvoll": "möglich und sinnvoll",
+          "nicht_moeglich": "nicht möglich",
+          "notwendig_oder_es_wird_kalt": "notwendig, oder es wird kalt"
+        }
+      },
+      "kessel_nachlegezeitpunkt_2": {
+        "name": "Kessel Nachlegezeitpunkt"
+      },
+      "kessel_o2_sollwert": {
+        "name": "Kessel O2 Sollwert"
+      },
+      "kessel_restlaufzeit_wartung": {
+        "name": "Kessel Restlaufzeit Wartung"
       },
       "kessel_restsauerstoff_ist": {
         "name": "Kessel Restsauerstoff Ist"
       },
-      "kesseltemperatur_ist": {
-        "name": "Kesseltemperatur Ist"
+      "kessel_restsauerstoff_korr": {
+        "name": "Kessel Restsauerstoff Korr. %"
+      },
+      "kessel_rucklaufmischer": {
+        "name": "Kessel Rücklaufmischer %"
       },
       "kessel_rucklauftemperatur_ist": {
         "name": "Kessel Rücklauftemperatur Ist"
       },
-      "materialmenge_aktuell": {
-        "name": "Materialmenge Aktuell"
-      },
-      "primarluftklappe_ist": {
-        "name": "Primärluftklappe Ist"
-      },
-      "sekundarluftklappe_ist": {
-        "name": "Sekundärluftklappe Ist"
+      "kessel_saugzuggeblase_ist": {
+        "name": "Kessel Saugzuggebläse Ist"
       },
       "kessel_status": {
         "name": "Kessel Status",
@@ -131,211 +941,32 @@
           "zuendung_bereit": "Zündung bereit"
         }
       },
-      "primarluftklappe_soll": {
-        "name": "Primärluftklappe Soll"
+      "kessel_stillstandszeit": {
+        "name": "Kessel Stillstandszeit"
       },
-      "kessel_externe_anforderung": {
-        "name": "Kessel Externe Anforderung %"
-      },
-      "kesselvorlauf_solltemperatur": {
-        "name": "Kesselvorlauf Solltemperatur"
-      },
-      "kesselrucklauf_solltemperatur": {
-        "name": "Kessel Solltemperatur Rücklauf"
-      },
-      "kesselleistung_ist": {
-        "name": "Kesselleistung Ist"
-      },
-      "kessel_saugzuggeblase_ist": {
-        "name": "Kessel Saugzuggebläse Ist"
+      "kessel_typ_info_leer": {
+        "name": "Kessel Typ Info"
       },
       "kessel_unterdruck_ist": {
         "name": "Kessel Unterdruck Ist"
       },
-      "sekundarluftklappe_soll": {
-        "name": "Sekundärluftklappe Soll"
+      "kessel_warmemenge_gesamt": {
+        "name": "Kessel Wärmemenge Gesamt"
       },
-      "kessel_rucklaufmischer": {
-        "name": "Kessel Rücklaufmischer %"
+      "kessel_wirkungsgrad": {
+        "name": "Kessel Wirkungsgrad"
       },
-      "abgasleitwert_ist": {
-        "name": "Abgasleitwert Ist"
+      "kesselleistung_ist": {
+        "name": "Kesselleistung Ist"
       },
-      "kessel_restsauerstoff_korr": {
-        "name": "Kessel Restsauerstoff Korr. %"
+      "kesselrucklauf_solltemperatur": {
+        "name": "Kessel Solltemperatur Rücklauf"
       },
-      "abgasleitwert_soll": {
-        "name": "Abgasleitwert Soll"
+      "kesseltemperatur_ist": {
+        "name": "Kesseltemperatur Ist"
       },
-      "kessel_o2_sollwert": {
-        "name": "Kessel O2 Sollwert"
-      },
-      "kessel_nachlegemenge": {
-        "name": "Kessel Nachlegemenge %"
-      },
-      "kessel_nachlegebedarf": {
-        "name": "Kessel Nachlegebedarf %"
-      },
-      "stillstandszeit_soll": {
-        "name": "Stillstandszeit Soll"
-      },
-      "kessel_stillstandszeit": {
-        "name": "Kessel Stillstandszeit"
-      },
-      "angeforderte_temperatur_abnehmer": {
-        "name": "Angeforderte Temperatur Abnehmer"
-      },
-      "puffer_temperatur_oben": {
-        "name": "Puffer Temperatur Oben"
-      },
-      "puffer_temperatur_mitte": {
-        "name": "Puffer Temperatur Mitte"
-      },
-      "puffer_temperatur_unten": {
-        "name": "Puffer Temperatur Unten"
-      },
-      "puffer_2_temperatur_oben": {
-        "name": "Puffer 2 Temperatur Oben"
-      },
-      "puffer_2_temperatur_mitte": {
-        "name": "Puffer 2 Temperatur Mitte"
-      },
-      "puffer_2_temperatur_unten": {
-        "name": "Puffer 2 Temperatur Unten"
-      },
-      "puffer_2_soll_oben": {
-        "name": "Puffer 2 Soll Oben"
-      },
-      "puffer_2_rucklauf_soll": {
-        "name": "Puffer 2 Soll Rücklauf"
-      },
-      "puffer_2_status": {
-        "name": "Puffer 2 Status"
-      },
-      "puffer_2_energie_max": {
-        "name": "Puffer 2 Energie Max"
-      },
-      "puffer_2_energie_aktuell": {
-        "name": "Puffer 2 Energie Aktuell"
-      },
-      "puffer_2_ladezustand_alt": {
-        "name": "Puffer 2 Ladezustand Alt."
-      },
-      "puffer_2_energie_gesamt_zahler": {
-        "name": "Puffer 2 Energie Gesamt (Zähler)"
-      },
-      "puffer_2_energie_ist": {
-        "name": "Puffer 2 Energie Ist"
-      },
-      "puffer_2_energie_aufnehmbar": {
-        "name": "Puffer 2 Energie Aufnehmbar"
-      },
-      "puffer_2_ladezustand": {
-        "name": "Puffer 2 Ladezustand"
-      },
-      "puffer_2_vorlauf_extern": {
-        "name": "Puffer 2 Vorlauf Extern"
-      },
-      "puffer_2_rucklauf_extern": {
-        "name": "Puffer 2 Rücklauf Extern"
-      },
-      "puffer_ladezustand": {
-        "name": "Puffer Ladezustand"
-      },
-      "hk1_vorlauftemperatur_ist": {
-        "name": "HK1 Vorlauftemperatur Ist"
-      },
-      "hk1_vorlauftemperatur_soll": {
-        "name": "HK1 Vorlauftemperatur Soll"
-      },
-      "kessel_haupt_betriebsart": {
-        "name": "Kessel Haupt-Betriebsart",
-        "state": {
-          "abschaltvorgang": "Abschaltvorgang",
-          "aktoren_anlage": "Aktoren Anlage",
-          "aktoren_zufuehrung": "Aktoren Zuführung",
-          "ausgeschaltet": "Ausgeschaltet",
-          "autobinding": "Autobinding",
-          "eingeschaltet": "Eingeschaltet",
-          "festwert": "Festwert",
-          "schornsteinfeger": "Schornsteinfeger",
-          "unbekannt": "Unbekannt"
-        }
-      },
-      "kessel_betriebsphase_text": {
-        "name": "Kessel Betriebsphase",
-        "state": {
-          "ausbrand": "Ausbrand",
-          "brenner_aus": "Brenner aus",
-          "brenner_gesperrt": "Brenner gesperrt",
-          "flammenstabilisierung": "Flammenstabilisierung",
-          "modulation_entaschung": "Modulation Entaschung",
-          "modulation_fixleistung": "Modulation Fixleistung",
-          "modulationsbetrieb": "Modulationsbetrieb",
-          "selbsttest": "Selbsttest",
-          "standby": "Standby",
-          "stoerabschaltung": "Störabschaltung",
-          "vorspuelen": "Vorspülen",
-          "we_ausschalten": "WE ausschalten",
-          "we_einschalten": "WE einschalten",
-          "zuendphase": "Zündphase"
-        }
-      },
-      "kessel_ausbrandgrund": {
-        "name": "Kessel Ausbrandgrund",
-        "state": {
-          "none": "Keiner",
-          "abschaltung": "Abschaltung",
-          "keine_anforderung": "Keine Anforderung",
-          "rostkippung": "Rostkippung"
-        }
-      },
-      "puffer_status": {
-        "name": "Puffer Status"
-      },
-      "hk1_mischer_status_text": {
-        "name": "HK1 Mischer Status"
-      },
-      "hk1_pumpe_status_text": {
-        "name": "HK1 Pumpe Status"
-      },
-      "hk1_aktuelle_betriebsart": {
-        "name": "HK1 Aktuelle Betriebsart",
-        "state": {
-          "abgesenkt": "Abgesenkt",
-          "aus": "Aus",
-          "nacht": "Nachtbetrieb",
-          "party": "Partybetrieb",
-          "sommer": "Sommerbetrieb",
-          "standard": "Standard",
-          "tag": "Tagbetrieb",
-          "urlaub": "Urlaubsbetrieb"
-        }
-      },
-      "sprache": {
-        "name": "Sprache",
-        "state": {
-          "dansk": "Dansk",
-          "deutsch": "Deutsch",
-          "english": "English",
-          "espagnol": "Espagnol",
-          "fran_ais": "Français",
-          "italiano": "Italiano",
-          "j_zyk_polski": "Język polski",
-          "nederlands": "Nederlands",
-          "norsk": "Norsk",
-          "sloven_cina": "Slovenšcina",
-          "svenska": "Svenska"
-        }
-      },
-      "bauart": {
-        "name": "Bauart",
-        "state": {
-          "hsf": "HSF",
-          "pha": "PHA",
-          "sal": "SAL",
-          "shk": "SHK"
-        }
+      "kesseltemperatur_sollwert_param": {
+        "name": "Kesseltemperatur Sollwert (Param)"
       },
       "kesseltyp_kennung": {
         "name": "Kesseltyp Kennung",
@@ -381,87 +1012,41 @@
           "euro_50": "Euro 50"
         }
       },
-      "stromnetz": {
-        "name": "Stromnetz",
-        "state": {
-          "1x230v": "1x230V",
-          "3x230v": "3x230V",
-          "3x400v": "3x400V"
-        }
+      "kesselvorlauf_solltemperatur": {
+        "name": "Kesselvorlauf Solltemperatur"
       },
-      "brennstoff": {
-        "name": "Brennstoff",
-        "state": {
-          "material_1": "Material 1",
-          "material_2": "Material 2",
-          "material_3": "Material 3",
-          "material_4": "Material 4"
-        }
+      "lager_aktueller_inhalt": {
+        "name": "Aktueller Lagerinhalt"
       },
-      "automatische_zeitumstellung": {
-        "name": "Automatische Zeitumstellung",
-        "state": {
-          "ein": "Ein",
-          "aus": "Aus"
-        }
+      "lager_letzte_fuellung": {
+        "name": "Letzte Füllung"
       },
-      "einstiegsbild": {
-        "name": "Einstiegsbild",
-        "state": {
-          "heizkessel": "Heizkessel",
-          "puffer_1": "Puffer 1"
-        }
+      "lager_pelletverbrauch_insgesamt": {
+        "name": "Pelletverbrauch Insgesamt"
       },
-      "holzart": {
-        "name": "Holzart",
-        "state": {
-          "hartholz": "Hartholz",
-          "holzbriketts": "Holzbriketts",
-          "mischholz": "Mischholz",
-          "saegereste": "Sägereste",
-          "weichholz": "Weichholz"
-        }
+      "lager_verbrauch_seit_fuellung": {
+        "name": "Verbrauch seit letzter Füllung"
       },
-      "holzfeuchte": {
-        "name": "Holzfeuchte",
-        "state": {
-          "feuchte_qualitaet": "feuchte Qualität",
-          "mittlere_qualitaet": "mittlere Qualität",
-          "trockene_qualitaet": "trockene Qualität"
-        }
+      "laufzeit_entaschung": {
+        "name": "Laufzeit Entaschung"
       },
-      "automatische_zundung_aktivieren": {
-        "name": "Automatische Zündung Aktivieren",
-        "state": {
-          "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein"
-        }
+      "laufzeit_hauptgeblase": {
+        "name": "Laufzeit Hauptgebläse"
       },
-      "auto_zundung_webcontrol_erlauben": {
-        "name": "Auto Zündung WebControl Erlauben",
-        "state": {
-          "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein"
-        }
+      "laufzeit_wt_reinigung": {
+        "name": "Laufzeit WT Reinigung"
       },
-      "objektwarmebedarf": {
-        "name": "Objektwärmebedarf"
+      "laufzeit_zundgeblase": {
+        "name": "Laufzeit Zündgebläse"
+      },
+      "mac_adresse": {
+        "name": "MAC Adresse"
+      },
+      "materialmenge_aktuell": {
+        "name": "Materialmenge Aktuell"
       },
       "minimale_nachlegemenge": {
         "name": "Minimale Nachlegemenge"
-      },
-      "nachlegeschritt_text": {
-        "name": "Nachlegeschritt (Text)"
-      },
-      "nachlegeschritt": {
-        "name": "Nachlegeschritt",
-        "state": {
-          "1prozent_schritte": "1%-Schritte",
-          "5prozent_schritte": "5%-Schritte",
-          "5_0": "5%-Schritte"
-        }
       },
       "nachlege_benachrichtigung": {
         "name": "Nachlege-Benachrichtigung",
@@ -472,86 +1057,108 @@
           "bei_aenderung_um_groesser_2_h": "bei Änderung um > 2 h"
         }
       },
+      "nachlegeschritt": {
+        "name": "Nachlegeschritt",
+        "state": {
+          "1prozent_schritte": "1%-Schritte",
+          "5prozent_schritte": "5%-Schritte",
+          "5_0": "5%-Schritte"
+        }
+      },
+      "nachlegeschritt_text": {
+        "name": "Nachlegeschritt (Text)"
+      },
+      "np1_anforderung_abnehmer": {
+        "name": "NP1 Anforderung Abnehmer"
+      },
+      "np1_anforderung_quelle": {
+        "name": "NP1 Anforderung Quelle"
+      },
+      "np1_betriebsart": {
+        "name": "NP1 Betriebsart"
+      },
+      "np1_fernwaerme": {
+        "name": "NP1 Fernwärme"
+      },
+      "np1_pumpe_status": {
+        "name": "NP1 Pumpe Status"
+      },
+      "np1_temperatur": {
+        "name": "NP1 Temperatur"
+      },
+      "np1_waermequelle": {
+        "name": "NP1 Wärmequelle"
+      },
+      "np2_anforderung_abnehmer": {
+        "name": "NP2 Anforderung Abnehmer"
+      },
+      "np2_anforderung_quelle": {
+        "name": "NP2 Anforderung Quelle"
+      },
+      "np2_betriebsart": {
+        "name": "NP2 Betriebsart"
+      },
+      "np2_fernwaerme": {
+        "name": "NP2 Fernwärme"
+      },
+      "np2_pumpe_status": {
+        "name": "NP2 Pumpe Status"
+      },
+      "np2_temperatur": {
+        "name": "NP2 Temperatur"
+      },
+      "np2_waermequelle": {
+        "name": "NP2 Wärmequelle"
+      },
+      "objektwarmebedarf": {
+        "name": "Objektwärmebedarf"
+      },
       "offset_aussenfuhler": {
         "name": "Offset Außenfühler"
       },
-      "kesseltemperatur_sollwert_param": {
-        "name": "Kesseltemperatur Sollwert (Param)"
+      "offset_kesseltemperatur_soll_maximum": {
+        "name": "Offset Kesseltemperatur Soll Maximum"
       },
-      "frostschutzprogramm_aktivieren": {
-        "name": "Frostschutzprogramm aktivieren",
+      "pid3_o2_sekundarluft_maximum": {
+        "name": "PID3 O2 Sekundärluft Maximum"
+      },
+      "pid3_o2_sekundarluft_minimum": {
+        "name": "PID3 O2 Sekundärluft Minimum"
+      },
+      "pid_sollwert_rucklauf_spreizung_minimum": {
+        "name": "PID Sollwert Spreizung Minimum"
+      },
+      "primarluft_korrektur_o2": {
+        "name": "Primärluft Korrektur O2",
         "state": {
           "ja": "Ja",
           "nein": "Nein",
           "ein": "Ein"
         }
       },
-      "frostschutz_zirkulation_at_kleiner": {
-        "name": "Frostschutz Zirkulation AT kleiner"
+      "primarluftklappe_ist": {
+        "name": "Primärluftklappe Ist"
       },
-      "frostschutz_rlt_kleiner": {
-        "name": "Frostschutz RLT kleiner"
+      "primarluftklappe_soll": {
+        "name": "Primärluftklappe Soll"
       },
-      "frostschutz_rlt_groesser": {
-        "name": "Frostschutz RLT größer"
-      },
-      "offset_kesseltemperatur_soll_maximum": {
-        "name": "Offset Kesseltemperatur Soll Maximum"
-      },
-      "anzunden_zeitdauer": {
-        "name": "Anzünden Zeitdauer"
-      },
-      "anzunden_primarluft": {
-        "name": "Anzünden Primärluft"
-      },
-      "anzunden_sekundarluft": {
-        "name": "Anzünden Sekundärluft"
-      },
-      "anheizen_zeitdauer": {
-        "name": "Anheizen Zeitdauer"
-      },
-      "auto_zundung_einschaltverzogerung": {
-        "name": "Auto Zündung Einschaltverzögerung"
-      },
-      "ausbrennen_primarluft": {
-        "name": "Ausbrennen Primärluft"
-      },
-      "ausbrennen_sekundarluft": {
-        "name": "Ausbrennen Sekundärluft"
-      },
-      "ausbrennen_bezugsgrosse": {
-        "name": "Ausbrennen Bezugsgröße",
+      "puffer_1_beladeventil_aktivieren": {
+        "name": "Puffer 1 Beladeventil Aktivieren",
         "state": {
-          "o2": "O2",
-          "rgt": "RGT"
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
         }
       },
-      "festwertvorgabe_primarluft": {
-        "name": "Festwertvorgabe Primärluft"
+      "puffer_1_bezeichnung": {
+        "name": "Puffer 1 Bezeichnung"
       },
-      "festwertvorgabe_sekundarluft": {
-        "name": "Festwertvorgabe Sekundärluft"
-      },
-      "pid3_o2_sekundarluft_minimum": {
-        "name": "PID3 O2 Sekundärluft Minimum"
-      },
-      "pid3_o2_sekundarluft_maximum": {
-        "name": "PID3 O2 Sekundärluft Maximum"
-      },
-      "rucklaufmischer_laufzeit_gesamt": {
-        "name": "Mischer Laufzeit Gesamt"
-      },
-      "pid_sollwert_rucklauf_spreizung_minimum": {
-        "name": "PID Sollwert Spreizung Minimum"
-      },
-      "restwarmenutzung_puffer_bezug": {
-        "name": "Restwärmenutzung Puffer Bezug",
+      "puffer_1_energieberechnung_aktivieren": {
+        "name": "Puffer 1 Energieberechnung Aktivieren",
         "state": {
-          "puffer_mitte": "Puffer mitte",
-          "puffer_mitte_oben": "Puffer mitte-oben",
-          "puffer_mitte_unten": "Puffer mitte-unten",
-          "puffer_oben": "Puffer oben",
-          "puffer_unten": "Puffer unten"
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
         }
       },
       "puffer_1_fuhler_quelle": {
@@ -564,20 +1171,14 @@
           "puffer_unten": "Puffer unten"
         }
       },
-      "freigabe_kesseltemperatur": {
-        "name": "Freigabe Kesseltemperatur"
-      },
-      "freigabe_abgastemperatur": {
-        "name": "Freigabe Abgastemperatur"
-      },
-      "puffer_1_bezeichnung": {
-        "name": "Puffer 1 Bezeichnung"
+      "puffer_1_grosse": {
+        "name": "Puffer 1 Größe"
       },
       "puffer_1_ladung_abbruch_temperatur_oben": {
         "name": "Puffer 1 Ladung Abbruch Temperatur Oben"
       },
-      "puffer_1_energieberechnung_aktivieren": {
-        "name": "Puffer 1 Energieberechnung Aktivieren",
+      "puffer_1_nachlegemenge_optimieren": {
+        "name": "Puffer 1 Nachlegemenge Optimieren",
         "state": {
           "ja": "Ja",
           "nein": "Nein",
@@ -590,35 +1191,8 @@
       "puffer_1_temperatur_warm": {
         "name": "Puffer 1 Temperatur Warm"
       },
-      "puffer_1_nachlegemenge_optimieren": {
-        "name": "Puffer 1 Nachlegemenge Optimieren",
-        "state": {
-          "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein"
-        }
-      },
-      "puffer_1_grosse": {
-        "name": "Puffer 1 Größe"
-      },
       "puffer_1_umladesystem_aktivieren": {
         "name": "Puffer 1 Umladesystem Aktivieren",
-        "state": {
-          "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein"
-        }
-      },
-      "puffer_1_beladeventil_aktivieren": {
-        "name": "Puffer 1 Beladeventil Aktivieren",
-        "state": {
-          "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein"
-        }
-      },
-      "puffer_1_zonenventil_aktivieren": {
-        "name": "Puffer 1 Zonenventil Aktivieren",
         "state": {
           "ja": "Ja",
           "nein": "Nein",
@@ -632,49 +1206,8 @@
           "aus": "Aus"
         }
       },
-      "puffer_2_bezeichnung": {
-        "name": "Puffer 2 Bezeichnung"
-      },
-      "puffer_2_ladung_abbruch_temperatur_oben": {
-        "name": "Puffer 2 Ladung Abbruch Temperatur Oben"
-      },
-      "puffer_2_fuhler_quelle": {
-        "name": "Puffer 2 Fühler Quelle",
-        "state": {
-          "puffer_mitte": "Puffer mitte",
-          "puffer_mitte_oben": "Puffer mitte-oben",
-          "puffer_mitte_unten": "Puffer mitte-unten",
-          "puffer_oben": "Puffer oben",
-          "puffer_unten": "Puffer unten"
-        }
-      },
-      "puffer_2_energieberechnung_aktivieren": {
-        "name": "Puffer 2 Energieberechnung Aktivieren",
-        "state": {
-          "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein"
-        }
-      },
-      "puffer_2_temperatur_kalt": {
-        "name": "Puffer 2 Temperatur Kalt"
-      },
-      "puffer_2_temperatur_warm": {
-        "name": "Puffer 2 Temperatur Warm"
-      },
-      "puffer_2_nachlegemenge_optimieren": {
-        "name": "Puffer 2 Nachlegemenge Optimieren",
-        "state": {
-          "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein"
-        }
-      },
-      "puffer_2_grosse": {
-        "name": "Puffer 2 Größe"
-      },
-      "puffer_2_umladesystem_aktivieren": {
-        "name": "Puffer 2 Umladesystem Aktivieren",
+      "puffer_1_zonenventil_aktivieren": {
+        "name": "Puffer 1 Zonenventil Aktivieren",
         "state": {
           "ja": "Ja",
           "nein": "Nein",
@@ -689,19 +1222,113 @@
           "ein": "Ein"
         }
       },
-      "puffer_2_zonenventil_aktivieren": {
-        "name": "Puffer 2 Zonenventil Aktivieren",
+      "puffer_2_bezeichnung": {
+        "name": "Puffer 2 Bezeichnung"
+      },
+      "puffer_2_energie_aktuell": {
+        "name": "Puffer 2 Energie Aktuell"
+      },
+      "puffer_2_energie_aufnehmbar": {
+        "name": "Puffer 2 Energie Aufnehmbar"
+      },
+      "puffer_2_energie_gesamt_zahler": {
+        "name": "Puffer 2 Energie Gesamt (Zähler)"
+      },
+      "puffer_2_energie_ist": {
+        "name": "Puffer 2 Energie Ist"
+      },
+      "puffer_2_energie_max": {
+        "name": "Puffer 2 Energie Max"
+      },
+      "puffer_2_energieberechnung_aktivieren": {
+        "name": "Puffer 2 Energieberechnung Aktivieren",
         "state": {
           "ja": "Ja",
           "nein": "Nein",
           "ein": "Ein"
         }
       },
+      "puffer_2_fuhler_quelle": {
+        "name": "Puffer 2 Fühler Quelle",
+        "state": {
+          "puffer_mitte": "Puffer mitte",
+          "puffer_mitte_oben": "Puffer mitte-oben",
+          "puffer_mitte_unten": "Puffer mitte-unten",
+          "puffer_oben": "Puffer oben",
+          "puffer_unten": "Puffer unten"
+        }
+      },
+      "puffer_2_grosse": {
+        "name": "Puffer 2 Größe"
+      },
+      "puffer_2_ladezustand": {
+        "name": "Puffer 2 Ladezustand"
+      },
+      "puffer_2_ladezustand_alt": {
+        "name": "Puffer 2 Ladezustand Alt."
+      },
+      "puffer_2_ladung_abbruch_temperatur_oben": {
+        "name": "Puffer 2 Ladung Abbruch Temperatur Oben"
+      },
+      "puffer_2_nachlegemenge_optimieren": {
+        "name": "Puffer 2 Nachlegemenge Optimieren",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
+        }
+      },
+      "puffer_2_rucklauf_extern": {
+        "name": "Puffer 2 Rücklauf Extern"
+      },
+      "puffer_2_rucklauf_soll": {
+        "name": "Puffer 2 Soll Rücklauf"
+      },
+      "puffer_2_soll_oben": {
+        "name": "Puffer 2 Soll Oben"
+      },
+      "puffer_2_status": {
+        "name": "Puffer 2 Status"
+      },
+      "puffer_2_temperatur_kalt": {
+        "name": "Puffer 2 Temperatur Kalt"
+      },
+      "puffer_2_temperatur_mitte": {
+        "name": "Puffer 2 Temperatur Mitte"
+      },
+      "puffer_2_temperatur_oben": {
+        "name": "Puffer 2 Temperatur Oben"
+      },
+      "puffer_2_temperatur_unten": {
+        "name": "Puffer 2 Temperatur Unten"
+      },
+      "puffer_2_temperatur_warm": {
+        "name": "Puffer 2 Temperatur Warm"
+      },
+      "puffer_2_umladesystem_aktivieren": {
+        "name": "Puffer 2 Umladesystem Aktivieren",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
+        }
+      },
+      "puffer_2_vorlauf_extern": {
+        "name": "Puffer 2 Vorlauf Extern"
+      },
       "puffer_2_y2_ventil_aktivieren": {
         "name": "Puffer 2 Y2 Ventil Aktivieren",
         "state": {
           "ein": "Ein",
           "aus": "Aus"
+        }
+      },
+      "puffer_2_zonenventil_aktivieren": {
+        "name": "Puffer 2 Zonenventil Aktivieren",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein",
+          "ein": "Ein"
         }
       },
       "puffer_art": {
@@ -712,211 +1339,11 @@
           "normal": "Normal"
         }
       },
-      "heizkreis_1_system": {
-        "name": "Heizkreis 1 System",
-        "state": {
-          "fussboden": "Fußboden",
-          "heizkoerper": "Heizkörper",
-          "keines": "Keines",
-          "konstant": "Konstant",
-          "ungeregelt": "Ungeregelt"
-        }
-      },
-      "hk1_bezeichnung": {
-        "name": "HK1 Bezeichnung"
-      },
-      "hk1_soll_normal": {
-        "name": "Tagbetrieb Raumtemperatur Soll"
-      },
-      "hk1_parallelverschiebung": {
-        "name": "HK1 Parallelverschiebung"
-      },
-      "hk1_raumeinflussfaktor": {
-        "name": "HK1 Raumeinflussfaktor"
-      },
-      "hk1_vorlauftemperatur_minimum": {
-        "name": "HK1 Vorlauftemperatur Minimum"
-      },
-      "hk1_vorlauftemperatur_maximum": {
-        "name": "HK1 Vorlauftemperatur Maximum"
-      },
-      "hk1_raumeinheit_status": {
-        "name": "HK1 Raumeinheit Status",
-        "state": {
-          "keine": "Keine",
-          "raumbedien_geraet_bus": "Raumbedien- gerät BUS",
-          "raumbedien_geraet_bus_nlm": "Raumbedien- gerät BUS NLM",
-          "raumbedien_geraet_light": "Raumbedien- gerät LIGHT",
-          "raumtempera_turfuehler": "Raumtempera- turfühler"
-        }
-      },
-      "hk1_offset_raumfuhler": {
-        "name": "HK1 Offset Raumfühler"
-      },
-      "hk1_warmequelle": {
-        "name": "HK1 Wärmequelle",
-        "state": {
-          "keine": "Keine",
-          "kessel": "Kessel",
-          "netzpumpe_1": "Netzpumpe 1",
-          "netzpumpe_2": "Netzpumpe 2",
-          "netzpumpe_3": "Netzpumpe 3",
-          "puffer_1": "Puffer 1",
-          "puffer_2": "Puffer 2",
-          "verband": "Verband"
-        }
-      },
-      "hk1_mischerlaufzeit_maximum": {
-        "name": "HK1 Mischerlaufzeit Maximum"
-      },
-      "hk1_pumpe_ein_freigabetemperatur": {
-        "name": "HK1 Pumpe Ein Freigabetemperatur"
-      },
-      "hk1_frostschutz_temp": {
-        "name": "HK1 Frostschutz Temperatur"
-      },
-      "heizgrenze_sommer": {
-        "name": "HK1 Heizgrenze Sommer"
-      },
-      "heizgrenze_winter": {
-        "name": "HK1 Heizgrenze Winter"
-      },
-      "hk1_restwarme_aufnehmen": {
-        "name": "HK1 Restwärme Aufnehmen",
-        "state": {
-          "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein"
-        }
-      },
-      "software_version_touch": {
-        "name": "Software Version (Touch)"
-      },
-      "anlagenbezeichnung_sn": {
-        "name": "Anlagenbezeichnung/SN"
-      },
-      "mac_adresse": {
-        "name": "MAC Adresse"
-      },
-      "anlage_betriebsart": {
-        "name": "Anlage Betriebsart",
-        "state": {
-          "frostschutz": "Frostschutz",
-          "normal": "Normal",
-          "sommerbetrieb": "Sommerbetrieb",
-          "urlaubs_betrieb": "Urlaubsbetrieb"
-        }
-      },
-      "anlage_status_text": {
-        "name": "Anlage Status",
-        "state": {
-          "aus": "Aus",
-          "ein": "Ein",
-          "frostschutz": "Frostschutz",
-          "sommerbetrieb": "Sommerbetrieb",
-          "urlaubs_betrieb": "Urlaubsbetrieb"
-        }
-      },
-      "software_version_fa": {
-        "name": "Software Version FA"
-      },
-      "extra_version_info": {
-        "name": "Extra Version Info"
-      },
-      "hydraulikschema_nummer": {
-        "name": "Hydraulikschema Nummer"
-      },
-      "kessel_betriebsstunden": {
-        "name": "Kessel Betriebsstunden"
-      },
-      "laufzeit_wt_reinigung": {
-        "name": "Laufzeit WT Reinigung"
-      },
-      "laufzeit_entaschung": {
-        "name": "Laufzeit Entaschung"
-      },
-      "laufzeit_hauptgeblase": {
-        "name": "Laufzeit Hauptgebläse"
-      },
-      "laufzeit_zundgeblase": {
-        "name": "Laufzeit Zündgebläse"
-      },
-      "anzahl_rostkippungen": {
-        "name": "Anzahl Rostkippungen"
-      },
-      "kessel_restlaufzeit_wartung": {
-        "name": "Kessel Restlaufzeit Wartung"
-      },
-      "kessel_wirkungsgrad": {
-        "name": "Kessel Wirkungsgrad"
-      },
-      "betriebsstunden_rostmotor": {
-        "name": "Betriebsstunden Rostmotor"
-      },
-      "betriebsstunden_stokerschnecke": {
-        "name": "Betriebsstunden Stokerschnecke"
-      },
-      "betriebsstunden_ascheschnecke": {
-        "name": "Betriebsstunden Ascheschnecke"
-      },
-      "restlaufzeit_schornsteinfeger": {
-        "name": "Restlaufzeit Schornsteinfeger"
-      },
-      "kessel_typ_info_leer": {
-        "name": "Kessel Typ Info"
-      },
-      "primarluft_korrektur_o2": {
-        "name": "Primärluft Korrektur O2",
-        "state": {
-          "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein"
-        }
-      },
-      "kessel_nachlegezeitpunkt_2": {
-        "name": "Kessel Nachlegezeitpunkt"
-      },
-      "kessel_energieverbrauch_tag_gesamt": {
-        "name": "Kessel Energieverbrauch Tag/Gesamt"
-      },
-      "kessel_nachlegen_anzeige_text": {
-        "name": "Kessel Nachlegen Anzeige",
-        "state": {
-          "erlaubt_aber_stillstandszeit": "erlaubt, aber Stillstandszeit",
-          "moeglich_und_sinnvoll": "möglich und sinnvoll",
-          "nicht_moeglich": "nicht möglich",
-          "notwendig_oder_es_wird_kalt": "notwendig, oder es wird kalt"
-        }
-      },
-      "zeit_kesseluberhitzung_10_abbrande_std": {
-        "name": "Zeit Kesselüberhitzung 10 Abbrände (Std)"
-      },
-      "zeit_kesseluberhitzung_10_abbrande_prozent": {
-        "name": "Zeit Kesselüberhitzung 10 Abbrände (%)"
-      },
-      "zeit_kesseluberhitzung_gesamt_std": {
-        "name": "Zeit Kesselüberhitzung Gesamt (Std)"
-      },
-      "zeit_kesseluberhitzung_gesamt_prozent": {
-        "name": "Zeit Kesselüberhitzung Gesamt (%)"
-      },
-      "kessel_warmemenge_gesamt": {
-        "name": "Kessel Wärmemenge Gesamt"
-      },
-      "puffer_soll_oben": {
-        "name": "Puffer Soll Oben"
-      },
-      "puffer_rucklauf_soll": {
-        "name": "Puffer Soll Rücklauf"
-      },
-      "puffer_energie_max": {
-        "name": "Puffer Energie Max"
-      },
       "puffer_energie_aktuell": {
         "name": "Puffer Energie Aktuell"
       },
-      "puffer_ladezustand_alt": {
-        "name": "Puffer Ladezustand Alt."
+      "puffer_energie_aufnehmbar": {
+        "name": "Puffer Energie Aufnehmbar"
       },
       "puffer_energie_gesamt_zahler": {
         "name": "Puffer Energie Gesamt (Zähler)"
@@ -924,140 +1351,117 @@
       "puffer_energie_ist": {
         "name": "Puffer Energie Ist"
       },
-      "puffer_energie_aufnehmbar": {
-        "name": "Puffer Energie Aufnehmbar"
+      "puffer_energie_max": {
+        "name": "Puffer Energie Max"
       },
-      "puffer_vorlauf_extern": {
-        "name": "Puffer Vorlauf Extern"
+      "puffer_ladezustand": {
+        "name": "Puffer Ladezustand"
+      },
+      "puffer_ladezustand_alt": {
+        "name": "Puffer Ladezustand Alt."
       },
       "puffer_rucklauf_extern": {
         "name": "Puffer Rücklauf Extern"
       },
-      "lager_pelletverbrauch_insgesamt": {
-        "name": "Pelletverbrauch Insgesamt"
+      "puffer_rucklauf_soll": {
+        "name": "Puffer Soll Rücklauf"
       },
-      "lager_aktueller_inhalt": {
-        "name": "Aktueller Lagerinhalt"
+      "puffer_soll_oben": {
+        "name": "Puffer Soll Oben"
       },
-      "lager_verbrauch_seit_fuellung": {
-        "name": "Verbrauch seit letzter Füllung"
+      "puffer_status": {
+        "name": "Puffer Status"
       },
-      "lager_letzte_fuellung": {
-        "name": "Letzte Füllung"
+      "puffer_temperatur_mitte": {
+        "name": "Puffer Temperatur Mitte"
       },
-      "hk1_temp_quelle_status_wert": {
-        "name": "HK1 Temp Quelle Status Wert"
+      "puffer_temperatur_oben": {
+        "name": "Puffer Temperatur Oben"
       },
-      "hk2_vorlauftemperatur_ist": {
-        "name": "HK2 Vorlauftemperatur Ist"
+      "puffer_temperatur_unten": {
+        "name": "Puffer Temperatur Unten"
       },
-      "hk2_vorlauftemperatur_soll": {
-        "name": "HK2 Vorlauftemperatur Soll"
+      "puffer_vorlauf_extern": {
+        "name": "Puffer Vorlauf Extern"
       },
-      "hk2_mischer_status_text": {
-        "name": "HK2 Mischer Status"
+      "restlaufzeit_schornsteinfeger": {
+        "name": "Restlaufzeit Schornsteinfeger"
       },
-      "hk2_pumpe_status_text": {
-        "name": "HK2 Pumpe Status"
-      },
-      "hk2_aktuelle_betriebsart": {
-        "name": "HK2 Aktuelle Betriebsart",
+      "restwarmenutzung_puffer_bezug": {
+        "name": "Restwärmenutzung Puffer Bezug",
         "state": {
-          "abgesenkt": "Abgesenkt",
-          "aus": "Aus",
-          "nacht": "Nachtbetrieb",
-          "party": "Partybetrieb",
-          "sommer": "Sommerbetrieb",
-          "standard": "Standard",
-          "tag": "Tagbetrieb",
-          "urlaub": "Urlaubsbetrieb"
+          "puffer_mitte": "Puffer mitte",
+          "puffer_mitte_oben": "Puffer mitte-oben",
+          "puffer_mitte_unten": "Puffer mitte-unten",
+          "puffer_oben": "Puffer oben",
+          "puffer_unten": "Puffer unten"
         }
       },
-      "heizkreis_2_system": {
-        "name": "Heizkreis 2 System",
+      "rucklaufmischer_laufzeit_gesamt": {
+        "name": "Mischer Laufzeit Gesamt"
+      },
+      "sekundarluftklappe_ist": {
+        "name": "Sekundärluftklappe Ist"
+      },
+      "sekundarluftklappe_soll": {
+        "name": "Sekundärluftklappe Soll"
+      },
+      "software_version_fa": {
+        "name": "Software Version FA"
+      },
+      "software_version_touch": {
+        "name": "Software Version (Touch)"
+      },
+      "solar_kollektorschutz_aktiv": {
+        "name": "Solar Kollektorschutz Aktiv"
+      },
+      "solar_zone1_temperatur": {
+        "name": "Solar Zone 1 Temperatur"
+      },
+      "solar_zone2_temperatur": {
+        "name": "Solar Zone 2 Temperatur"
+      },
+      "solar_zone3_temperatur": {
+        "name": "Solar Zone 3 Temperatur"
+      },
+      "sprache": {
+        "name": "Sprache",
         "state": {
-          "fussboden": "Fußboden",
-          "heizkoerper": "Heizkörper",
-          "keines": "Keines",
-          "konstant": "Konstant",
-          "ungeregelt": "Ungeregelt"
+          "dansk": "Dansk",
+          "deutsch": "Deutsch",
+          "english": "English",
+          "espagnol": "Espagnol",
+          "fran_ais": "Français",
+          "italiano": "Italiano",
+          "j_zyk_polski": "Język polski",
+          "nederlands": "Nederlands",
+          "norsk": "Norsk",
+          "sloven_cina": "Slovenšcina",
+          "svenska": "Svenska"
         }
       },
-      "hk2_bezeichnung": {
-        "name": "HK2 Bezeichnung"
+      "stillstandszeit_soll": {
+        "name": "Stillstandszeit Soll"
       },
-      "hk2_soll_normal": {
-        "name": "HK2 Tagbetrieb Raumtemperatur Soll"
-      },
-      "hk2_parallelverschiebung": {
-        "name": "HK2 Parallelverschiebung"
-      },
-      "hk2_raumeinflussfaktor": {
-        "name": "HK2 Raumeinflussfaktor"
-      },
-      "hk2_vorlauftemperatur_minimum": {
-        "name": "HK2 Vorlauftemperatur Minimum"
-      },
-      "hk2_vorlauftemperatur_maximum": {
-        "name": "HK2 Vorlauftemperatur Maximum"
-      },
-      "hk2_raumeinheit_status": {
-        "name": "HK2 Raumeinheit Status",
+      "stromnetz": {
+        "name": "Stromnetz",
         "state": {
-          "keine": "Keine",
-          "raumbedien_geraet_bus": "Raumbedien- gerät BUS",
-          "raumbedien_geraet_bus_nlm": "Raumbedien- gerät BUS NLM",
-          "raumbedien_geraet_light": "Raumbedien- gerät LIGHT",
-          "raumtempera_turfuehler": "Raumtempera- turfühler"
+          "1x230v": "1x230V",
+          "3x230v": "3x230V",
+          "3x400v": "3x400V"
         }
       },
-      "hk2_offset_raumfuhler": {
-        "name": "HK2 Offset Raumfühler"
+      "ww1_anforderung_abnehmer": {
+        "name": "WW1 Anforderung Abnehmer"
       },
-      "hk2_warmequelle": {
-        "name": "HK2 Wärmequelle",
-        "state": {
-          "keine": "Keine",
-          "kessel": "Kessel",
-          "netzpumpe_1": "Netzpumpe 1",
-          "netzpumpe_2": "Netzpumpe 2",
-          "netzpumpe_3": "Netzpumpe 3",
-          "puffer_1": "Puffer 1",
-          "puffer_2": "Puffer 2",
-          "verband": "Verband"
-        }
+      "ww1_anforderung_quelle": {
+        "name": "WW1 Anforderung Quelle"
       },
-      "hk2_mischerlaufzeit_maximum": {
-        "name": "HK2 Mischerlaufzeit Maximum"
+      "ww1_angeforderte_temperatur_status": {
+        "name": "WW1 Angeforderte Temperatur Status"
       },
-      "hk2_pumpe_ein_freigabetemperatur": {
-        "name": "HK2 Pumpe Ein Freigabetemperatur"
-      },
-      "hk2_frostschutz_temp": {
-        "name": "HK2 Frostschutz Temperatur"
-      },
-      "hk2_heizgrenze_sommer": {
-        "name": "HK2 Heizgrenze Sommer"
-      },
-      "hk2_heizgrenze_winter": {
-        "name": "HK2 Heizgrenze Winter"
-      },
-      "hk2_restwarme_aufnehmen": {
-        "name": "HK2 Restwärme Aufnehmen",
-        "state": {
-          "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein"
-        }
-      },
-      "hk2_temp_quelle_status_wert": {
-        "name": "HK2 Temp Quelle Status Wert"
-      },
-      "ww1_temperatur_ist": {
-        "name": "WW1 Temperatur Ist"
-      },
-      "ww1_ladungspumpe_status_text": {
-        "name": "WW1 Ladungspumpe Status"
+      "ww1_betriebsart": {
+        "name": "WW1 Betriebsart"
       },
       "ww1_erhitzen_an_schwelle": {
         "name": "WW1 Erhitzen AN-Schwelle"
@@ -1065,22 +1469,118 @@
       "ww1_erhitzen_aus_schwelle": {
         "name": "WW1 Erhitzen AUS-Schwelle"
       },
+      "ww1_frostschutz_aktiv": {
+        "name": "WW1 Frostschutz Aktiv"
+      },
+      "ww1_ladungspumpe_status_text": {
+        "name": "WW1 Ladungspumpe Status"
+      },
+      "ww1_legionellenschutz": {
+        "name": "WW1 Legionellenschutz"
+      },
+      "ww1_pumpe_status": {
+        "name": "WW1 Pumpe Status"
+      },
+      "ww1_solar_vorlauf": {
+        "name": "WW1 Solar Vorlauf"
+      },
+      "ww1_temperatur_ist": {
+        "name": "WW1 Temperatur Ist"
+      },
+      "ww1_temperatur_oben": {
+        "name": "WW1 Temperatur Oben"
+      },
+      "ww1_temperatur_unten": {
+        "name": "WW1 Temperatur Unten"
+      },
       "ww1_temperatur_vorlauf_solar_ist": {
         "name": "WW1 Temperatur Vorlauf Solar Ist"
       },
-      "ww1_angeforderte_temperatur_status": {
-        "name": "WW1 Angeforderte Temperatur Status"
+      "ww1_vorrang_aktiviert": {
+        "name": "WW1 Vorrang Aktiviert"
+      },
+      "ww1_waermequelle": {
+        "name": "WW1 Wärmequelle"
+      },
+      "ww2_anforderung_abnehmer": {
+        "name": "WW2 Anforderung Abnehmer"
+      },
+      "ww2_anforderung_quelle": {
+        "name": "WW2 Anforderung Quelle"
+      },
+      "ww2_angeforderte_temperatur_status": {
+        "name": "WW2 Angeforderte Temperatur Status"
+      },
+      "ww2_betriebsart": {
+        "name": "WW2 Betriebsart"
+      },
+      "ww2_erhitzen_an_schwelle": {
+        "name": "WW2 Erhitzen AN-Schwelle"
+      },
+      "ww2_erhitzen_aus_schwelle": {
+        "name": "WW2 Erhitzen AUS-Schwelle"
+      },
+      "ww2_frostschutz_aktiv": {
+        "name": "WW2 Frostschutz Aktiv"
+      },
+      "ww2_ladungspumpe_status_text": {
+        "name": "WW2 Ladungspumpe Status"
+      },
+      "ww2_legionellenschutz": {
+        "name": "WW2 Legionellenschutz"
+      },
+      "ww2_pumpe_status": {
+        "name": "WW2 Pumpe Status"
+      },
+      "ww2_solar_vorlauf": {
+        "name": "WW2 Solar Vorlauf"
+      },
+      "ww2_temperatur_ist": {
+        "name": "WW2 Temperatur Ist"
+      },
+      "ww2_temperatur_oben": {
+        "name": "WW2 Temperatur Oben"
+      },
+      "ww2_temperatur_unten": {
+        "name": "WW2 Temperatur Unten"
+      },
+      "ww2_temperatur_vorlauf_solar_ist": {
+        "name": "WW2 Temperatur Vorlauf Solar Ist"
+      },
+      "ww2_vorrang_aktiviert": {
+        "name": "WW2 Vorrang Aktiviert"
+      },
+      "ww2_waermequelle": {
+        "name": "WW2 Wärmequelle"
+      },
+      "zeit_kesseluberhitzung_10_abbrande_prozent": {
+        "name": "Zeit Kesselüberhitzung 10 Abbrände (%)"
+      },
+      "zeit_kesseluberhitzung_10_abbrande_std": {
+        "name": "Zeit Kesselüberhitzung 10 Abbrände (Std)"
+      },
+      "zeit_kesseluberhitzung_gesamt_prozent": {
+        "name": "Zeit Kesselüberhitzung Gesamt (%)"
+      },
+      "zeit_kesseluberhitzung_gesamt_std": {
+        "name": "Zeit Kesselüberhitzung Gesamt (Std)"
       }
     },
     "number": {
-      "hk1_soll_normal": {
-        "name": "HK1 Tagbetrieb Raumtemperatur Soll"
+      "hk1_eco_absenken_aus_aussentemperatur": {
+        "name": "HK1 Eco Absenken Aus Außentemperatur"
+      },
+      "hk1_eco_heizen_aus_aussentemperatur": {
+        "name": "HK1 Eco Heizen Aus Außentemperatur"
+      },
+      "hk1_frostschutz_ein_aussentemperatur": {
+        "name": "HK1 Frostschutz Ein Außentemperatur"
+      },
+      "hk1_frostschutz_vorlauf_soll": {
+        "name": "HK1 Frostschutz Vorlauf Soll"
       },
       "hk1_parallelverschiebung": {
         "name": "HK1 Parallelverschiebung"
-      },
-      "hk1_steilheit": {
-        "name": "HK1 Steilheit"
       },
       "hk1_pumpe_aus_aussentemperatur": {
         "name": "HK1 Pumpe Aus Außentemperatur"
@@ -1088,17 +1588,26 @@
       "hk1_soll_absenk": {
         "name": "HK1 Soll Absenk"
       },
-      "hk1_eco_absenken_aus_aussentemperatur": {
-        "name": "HK1 Eco Absenken Aus Außentemperatur"
+      "hk1_soll_normal": {
+        "name": "HK1 Tagbetrieb Raumtemperatur Soll"
       },
-      "hk2_soll_normal": {
-        "name": "HK2 Tagbetrieb Raumtemperatur Soll"
+      "hk1_steilheit": {
+        "name": "HK1 Steilheit"
+      },
+      "hk2_eco_absenken_aus_aussentemperatur": {
+        "name": "HK2 Eco Absenken Aus Außentemperatur"
+      },
+      "hk2_eco_heizen_aus_aussentemperatur": {
+        "name": "HK2 Eco Heizen Aus Außentemperatur"
+      },
+      "hk2_frostschutz_ein_aussentemperatur": {
+        "name": "HK2 Frostschutz Ein Außentemperatur"
+      },
+      "hk2_frostschutz_vorlauf_soll": {
+        "name": "HK2 Frostschutz Vorlauf Soll"
       },
       "hk2_parallelverschiebung": {
         "name": "HK2 Parallelverschiebung"
-      },
-      "hk2_steilheit": {
-        "name": "HK2 Steilheit"
       },
       "hk2_pumpe_aus_aussentemperatur": {
         "name": "HK2 Pumpe Aus Außentemperatur"
@@ -1106,14 +1615,233 @@
       "hk2_soll_absenk": {
         "name": "HK2 Soll Absenk"
       },
-      "hk2_eco_absenken_aus_aussentemperatur": {
-        "name": "HK2 Eco Absenken Aus Außentemperatur"
+      "hk2_soll_normal": {
+        "name": "HK2 Tagbetrieb Raumtemperatur Soll"
+      },
+      "hk2_steilheit": {
+        "name": "HK2 Steilheit"
+      },
+      "hk3_eco_absenken_aus_aussentemperatur": {
+        "name": "HK3 Eco Absenken Aus Außentemperatur"
+      },
+      "hk3_eco_heizen_aus_aussentemperatur": {
+        "name": "HK3 Eco Heizen Aus Außentemperatur"
+      },
+      "hk3_frostschutz_ein_aussentemperatur": {
+        "name": "HK3 Frostschutz Ein Außentemperatur"
+      },
+      "hk3_frostschutz_vorlauf_soll": {
+        "name": "HK3 Frostschutz Vorlauf Soll"
+      },
+      "hk3_parallelverschiebung": {
+        "name": "HK3 Parallelverschiebung"
+      },
+      "hk3_pumpe_aus_aussentemperatur": {
+        "name": "HK3 Pumpe Aus Außentemperatur"
+      },
+      "hk3_soll_absenk": {
+        "name": "HK3 Soll Absenk"
+      },
+      "hk3_soll_normal": {
+        "name": "HK3 Tagbetrieb Raumtemperatur Soll"
+      },
+      "hk3_steilheit": {
+        "name": "HK3 Steilheit"
+      },
+      "hk4_eco_absenken_aus_aussentemperatur": {
+        "name": "HK4 Eco Absenken Aus Außentemperatur"
+      },
+      "hk4_eco_heizen_aus_aussentemperatur": {
+        "name": "HK4 Eco Heizen Aus Außentemperatur"
+      },
+      "hk4_frostschutz_ein_aussentemperatur": {
+        "name": "HK4 Frostschutz Ein Außentemperatur"
+      },
+      "hk4_frostschutz_vorlauf_soll": {
+        "name": "HK4 Frostschutz Vorlauf Soll"
+      },
+      "hk4_parallelverschiebung": {
+        "name": "HK4 Parallelverschiebung"
+      },
+      "hk4_pumpe_aus_aussentemperatur": {
+        "name": "HK4 Pumpe Aus Außentemperatur"
+      },
+      "hk4_soll_absenk": {
+        "name": "HK4 Soll Absenk"
+      },
+      "hk4_soll_normal": {
+        "name": "HK4 Tagbetrieb Raumtemperatur Soll"
+      },
+      "hk4_steilheit": {
+        "name": "HK4 Steilheit"
+      },
+      "hk5_eco_absenken_aus_aussentemperatur": {
+        "name": "HK5 Eco Absenken Aus Außentemperatur"
+      },
+      "hk5_eco_heizen_aus_aussentemperatur": {
+        "name": "HK5 Eco Heizen Aus Außentemperatur"
+      },
+      "hk5_frostschutz_ein_aussentemperatur": {
+        "name": "HK5 Frostschutz Ein Außentemperatur"
+      },
+      "hk5_frostschutz_vorlauf_soll": {
+        "name": "HK5 Frostschutz Vorlauf Soll"
+      },
+      "hk5_parallelverschiebung": {
+        "name": "HK5 Parallelverschiebung"
+      },
+      "hk5_pumpe_aus_aussentemperatur": {
+        "name": "HK5 Pumpe Aus Außentemperatur"
+      },
+      "hk5_soll_absenk": {
+        "name": "HK5 Soll Absenk"
+      },
+      "hk5_soll_normal": {
+        "name": "HK5 Tagbetrieb Raumtemperatur Soll"
+      },
+      "hk5_steilheit": {
+        "name": "HK5 Steilheit"
+      },
+      "hk6_eco_absenken_aus_aussentemperatur": {
+        "name": "HK6 Eco Absenken Aus Außentemperatur"
+      },
+      "hk6_eco_heizen_aus_aussentemperatur": {
+        "name": "HK6 Eco Heizen Aus Außentemperatur"
+      },
+      "hk6_frostschutz_ein_aussentemperatur": {
+        "name": "HK6 Frostschutz Ein Außentemperatur"
+      },
+      "hk6_frostschutz_vorlauf_soll": {
+        "name": "HK6 Frostschutz Vorlauf Soll"
+      },
+      "hk6_parallelverschiebung": {
+        "name": "HK6 Parallelverschiebung"
+      },
+      "hk6_pumpe_aus_aussentemperatur": {
+        "name": "HK6 Pumpe Aus Außentemperatur"
+      },
+      "hk6_soll_absenk": {
+        "name": "HK6 Soll Absenk"
+      },
+      "hk6_soll_normal": {
+        "name": "HK6 Tagbetrieb Raumtemperatur Soll"
+      },
+      "hk6_steilheit": {
+        "name": "HK6 Steilheit"
+      },
+      "np1_differenz_aus": {
+        "name": "NP1 Differenz Aus"
+      },
+      "np1_differenz_ein": {
+        "name": "NP1 Differenz Ein"
+      },
+      "np1_freigabetemperatur": {
+        "name": "NP1 Freigabetemperatur"
+      },
+      "np1_frostschutz_ein": {
+        "name": "NP1 Frostschutz Ein"
+      },
+      "np1_frostschutz_soll": {
+        "name": "NP1 Frostschutz Soll"
+      },
+      "np1_temperatur_maximum": {
+        "name": "NP1 Temperatur Maximum"
+      },
+      "np1_temperatur_minimum": {
+        "name": "NP1 Temperatur Minimum"
+      },
+      "np2_differenz_aus": {
+        "name": "NP2 Differenz Aus"
+      },
+      "np2_differenz_ein": {
+        "name": "NP2 Differenz Ein"
+      },
+      "np2_freigabetemperatur": {
+        "name": "NP2 Freigabetemperatur"
+      },
+      "np2_frostschutz_ein": {
+        "name": "NP2 Frostschutz Ein"
+      },
+      "np2_frostschutz_soll": {
+        "name": "NP2 Frostschutz Soll"
+      },
+      "np2_temperatur_maximum": {
+        "name": "NP2 Temperatur Maximum"
+      },
+      "np2_temperatur_minimum": {
+        "name": "NP2 Temperatur Minimum"
       },
       "ww1_erhitzen_an_schwelle": {
         "name": "WW1 Erhitzen AN-Schwelle"
       },
       "ww1_erhitzen_aus_schwelle": {
         "name": "WW1 Erhitzen AUS-Schwelle"
+      },
+      "ww1_kessel_soll": {
+        "name": "WW1 Kessel Solltemperatur"
+      },
+      "ww1_ladung_abbruch_temp": {
+        "name": "WW1 Ladung Abbruch Temperatur"
+      },
+      "ww1_legionellen_kessel_soll": {
+        "name": "WW1 Legionellen Kessel Soll"
+      },
+      "ww1_legionellen_solltemp": {
+        "name": "WW1 Legionellen Solltemperatur"
+      },
+      "ww1_pumpe_freigabetemperatur": {
+        "name": "WW1 Pumpe Freigabetemperatur"
+      },
+      "ww1_pumpe_nachlauf": {
+        "name": "WW1 Pumpe Nachlauf"
+      },
+      "ww1_uebertemperatur_differenz": {
+        "name": "WW1 Übertemperatur Differenz"
+      },
+      "ww1_vorrang_absenktemperatur": {
+        "name": "WW1 Vorrang Absenktemperatur"
+      },
+      "ww1_vorrang_dauer": {
+        "name": "WW1 Vorrang Dauer"
+      },
+      "ww1_waermequelle_ueberhoehung": {
+        "name": "WW1 Wärmequelle Überhöhung"
+      },
+      "ww2_erhitzen_an_schwelle": {
+        "name": "WW2 Erhitzen AN-Schwelle"
+      },
+      "ww2_erhitzen_aus_schwelle": {
+        "name": "WW2 Erhitzen AUS-Schwelle"
+      },
+      "ww2_kessel_soll": {
+        "name": "WW2 Kessel Solltemperatur"
+      },
+      "ww2_ladung_abbruch_temp": {
+        "name": "WW2 Ladung Abbruch Temperatur"
+      },
+      "ww2_legionellen_kessel_soll": {
+        "name": "WW2 Legionellen Kessel Soll"
+      },
+      "ww2_legionellen_solltemp": {
+        "name": "WW2 Legionellen Solltemperatur"
+      },
+      "ww2_pumpe_freigabetemperatur": {
+        "name": "WW2 Pumpe Freigabetemperatur"
+      },
+      "ww2_pumpe_nachlauf": {
+        "name": "WW2 Pumpe Nachlauf"
+      },
+      "ww2_uebertemperatur_differenz": {
+        "name": "WW2 Übertemperatur Differenz"
+      },
+      "ww2_vorrang_absenktemperatur": {
+        "name": "WW2 Vorrang Absenktemperatur"
+      },
+      "ww2_vorrang_dauer": {
+        "name": "WW2 Vorrang Dauer"
+      },
+      "ww2_waermequelle_ueberhoehung": {
+        "name": "WW2 Wärmequelle Überhöhung"
       }
     },
     "select": {
@@ -1130,6 +1858,50 @@
       },
       "hk2_betriebsart": {
         "name": "HK2 Betriebsart",
+        "state": {
+          "normal": "Normal",
+          "tag": "Tagbetrieb",
+          "nacht": "Nachtbetrieb",
+          "party": "Partybetrieb",
+          "sommer": "Sommerbetrieb",
+          "urlaub": "Urlaubsbetrieb"
+        }
+      },
+      "hk3_betriebsart": {
+        "name": "HK3 Betriebsart",
+        "state": {
+          "normal": "Normal",
+          "tag": "Tagbetrieb",
+          "nacht": "Nachtbetrieb",
+          "party": "Partybetrieb",
+          "sommer": "Sommerbetrieb",
+          "urlaub": "Urlaubsbetrieb"
+        }
+      },
+      "hk4_betriebsart": {
+        "name": "HK4 Betriebsart",
+        "state": {
+          "normal": "Normal",
+          "tag": "Tagbetrieb",
+          "nacht": "Nachtbetrieb",
+          "party": "Partybetrieb",
+          "sommer": "Sommerbetrieb",
+          "urlaub": "Urlaubsbetrieb"
+        }
+      },
+      "hk5_betriebsart": {
+        "name": "HK5 Betriebsart",
+        "state": {
+          "normal": "Normal",
+          "tag": "Tagbetrieb",
+          "nacht": "Nachtbetrieb",
+          "party": "Partybetrieb",
+          "sommer": "Sommerbetrieb",
+          "urlaub": "Urlaubsbetrieb"
+        }
+      },
+      "hk6_betriebsart": {
+        "name": "HK6 Betriebsart",
         "state": {
           "normal": "Normal",
           "tag": "Tagbetrieb",
