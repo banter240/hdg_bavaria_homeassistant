@@ -1,3 +1,37 @@
+## [2.0.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v1.0.0...v2.0.0-dev.1) (2026-01-16)
+
+### ⚠ BREAKING CHANGES
+
+* HK entity naming changed (heizkreis_X_system → hkX_system)
+
+### ✨ New Features
+
+* feat!: add WW/NP/Solar support, HK loop generation, and code quality improvements
+
+## New Features
+- Hot Water Circuits (WW1-WW2): Full support via get_ww_definitions() loop
+- Network Pumps (NP1-NP2): Full support via get_np_definitions() loop
+- Solar Thermal: Zone 1-3 temps, collector protection
+- Heating Circuits (HK1-HK6): Unified loop generation, fixed offset 48 bug
+
+## Architecture
+- Factory Functions with Smart Defaults (60%+ code reduction)
+- Package Definitions for future config flow
+
+## Translations
+- Complete DE/EN translations for all new entities (HK3-6, WW1-2, NP1-2, Solar)
+
+## Documentation
+- Updated README with breaking changes documentation
+- Expanded "Enabling Additional Entities" section with component table
+
+
+### 🐛 Bug Fixes
+
+* fix: resolve diagnostics AttributeError and refactor coordinator state
+
+Refactored the internal coordinator polling state to use a dataclass for better type safety and centralized state management. This resolves the reported AttributeError during diagnostics download. Improved robustness of diagnostic data by introducing a public accessor with real UTC timestamps and monotonic values, and implemented a factory method for clean state initialization.
+
 ## [1.1.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v1.0.0...v1.1.0-dev.1) (2026-01-12)
 
 ### ✨ New Features
