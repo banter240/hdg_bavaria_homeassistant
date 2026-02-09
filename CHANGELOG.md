@@ -1,3 +1,17 @@
+## [2.0.0-dev.2](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.1...v2.0.0-dev.2) (2026-02-09)
+
+### ✨ New Features
+
+* feat(hdg_boiler): enhance sensor definitions, add controls and fix scaling
+
+* Add 'lagerinhalt_aktuell' (21006) as mass sensor.
+* Add 'externe_warmequelle_betriebsart' (25001) as select entity with status mapping.
+* Convert Puffer 1/2 charge parameters (24004, 24006, 24104, 24106) to writable Number entities.
+* Rename Puffer keys to match controller text ('puffer_ladung_ein/aus').
+* Add 'netzpumpe_freigabetemperatur' (7023, 7123, 7223) as Number entities.
+* Add missing Netzpumpe status entities (1-3) and translations.
+* Correct scaling (factor 100) and unit logic for pellet consumption (21005T).
+
 ## [2.0.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v1.0.0...v2.0.0-dev.1) (2026-01-16)
 
 ### ⚠ BREAKING CHANGES
