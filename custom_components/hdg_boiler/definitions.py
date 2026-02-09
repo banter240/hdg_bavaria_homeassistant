@@ -43,6 +43,8 @@ POLLING_GROUP_KEYS: dict[str, str] = {
 
 # Standard options for heating circuit operating modes
 HK_OPERATING_MODE_OPTIONS: Final = ["normal", "tag", "nacht", "party", "sommer"]
+# Options for external heat source operating mode (mapped to AUS, EIN, AUTO_EIN)
+EXT_WQ_OPERATING_MODE_OPTIONS: Final = ["aus", "ein", "auto_ein"]
 
 
 #
@@ -452,6 +454,7 @@ def create_mass_sensor(
     entity_registry_enabled_default: bool = True,
 ) -> SensorDefinition:
     """Create a mass/weight sensor."""
+    device_class = None if unit == UNIT_MASS_TONNES else SensorDeviceClass.WEIGHT
     return _create_sensor_definition(
         hdg_node_id=node_id,
         translation_key=key,
@@ -459,7 +462,7 @@ def create_mass_sensor(
         hdg_data_type="2",
         parse_as_type="float",
         hdg_formatter=hdg_formatter,
-        ha_device_class=SensorDeviceClass.WEIGHT,
+        ha_device_class=device_class,
         ha_native_unit_of_measurement=unit,
         ha_state_class=ha_state_class,
         icon=icon,
@@ -797,24 +800,79 @@ def get_hk_definitions(
 
     # Add HK1 specific sensors
     if idx == 1:
-        defs.update(
-            {
-                "heizgrenze_sommer": create_temp_sensor(
-                    key="heizgrenze_sommer",
-                    node_id="6050T",
-                    polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
-                    icon="mdi:weather-sunny-alert",
-                ),
-                "heizgrenze_winter": create_temp_sensor(
-                    key="heizgrenze_winter",
-                    node_id="6051T",
-                    polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
-                    icon="mdi:weather-snowy-heavy",
-                ),
-            }
-        )
+        defs |= {
+            "heizgrenze_sommer": create_temp_sensor(
+                key="heizgrenze_sommer",
+                node_id="6050T",
+                polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
+                icon="mdi:weather-sunny-alert",
+            ),
+            "heizgrenze_winter": create_temp_sensor(
+                key="heizgrenze_winter",
+                node_id="6051T",
+                polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
+                icon="mdi:weather-snowy-heavy",
+            ),
+        }
 
     return defs
+
+
+def get_netzpumpe_definitions(idx: int, base_node: int) -> dict[str, SensorDefinition]:
+    """Generate entities for a network pump (Netzpumpe)."""
+    p = f"netzpumpe_{idx}_"
+    # Enable NP1 by default, others disabled
+    enabled = idx == 1
+
+    return {
+        f"{p}temperatur": create_temp_sensor(
+            entity_registry_enabled_default=enabled,
+            key=f"{p}temperatur",
+            node_id=f"{base_node + 1}T",
+            polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+            icon="mdi:thermometer",
+        ),
+        f"{p}status_text": create_enum_sensor(
+            entity_registry_enabled_default=enabled,
+            key=f"{p}status_text",
+            node_id=f"{base_node + 2}T",
+            polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
+            icon="mdi:pump",
+            entity_category=EntityCategory.DIAGNOSTIC,
+        ),
+        f"{p}betriebsart": create_diagnostic_enum_sensor(
+            entity_registry_enabled_default=enabled,
+            key=f"{p}betriebsart",
+            node_id=f"{base_node + 3}T",
+            polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
+            icon="mdi:pump-outline",
+        ),
+    }
+
+
+def get_netzpumpe_param_definitions(
+    idx: int, base_node: int
+) -> dict[str, SensorDefinition]:
+    """Generate parameter entities for a network pump."""
+    p = f"netzpumpe_{idx}_"
+    enabled = idx == 1
+
+    return {
+        f"{p}freigabetemperatur": create_number_entity(
+            entity_registry_enabled_default=enabled,
+            key=f"{p}freigabetemperatur",
+            node_id=f"{base_node + 23}T",
+            polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+            icon="mdi:thermometer-check",
+            setter_type="int",
+            setter_min_val=0.0,
+            setter_max_val=95.0,
+            setter_step=1.0,
+            ha_device_class=SensorDeviceClass.TEMPERATURE,
+            ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+            hdg_formatter="iTEMP",
+        ),
+    }
 
 
 # Master dictionary defining all sensors and entities for the integration.
@@ -829,6 +887,12 @@ def get_hk_definitions(
 #   - `parse_as_type`: Hint for how to parse the raw string value from the API.
 # Each key is a unique identifier (often matching the translation_key) for the entity.
 SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
+    **get_netzpumpe_definitions(1, 27000),
+    **get_netzpumpe_definitions(2, 27100),
+    **get_netzpumpe_definitions(3, 27200),
+    **get_netzpumpe_param_definitions(1, 7000),
+    **get_netzpumpe_param_definitions(2, 7100),
+    **get_netzpumpe_param_definitions(3, 7200),
     "sprache": create_enum_sensor(
         key="sprache",
         node_id="1T",
@@ -940,6 +1004,15 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         node_id="36T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_3"],
         icon="mdi:thermometer-offset",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "lagerinhalt_aktuell": create_mass_sensor(
+        key="lagerinhalt_aktuell",
+        node_id="21006T",
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_3"],
+        icon="mdi:silo",
+        hdg_formatter="iKG",
+        unit=UnitOfMass.KILOGRAMS,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     "kesseltemperatur_sollwert_param": create_temp_sensor(
@@ -1739,17 +1812,31 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
         icon="mdi:coolant-temperature",
     ),
-    "puffer_soll_oben": create_temp_sensor(
-        key="puffer_soll_oben",
+    "puffer_ladung_ein_temperatur": create_number_entity(
+        key="puffer_ladung_ein_temperatur",
         node_id="24004T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
-        icon="mdi:coolant-temperature",
+        icon="mdi:thermometer-chevron-up",
+        setter_type="int",
+        setter_min_val=0.0,
+        setter_max_val=95.0,
+        setter_step=1.0,
+        ha_device_class=SensorDeviceClass.TEMPERATURE,
+        ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        hdg_formatter="iTEMP",
     ),
-    "puffer_rucklauf_soll": create_temp_sensor(
-        key="puffer_rucklauf_soll",
+    "puffer_ladung_aus_temperatur": create_number_entity(
+        key="puffer_ladung_aus_temperatur",
         node_id="24006T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
-        icon="mdi:coolant-temperature",
+        icon="mdi:thermometer-chevron-down",
+        setter_type="int",
+        setter_min_val=0.0,
+        setter_max_val=95.0,
+        setter_step=1.0,
+        ha_device_class=SensorDeviceClass.TEMPERATURE,
+        ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        hdg_formatter="iTEMP",
     ),
     "puffer_status": create_enum_sensor(
         key="puffer_status",
@@ -1853,19 +1940,33 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
         icon="mdi:coolant-temperature",
     ),
-    "puffer_2_soll_oben": create_temp_sensor(
+    "puffer_2_ladung_ein_temperatur": create_number_entity(
         entity_registry_enabled_default=False,
-        key="puffer_2_soll_oben",
+        key="puffer_2_ladung_ein_temperatur",
         node_id="24104T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
-        icon="mdi:coolant-temperature",
+        icon="mdi:thermometer-chevron-up",
+        setter_type="int",
+        setter_min_val=0.0,
+        setter_max_val=95.0,
+        setter_step=1.0,
+        ha_device_class=SensorDeviceClass.TEMPERATURE,
+        ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        hdg_formatter="iTEMP",
     ),
-    "puffer_2_rucklauf_soll": create_temp_sensor(
+    "puffer_2_ladung_aus_temperatur": create_number_entity(
         entity_registry_enabled_default=False,
-        key="puffer_2_rucklauf_soll",
+        key="puffer_2_ladung_aus_temperatur",
         node_id="24106T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
-        icon="mdi:coolant-temperature",
+        icon="mdi:thermometer-chevron-down",
+        setter_type="int",
+        setter_min_val=0.0,
+        setter_max_val=95.0,
+        setter_step=1.0,
+        ha_device_class=SensorDeviceClass.TEMPERATURE,
+        ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        hdg_formatter="iTEMP",
     ),
     "puffer_2_status": create_enum_sensor(
         entity_registry_enabled_default=False,
@@ -2195,6 +2296,14 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
         icon="mdi:thermostat",
         options=HK_OPERATING_MODE_OPTIONS,
+        uppercase_value=True,
+    ),
+    "externe_warmequelle_betriebsart": create_select_entity(
+        key="externe_warmequelle_betriebsart",
+        node_id="25001T",
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
+        icon="mdi:fire",
+        options=EXT_WQ_OPERATING_MODE_OPTIONS,
         uppercase_value=True,
     ),
 }

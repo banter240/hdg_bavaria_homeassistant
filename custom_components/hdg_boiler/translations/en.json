@@ -965,6 +965,9 @@
       "kesseltemperatur_ist": {
         "name": "Boiler Temperature Actual"
       },
+      "lagerinhalt_aktuell": {
+        "name": "Current Store Contents"
+      },
       "kesseltemperatur_sollwert_param": {
         "name": "Boiler Target Temperature (Param)"
       },
@@ -1281,11 +1284,20 @@
       "puffer_2_rucklauf_extern": {
         "name": "Buffer 2 Return External"
       },
-      "puffer_2_rucklauf_soll": {
-        "name": "Buffer 2 Target Return"
+      "puffer_2_ladung_aus_temperatur": {
+        "name": "Buffer 2 Charge Off Temperature"
       },
-      "puffer_2_soll_oben": {
-        "name": "Buffer 2 Target Top"
+      "puffer_2_ladung_ein_temperatur": {
+        "name": "Buffer 2 Charge On Temperature"
+      },
+      "netzpumpe_1_freigabetemperatur": {
+        "name": "Network Pump 1 Enable Temperature"
+      },
+      "netzpumpe_2_freigabetemperatur": {
+        "name": "Network Pump 2 Enable Temperature"
+      },
+      "netzpumpe_3_freigabetemperatur": {
+        "name": "Network Pump 3 Enable Temperature"
       },
       "puffer_2_status": {
         "name": "Buffer 2 Status"
@@ -1363,11 +1375,11 @@
       "puffer_rucklauf_extern": {
         "name": "Buffer Return External"
       },
-      "puffer_rucklauf_soll": {
-        "name": "Buffer Target Return"
+      "puffer_ladung_aus_temperatur": {
+        "name": "Buffer Charge Off Temperature"
       },
-      "puffer_soll_oben": {
-        "name": "Buffer Target Top"
+      "puffer_ladung_ein_temperatur": {
+        "name": "Buffer Charge On Temperature"
       },
       "puffer_status": {
         "name": "Buffer Status"
@@ -1900,6 +1912,33 @@
           "urlaub": "Holiday mode"
         }
       },
+      "netzpumpe_1_temperatur": {
+        "name": "Network Pump 1 Temperature"
+      },
+      "netzpumpe_1_status_text": {
+        "name": "Network Pump 1 Status"
+      },
+      "netzpumpe_1_betriebsart": {
+        "name": "Network Pump 1 Mode"
+      },
+      "netzpumpe_2_temperatur": {
+        "name": "Network Pump 2 Temperature"
+      },
+      "netzpumpe_2_status_text": {
+        "name": "Network Pump 2 Status"
+      },
+      "netzpumpe_2_betriebsart": {
+        "name": "Network Pump 2 Mode"
+      },
+      "netzpumpe_3_temperatur": {
+        "name": "Network Pump 3 Temperature"
+      },
+      "netzpumpe_3_status_text": {
+        "name": "Network Pump 3 Status"
+      },
+      "netzpumpe_3_betriebsart": {
+        "name": "Network Pump 3 Mode"
+      },
       "hk6_betriebsart": {
         "name": "HC6 Operating Mode",
         "state": {
@@ -1909,6 +1948,14 @@
           "party": "Party mode",
           "sommer": "Summer mode",
           "urlaub": "Holiday mode"
+        }
+      },
+      "externe_warmequelle_betriebsart": {
+        "name": "Ext. Heat Source Operating Mode",
+        "state": {
+          "auto_ein": "Auto",
+          "ein": "On",
+          "aus": "Off"
         }
       }
     }

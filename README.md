@@ -20,6 +20,15 @@ An unofficial Home Assistant integration to monitor and control HDG Bavaria heat
 
 ### ⚠️ Breaking Changes
 
+#### Buffer (Puffer) Entity Renaming & Platform Change
+
+- **Platform Change**: The read-only sensors for buffer charge temperatures have been converted to **writable `number` entities** to allow control via Home Assistant.
+- **Renaming**: Keys have been renamed to strictly match the controller's terminology and the new function:
+  - `sensor.puffer_soll_oben` → `number.puffer_ladung_ein_temperatur` ("Pufferladung Ein")
+  - `sensor.puffer_rucklauf_soll` → `number.puffer_ladung_aus_temperatur` ("Pufferladung Aus")
+  - Equivalent changes apply to **Buffer 2** (`puffer_2_...`).
+- **Action Required**: Update any automations or dashboards that reference the old sensor IDs.
+
 #### Version 1.2.0
 
 - **Heating Circuit Naming Consistency**:

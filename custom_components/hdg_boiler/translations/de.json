@@ -965,6 +965,9 @@
       "kesseltemperatur_ist": {
         "name": "Kesseltemperatur Ist"
       },
+      "lagerinhalt_aktuell": {
+        "name": "Aktueller Lagerinhalt"
+      },
       "kesseltemperatur_sollwert_param": {
         "name": "Kesseltemperatur Sollwert (Param)"
       },
@@ -1281,11 +1284,20 @@
       "puffer_2_rucklauf_extern": {
         "name": "Puffer 2 Rücklauf Extern"
       },
-      "puffer_2_rucklauf_soll": {
-        "name": "Puffer 2 Soll Rücklauf"
+      "puffer_2_ladung_aus_temperatur": {
+        "name": "Puffer 2 Ladung Aus Temperatur"
       },
-      "puffer_2_soll_oben": {
-        "name": "Puffer 2 Soll Oben"
+      "puffer_2_ladung_ein_temperatur": {
+        "name": "Puffer 2 Ladung Ein Temperatur"
+      },
+      "netzpumpe_1_freigabetemperatur": {
+        "name": "Netzpumpe 1 Freigabetemperatur"
+      },
+      "netzpumpe_2_freigabetemperatur": {
+        "name": "Netzpumpe 2 Freigabetemperatur"
+      },
+      "netzpumpe_3_freigabetemperatur": {
+        "name": "Netzpumpe 3 Freigabetemperatur"
       },
       "puffer_2_status": {
         "name": "Puffer 2 Status"
@@ -1363,11 +1375,11 @@
       "puffer_rucklauf_extern": {
         "name": "Puffer Rücklauf Extern"
       },
-      "puffer_rucklauf_soll": {
-        "name": "Puffer Soll Rücklauf"
+      "puffer_ladung_aus_temperatur": {
+        "name": "Pufferladung Aus Temperatur"
       },
-      "puffer_soll_oben": {
-        "name": "Puffer Soll Oben"
+      "puffer_ladung_ein_temperatur": {
+        "name": "Pufferladung Ein Temperatur"
       },
       "puffer_status": {
         "name": "Puffer Status"
@@ -1900,6 +1912,33 @@
           "urlaub": "Urlaubsbetrieb"
         }
       },
+      "netzpumpe_1_temperatur": {
+        "name": "Netzpumpe 1 Temperatur"
+      },
+      "netzpumpe_1_status_text": {
+        "name": "Netzpumpe 1 Status"
+      },
+      "netzpumpe_1_betriebsart": {
+        "name": "Netzpumpe 1 Betriebsart"
+      },
+      "netzpumpe_2_temperatur": {
+        "name": "Netzpumpe 2 Temperatur"
+      },
+      "netzpumpe_2_status_text": {
+        "name": "Netzpumpe 2 Status"
+      },
+      "netzpumpe_2_betriebsart": {
+        "name": "Netzpumpe 2 Betriebsart"
+      },
+      "netzpumpe_3_temperatur": {
+        "name": "Netzpumpe 3 Temperatur"
+      },
+      "netzpumpe_3_status_text": {
+        "name": "Netzpumpe 3 Status"
+      },
+      "netzpumpe_3_betriebsart": {
+        "name": "Netzpumpe 3 Betriebsart"
+      },
       "hk6_betriebsart": {
         "name": "HK6 Betriebsart",
         "state": {
@@ -1909,6 +1948,14 @@
           "party": "Partybetrieb",
           "sommer": "Sommerbetrieb",
           "urlaub": "Urlaubsbetrieb"
+        }
+      },
+      "externe_warmequelle_betriebsart": {
+        "name": "Ext. Wärmequelle Betriebsart",
+        "state": {
+          "auto_ein": "Auto",
+          "ein": "Ein",
+          "aus": "Aus"
         }
       }
     }

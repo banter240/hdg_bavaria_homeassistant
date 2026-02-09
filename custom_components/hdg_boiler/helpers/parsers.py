@@ -255,12 +255,20 @@ def parse_sensor_value(
         return cleaned_value  # Return raw or cleaned value if no parser found
 
     try:
-        return parser(
+        parsed_value = parser(
             cleaned_value,
             log_prefix,
             entity_definition,
             timezone=configured_timezone,
         )
+
+        # Apply specific formatter corrections
+        hdg_formatter = entity_definition.get("hdg_formatter")
+        if hdg_formatter == "iT" and isinstance(parsed_value, int | float):
+            # Correct scaling for Tonnes (e.g., 718.0 -> 7.18)
+            parsed_value = parsed_value / 100.0
+
+        return parsed_value
     except Exception as e:
         _LOGGER.warning(
             "%sError parsing value '%s' as %s: %s. Returning raw.",
