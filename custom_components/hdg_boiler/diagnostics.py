@@ -104,7 +104,21 @@ def _get_api_client_diagnostics(
     """Return diagnostic information about the HdgApiClient."""
     if not api_client:
         return {"error": "API Client not found or not initialized."}
-    return {"base_url": _redact_api_client_base_url(api_client, sensitive_host_ip)}
+    return {
+        "base_url": _redact_api_client_base_url(api_client, sensitive_host_ip),
+        "data_refresh_payload_mode_configured": getattr(
+            api_client, "data_refresh_payload_mode", "unknown"
+        ),
+        "data_refresh_payload_mode_detected": getattr(
+            api_client, "detected_data_refresh_payload_mode", None
+        ),
+        "data_refresh_payload_mode_fw_hint": getattr(
+            api_client, "firmware_based_preferred_payload_mode", None
+        ),
+        "data_refresh_payload_mode_effective": getattr(
+            api_client, "effective_data_refresh_payload_mode", "unknown"
+        ),
+    }
 
 
 async def _get_entity_diagnostics(

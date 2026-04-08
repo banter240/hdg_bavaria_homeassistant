@@ -6,11 +6,13 @@
         "description": "Configure the connection to your HDG Bavaria Boiler.",
         "data": {
           "host_ip": "Boiler's Host IP Address or Hostname",
-          "device_alias": "Alias for the Boiler (optional, for device & entity names)"
+          "device_alias": "Alias for the Boiler (optional, for device & entity names)",
+          "data_refresh_payload_mode": "dataRefresh Payload Mode"
         },
         "data_description": {
           "host_ip": "The IP address or hostname of your HDG Boiler (e.g., '192.168.1.100' or 'hdg-boiler.local').",
-          "device_alias": "An optional, user-friendly name for this boiler in Home Assistant. If left empty, a default name will be used."
+          "device_alias": "An optional, user-friendly name for this boiler in Home Assistant. If left empty, a default name will be used.",
+          "data_refresh_payload_mode": "Controls how node IDs are sent to ApiManager.php?action=dataRefresh. 'Auto' tries to detect the best format and uses a firmware heuristic (Touch firmware <= 1.54 prefers indexed mode)."
         }
       }
     },
@@ -41,6 +43,7 @@
           "source_timezone": "Source Timezone (IANA Format)",
           "api_timeout": "API Timeout (seconds)",
           "connect_timeout": "Connection Timeout (seconds)",
+          "data_refresh_payload_mode": "dataRefresh Payload Mode",
           "polling_preemption_timeout": "Polling Preemption Timeout (seconds)",
           "recently_set_poll_ignore_window_s": "Recently Set Ignore Window (seconds)",
           "log_level_threshold_for_connection_errors": "Connection Error Threshold",
@@ -60,6 +63,7 @@
           "source_timezone": "The timezone in which the boiler provides its time data (e.g., 'Europe/Berlin'). This is important for correct interpretation of date/time values from the boiler.",
           "api_timeout": "The maximum time (in seconds) to wait for a response from the boiler for any API request. A higher value can help with unstable networks but may lead to longer waits. Range: {min_api_timeout}-{max_api_timeout}s.",
           "connect_timeout": "The maximum time (in seconds) to wait for a connection to be established with the boiler. Range: {min_connect_timeout}-{max_connect_timeout}s.",
+          "data_refresh_payload_mode": "Select the payload format used for dataRefresh calls. 'auto' first uses compatibility logic and then keeps using a working mode. Use 'legacy' or 'indexed' to force one format.",
           "polling_preemption_timeout": "The maximum time (in seconds) a low-priority polling request is allowed to run if a higher-priority request (e.g., a setting change) is queued. A lower value ensures faster response to setting changes but may lead to more frequent interruptions with slow boiler responses. This value must be a whole number. Range: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
           "recently_set_poll_ignore_window_s": "Time window (in seconds) to ignore updates for values that have been recently set via Home Assistant. This prevents the integration from immediately overwriting a user's change with an old value from the boiler. Default: {default_ignore_window}s, Range: {min_ignore_window}-{max_ignore_window}s.",
           "log_level_threshold_for_connection_errors": "The number of consecutive connection failures after which the logging level for connection errors escalates. For example, if set to 5, the first 4 connection errors will be logged as INFO, and the 5th and subsequent errors will be logged as ERROR. Non-connection API errors will be logged as WARNING after this threshold. Range: 1-60",

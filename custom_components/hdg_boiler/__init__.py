@@ -17,11 +17,13 @@ from .api import HdgApiClient
 from .const import (
     CONF_API_TIMEOUT,
     CONF_CONNECT_TIMEOUT,
+    CONF_DATA_REFRESH_PAYLOAD_MODE,
     CONF_ERROR_THRESHOLD,
     CONF_HOST_IP,
     CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     DEFAULT_API_TIMEOUT,
     DEFAULT_CONNECT_TIMEOUT,
+    DEFAULT_DATA_REFRESH_PAYLOAD_MODE,
     DEFAULT_ERROR_THRESHOLD,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     DOMAIN,
@@ -50,6 +52,9 @@ def _create_api_and_access_manager(
         host_ip,
         entry.options.get(CONF_API_TIMEOUT, DEFAULT_API_TIMEOUT),
         entry.options.get(CONF_CONNECT_TIMEOUT, DEFAULT_CONNECT_TIMEOUT),
+        entry.options.get(
+            CONF_DATA_REFRESH_PAYLOAD_MODE, DEFAULT_DATA_REFRESH_PAYLOAD_MODE
+        ),
     )
     access_manager = HdgApiAccessManager(
         hass,

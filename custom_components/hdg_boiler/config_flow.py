@@ -29,6 +29,7 @@ from .const import (
     CONF_ADVANCED_LOGGING,
     CONF_API_TIMEOUT,
     CONF_CONNECT_TIMEOUT,
+    CONF_DATA_REFRESH_PAYLOAD_MODE,
     CONF_DEVICE_ALIAS,
     CONF_ERROR_THRESHOLD,
     CONF_FALLBACK_PING_INTERVAL,
@@ -44,6 +45,8 @@ from .const import (
     DEFAULT_ADVANCED_LOGGING,
     DEFAULT_API_TIMEOUT,
     DEFAULT_CONNECT_TIMEOUT,
+    DEFAULT_DATA_REFRESH_PAYLOAD_MODE,
+    DATA_REFRESH_PAYLOAD_MODES,
     DEFAULT_ERROR_THRESHOLD,
     DEFAULT_FALLBACK_PING_INTERVAL,
     DEFAULT_LOG_LEVEL,
@@ -97,11 +100,17 @@ async def _get_hostname_from_host_ip(host_ip: str) -> str | None:
     return hostname
 
 
-async def _test_api_connectivity(hass: core.HomeAssistant, host_ip: str) -> bool:
+async def _test_api_connectivity(
+    hass: core.HomeAssistant, host_ip: str, data_refresh_payload_mode: str
+) -> bool:
     """Test the API connectivity to the HDG boiler."""
     session = async_get_clientsession(hass)
     api_client = HdgApiClient(
-        session, host_ip, CONFIG_FLOW_API_TIMEOUT, DEFAULT_CONNECT_TIMEOUT
+        session,
+        host_ip,
+        CONFIG_FLOW_API_TIMEOUT,
+        DEFAULT_CONNECT_TIMEOUT,
+        data_refresh_payload_mode,
     )
     test_data = await api_client.async_get_nodes_data(CONFIG_FLOW_TEST_PAYLOAD)
 
@@ -113,7 +122,9 @@ async def _test_api_connectivity(hass: core.HomeAssistant, host_ip: str) -> bool
     return False
 
 
-async def _validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) -> bool:
+async def _validate_host_connectivity(
+    hass: core.HomeAssistant, host_ip: str, data_refresh_payload_mode: str
+) -> bool:
     """Validate connectivity to the HDG boiler."""
     try:
         hostname = await _get_hostname_from_host_ip(host_ip)
@@ -124,7 +135,7 @@ async def _validate_host_connectivity(hass: core.HomeAssistant, host_ip: str) ->
             _LOGGER.warning("ICMP ping to %s (from %s) failed.", hostname, host_ip)
             return False
 
-        return await _test_api_connectivity(hass, host_ip)
+        return await _test_api_connectivity(hass, host_ip, data_refresh_payload_mode)
 
     except (HdgApiConnectionError, HdgApiError) as err:
         _LOGGER.warning("API error during device check for %s: %s", host_ip, err)
@@ -154,7 +165,10 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow):
         errors: dict[str, str] = {}
         if user_input is not None:
             host_ip = user_input[CONF_HOST_IP]
-            if await _validate_host_connectivity(self.hass, host_ip):
+            payload_mode = user_input.get(
+                CONF_DATA_REFRESH_PAYLOAD_MODE, DEFAULT_DATA_REFRESH_PAYLOAD_MODE
+            )
+            if await _validate_host_connectivity(self.hass, host_ip, payload_mode):
                 await self.async_set_unique_id(host_ip.lower())
                 self._abort_if_unique_id_configured()
                 title = user_input.get(CONF_DEVICE_ALIAS) or f"HDG Boiler ({host_ip})"
@@ -165,6 +179,15 @@ class HdgBoilerConfigFlow(config_entries.ConfigFlow):
             {
                 vol.Required(CONF_HOST_IP): TextSelector(),
                 vol.Optional(CONF_DEVICE_ALIAS): TextSelector(),
+                vol.Optional(
+                    CONF_DATA_REFRESH_PAYLOAD_MODE,
+                    default=DEFAULT_DATA_REFRESH_PAYLOAD_MODE,
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=DATA_REFRESH_PAYLOAD_MODES,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
             }
         )
         return self.async_show_form(
@@ -227,6 +250,17 @@ class HdgBoilerOptionsFlowHandler(config_entries.OptionsFlow):
                 CONF_ADVANCED_LOGGING,
                 BooleanSelector(),
                 DEFAULT_ADVANCED_LOGGING,
+                vol.Optional,
+            ),
+            (
+                CONF_DATA_REFRESH_PAYLOAD_MODE,
+                SelectSelector(
+                    SelectSelectorConfig(
+                        options=DATA_REFRESH_PAYLOAD_MODES,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                DEFAULT_DATA_REFRESH_PAYLOAD_MODE,
                 vol.Optional,
             ),
             (
