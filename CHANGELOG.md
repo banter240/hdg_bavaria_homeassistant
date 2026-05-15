@@ -1,3 +1,36 @@
+## [2.0.0-dev.3](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.2...v2.0.0-dev.3) (2026-05-15)
+
+### ✨ New Features
+
+* feat(hdg_boiler): per-circuit component groups, config flow overhaul, and entity architecture refactor
+
+Component groups & options flow:
+* Add individual enable/disable toggles for all optional hardware circuits:
+  WW1, HK2–HK6, Solar, Puffer 2, Ext. Wärmequelle, Lager, Netzpumpen 1–3
+* Options flow grouped into collapsible sections (connection, polling, logging, components)
+* Hostname/DNS resolution support for CONF_HOST_IP — accepts both IP and hostname
+* Add CONF_LOG_VERSION_PREFIX: prefix every log entry with the integration version string
+
+Entity architecture:
+* Rewrite entity.py as thin HdgNodeEntity base; sensor/number/select platforms reduced
+  to setup-only modules
+* Add HdgOptimisticManager (helpers/optimistic_manager.py) — tracks pending writes,
+  blocks stale poll overrides, and auto-cleans after grace period
+* Add HdgCommandExecutor (helpers/executor.py) — isolates command dispatch from coordinator
+* Coordinator: fix init sequence, async_stop cleanup, and entity registration ordering
+* Coordinator: add update_node() as single write path; get_optimistic_value() public API
+* Fix translation key mismatches across en.json / de.json (full parity)
+
+Migration infrastructure:
+* Add helpers/migration.py with v2 migration scaffold (config entry VERSION stays at 1;
+  no active migration triggered — infrastructure only, ready for dev.3 activation)
+
+CI / dev tooling:
+* Add CodeQL, stale-bot, and lock-bot GitHub Actions workflows
+* Add yamllint config (.yamllint) and integrate into pre-commit pipeline
+* Migrate workflow standards and pre-commit baseline
+* Add dev/ AI workspace to .gitignore
+
 ## [2.0.0-dev.2](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.1...v2.0.0-dev.2) (2026-02-09)
 
 ### ✨ New Features
