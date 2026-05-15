@@ -1,17 +1,16 @@
 """Network and URL related utility functions for the HDG Bavaria Boiler integration.
 
-This module provides helpers for preparing a base URL from an IPv4 address
-and for checking host reachability via ICMP ping.
+This module provides helpers for preparing a base URL from a host address
+(IPv4 or hostname) and for checking host reachability via ICMP ping.
 """
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
 
 import asyncio
-import ipaddress
 import logging
 import platform
+import re
 from urllib.parse import urlparse, urlunparse
 
 import async_timeout
@@ -22,35 +21,27 @@ _LOGGER = logging.getLogger(DOMAIN)
 
 __all__ = ["prepare_base_url", "async_execute_icmp_ping"]
 
-
-def _is_valid_ipv4(address: str) -> bool:
-    """Check if the given string is a valid IPv4 address."""
-    try:
-        ipaddress.IPv4Address(address)
-        return True
-    except ipaddress.AddressValueError:
-        return False
+# Matches a valid hostname label: letters, digits, hyphens (RFC 1123)
+_HOSTNAME_RE = re.compile(
+    r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*"
+    r"[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$"
+)
 
 
 def prepare_base_url(host_input: str) -> str | None:
-    """Prepare and validate the base URL from a user-provided IPv4 address.
+    """Prepare and validate the base URL from a host address or hostname.
 
-    Ensures the host is a valid IPv4 address and prepends 'http://' if no
-    scheme is provided. The boiler device only supports IPv4.
+    Accepts an IPv4 address (e.g. ``192.168.1.100``) or a DNS hostname
+    (e.g. ``hdg-boiler.fritz.box``). Prepends ``http://`` when no scheme is
+    given. Port numbers are not supported.
 
-    Args:
-        host_input: The raw host input string from configuration.
-
-    Returns:
-        The prepared base URL (e.g., "http://192.168.1.100"), or None on failure.
-
+    Returns the normalised base URL or ``None`` if the input is invalid.
     """
     if not host_input:
         _LOGGER.error("Host address cannot be empty.")
         return None
 
     host_input = host_input.strip()
-    # Add a default scheme if one is missing, to allow urlparse to work correctly
     if "://" not in host_input:
         host_input = f"http://{host_input}"
 
@@ -58,18 +49,17 @@ def prepare_base_url(host_input: str) -> str | None:
         parsed_url = urlparse(host_input)
         host = parsed_url.hostname
 
-        if not host or not _is_valid_ipv4(host):
-            raise ValueError(f"Host part '{host}' is not a valid IPv4 address.")
+        if not host or not _HOSTNAME_RE.match(host):
+            raise ValueError(f"'{host}' is not a valid IPv4 address or hostname.")
 
         if parsed_url.port:
             raise ValueError("Port specification is not supported.")
 
-        # Reconstruct the URL with only the scheme and valid hostname
         return urlunparse((parsed_url.scheme, host, "", "", "", ""))
 
     except ValueError as e:
         _LOGGER.error(
-            "Invalid host/IP format for HDG Boiler: %s. Original input: '%s'",
+            "Invalid host format for HDG Boiler: %s. Original input: '%s'",
             e,
             host_input,
         )

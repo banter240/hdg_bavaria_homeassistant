@@ -7,7 +7,6 @@ locale-specific number formats, unit stripping, and various data types.
 
 from __future__ import annotations
 
-__version__ = "0.5.1"
 
 import html
 import logging
@@ -32,10 +31,8 @@ _HEURISTICS_LOGGER = logging.getLogger(HEURISTICS_LOGGER_NAME)
 
 __all__ = ["parse_sensor_value", "format_value_for_api"]
 
-# Regex to find the first numeric part of a string.
 _NUMERIC_PART_REGEX: Final = re.compile(r"([-+]?\d*[.,]?\d+)")
 
-# Regex to strip common units from the end of a string.
 _COMMON_UNITS_REGEX: Final = re.compile(
     r"\s*(°C|K|%|Std|min|s|pa|kw|kWh|MWh|l|l/h|m3/h|bar|rpm|A|V|Hz|ppm|pH|µS/cm|mS/cm|mg/l|g/l|kg/l|m3|m|mm|cm|km|g|kg|t|Wh|MWh|kJ|MJ|kcal|Mcal|l/min|m3/min|m/s|km/h|m/h|°F|psi|mbar|hPa|kPa|MPa|GW|MW|VA|kVA|MVA|VAR|kVAR|MVAR|PF|cosΦ|lux|lm|cd|lx|W/m2|J/m2|kWh/m2|ppm|ppb|mg/m3|g/m3|kg/m3|m3/m3|l/l|g/g|kg/kg|t/t|Wh/Wh|J/J|kcal/kcal|l/min/m2|m3/min/m2|m/s/m2|km/h/m2|m/h/m2|°F/min|psi/min|mbar/min|hPa/min|kPa/min|MPa/min|GW/min|MW/min|VA/min|kVA/min|MVA/min|VAR|kVAR|MVAR|PF/min|cosΦ/min|lux/min|lm/min|cd/min|lx/min|W/m2/min|J/m2/min|kWh/m2/min|ppm/min|ppb/min|mg/m3/min|g/m3/min|kg/m3/min|t/t/min|Wh/Wh/min|J/J/min|kcal/kcal/min|Schritte)$",
     re.IGNORECASE,
@@ -218,21 +215,15 @@ def _prepare_parser_and_value(
     return _PARSER_MAP.get(parse_as_type), cleaned_value
 
 
-# --- Main Parser ---
-
 _PARSER_MAP: Final[dict[str, Callable[..., Any]]] = {
     "int": lambda value, prefix, *args, **kwargs: _parse_number(value, int, prefix),
     "float": lambda value, prefix, *args, **kwargs: _parse_number(value, float, prefix),
-    "enum_text": lambda value,
-    prefix,
-    entity_def,
-    *args,
-    **kwargs: _convert_enum_text_to_key(value, entity_def, prefix),
-    "hdg_datetime_or_text": lambda value,
-    prefix,
-    *args,
-    timezone,
-    **kwargs: _parse_datetime(value, timezone, prefix),
+    "enum_text": lambda value, prefix, entity_def, *args, **kwargs: (
+        _convert_enum_text_to_key(value, entity_def, prefix)
+    ),
+    "hdg_datetime_or_text": lambda value, prefix, *args, timezone, **kwargs: (
+        _parse_datetime(value, timezone, prefix)
+    ),
     "text": lambda value, *args, **kwargs: value,
     "allow_empty_string": lambda value, *args, **kwargs: value,
 }
@@ -255,20 +246,12 @@ def parse_sensor_value(
         return cleaned_value  # Return raw or cleaned value if no parser found
 
     try:
-        parsed_value = parser(
+        return parser(
             cleaned_value,
             log_prefix,
             entity_definition,
             timezone=configured_timezone,
         )
-
-        # Apply specific formatter corrections
-        hdg_formatter = entity_definition.get("hdg_formatter")
-        if hdg_formatter == "iT" and isinstance(parsed_value, int | float):
-            # Correct scaling for Tonnes (e.g., 718.0 -> 7.18)
-            parsed_value = parsed_value / 100.0
-
-        return parsed_value
     except Exception as e:
         _LOGGER.warning(
             "%sError parsing value '%s' as %s: %s. Returning raw.",

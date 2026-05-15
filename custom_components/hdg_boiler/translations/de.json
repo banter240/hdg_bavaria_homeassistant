@@ -12,6 +12,107 @@
           "host_ip": "Die IP-Adresse oder der Hostname Ihres HDG-Kessels (z.B. '192.168.1.100' oder 'hdg-kessel.local').",
           "device_alias": "Ein optionaler, benutzerfreundlicher Name für diesen Kessel in Home Assistant. Wenn leer, wird ein Standardname verwendet."
         }
+      },
+      "init": {
+        "title": "Optionale Komponenten & Einstellungen",
+        "description": "Aktivieren Sie die optionalen Hardwarekomponenten Ihres Kessels und passen Sie die Einstellungen an.",
+        "sections": {
+          "components": {
+            "name": "Optionale Komponenten",
+            "data": {
+              "enable_hk2": "Heizkreis 2 (HK2)",
+              "enable_hk3": "Heizkreis 3 (HK3)",
+              "enable_hk4": "Heizkreis 4 (HK4)",
+              "enable_hk5": "Heizkreis 5 (HK5)",
+              "enable_hk6": "Heizkreis 6 (HK6)",
+              "enable_solar": "Solaranlage",
+              "enable_puffer_2": "Pufferspeicher 2",
+              "enable_ext_wq": "Externe Wärmequelle",
+              "enable_ww1": "Warmwasser (WW1)",
+              "enable_lager": "Lager-/Brennstoffüberwachung",
+              "enable_netzpumpe_1": "Netzpumpe 1",
+              "enable_netzpumpe_2": "Netzpumpe 2",
+              "enable_netzpumpe_3": "Netzpumpe 3"
+            },
+            "data_description": {
+              "enable_hk2": "Aktiviert die Entitäten für einen zweiten Heizkreis (HK2). Nur aktivieren, wenn der Kessel einen zweiten Heizkreis steuert.",
+              "enable_hk3": "Aktiviert die Entitäten für einen dritten Heizkreis (HK3). Nur aktivieren, wenn der Kessel einen dritten Heizkreis steuert.",
+              "enable_hk4": "Aktiviert die Entitäten für Heizkreis 4 (HK4). Nur aktivieren, wenn der Kessel diesen Heizkreis steuert.",
+              "enable_hk5": "Aktiviert die Entitäten für Heizkreis 5 (HK5). Nur aktivieren, wenn der Kessel diesen Heizkreis steuert.",
+              "enable_hk6": "Aktiviert die Entitäten für Heizkreis 6 (HK6). Nur aktivieren, wenn der Kessel diesen Heizkreis steuert.",
+              "enable_solar": "Aktiviert die Entitäten für eine thermische Solaranlage. Nur aktivieren, wenn der Kessel an eine Solaranlage angeschlossen ist.",
+              "enable_puffer_2": "Aktiviert die Entitäten für einen zweiten Pufferspeicher. Nur aktivieren, wenn ein zweiter Pufferspeicher installiert ist.",
+              "enable_ext_wq": "Aktiviert die Steuerungsentität für eine externe Wärmequelle. Nur aktivieren, wenn eine externe Wärmequelle (z. B. Wärmepumpe) angeschlossen ist.",
+              "enable_ww1": "Aktiviert die Entitäten für das Warmwassermodul (WW1). Aktivieren, wenn der Kessel einen Warmwasserspeicher steuert.",
+              "enable_lager": "Aktiviert die detaillierte Brennstoffüberwachung (Gesamtverbrauch, letztes Befülldatum). Der aktuelle Füllstand ist immer als Kernsensor verfügbar.",
+              "enable_netzpumpe_1": "Aktiviert die Entitäten für Netzpumpe 1 (NP1). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
+              "enable_netzpumpe_2": "Aktiviert die Entitäten für Netzpumpe 2 (NP2). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
+              "enable_netzpumpe_3": "Aktiviert die Entitäten für Netzpumpe 3 (NP3). Nur aktivieren, wenn diese Pumpe physisch installiert ist."
+            }
+          },
+          "polling": {
+            "name": "Abfrageintervalle",
+            "data": {
+              "scan_interval_group_1": "Scan-Intervall: Echtzeit-Kernwerte (Sekunden)",
+              "scan_interval_group_2": "Scan-Intervall: Status-Werte Allgemein (Sekunden)",
+              "scan_interval_group_3": "Scan-Intervall: Konfig/Zähler 1 (Sekunden)",
+              "scan_interval_group_4": "Scan-Intervall: Konfig/Zähler 2 (Sekunden)",
+              "scan_interval_group_5": "Scan-Intervall: Konfig/Zähler 3 (Sekunden)"
+            },
+            "data_description": {
+              "scan_interval_group_1": "Intervall für die Abfrage der wichtigsten Echtzeitdaten (z.B. Temperaturen, Status). Standard: {default_scan_interval_group_1}s.",
+              "scan_interval_group_2": "Intervall für die Abfrage allgemeiner Statusinformationen. Standard: {default_scan_interval_group_2}s.",
+              "scan_interval_group_3": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 1). Standard: {default_scan_interval_group_3}s.",
+              "scan_interval_group_4": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 2). Standard: {default_scan_interval_group_4}s.",
+              "scan_interval_group_5": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 3). Standard: {default_scan_interval_group_5}s."
+            }
+          },
+          "connection": {
+            "name": "Verbindung",
+            "data": {
+              "api_timeout": "API-Timeout (Sekunden)",
+              "connect_timeout": "Verbindungs-Timeout (Sekunden)",
+              "fallback_ping_interval": "Fallback-Ping-Intervall (Sekunden)"
+            },
+            "data_description": {
+              "api_timeout": "Die maximale Wartezeit (in Sekunden) auf eine Antwort vom Kessel für jede API-Anfrage. Ein höherer Wert kann bei instabilen Netzwerken helfen, aber auch zu längeren Wartezeiten führen. Bereich: {min_api_timeout}-{max_api_timeout}s.",
+              "connect_timeout": "Die maximale Wartezeit (in Sekunden) für den Verbindungsaufbau zum Kessel. Bereich: {min_connect_timeout}-{max_connect_timeout}s.",
+              "fallback_ping_interval": "Das Intervall in Sekunden, in dem der Host angepingt wird, wenn er als offline gilt. Ein erfolgreicher Ping löst einen sofortigen Aktualisierungsversuch aus. Bereich: {min_fallback_ping_interval}-{max_fallback_ping_interval}s, Standard: {default_fallback_ping_interval}s."
+            }
+          },
+          "logging": {
+            "name": "Protokollierung",
+            "data": {
+              "log_level": "Protokollierungsstufe",
+              "advanced_logging": "Erweiterte Protokollierung aktivieren",
+              "log_version_prefix": "Version in Logs anzeigen",
+              "source_timezone": "Quell-Zeitzone (IANA-Format)"
+            },
+            "data_description": {
+              "log_level": "Legt die Detailtiefe der Protokolle für diese Integration fest. 'DEBUG' ist sehr ausführlich und nützlich für die Fehlersuche. 'INFO' ist der Standard für den normalen Betrieb.",
+              "advanced_logging": "Aktiviert zusätzliche INFO-Level-Protokolle für wichtige Aktionen (z.B. das Setzen von Werten), auch wenn die Protokollierungsstufe auf INFO steht. Nützlich, um Aktionen zu verfolgen, ohne die vollständige DEBUG-Protokollierung zu aktivieren.",
+              "log_version_prefix": "Stellt jedem Log-Eintrag dieser Integration [vX.Y.Z] voran. Macht die laufende Version in jedem Log-Ausschnitt sofort sichtbar.",
+              "source_timezone": "Die Zeitzone, in der der Kessel seine Zeitdaten liefert (z.B. 'Europe/Berlin'). Dies ist wichtig für die korrekte Interpretation von Datums-/Zeitwerten vom Kessel."
+            }
+          },
+          "advanced": {
+            "name": "Erweitert",
+            "data": {
+              "polling_preemption_timeout": "Polling-Vorrang-Timeout (Sekunden)",
+              "recently_set_poll_ignore_window_s": "Ignorier-Fenster für gesetzte Werte (Sekunden)",
+              "log_level_threshold_for_connection_errors": "Fehler-Schwellenwert für Verbindungsprobleme",
+              "error_threshold": "Fehlerschwelle",
+              "log_level_threshold_for_preemption_errors": "Fehler-Schwellenwert für Vorrang-Unterbrechungen"
+            },
+            "data_description": {
+              "polling_preemption_timeout": "Die maximale Zeit (in Sekunden), die eine Abfrageanfrage niedriger Priorität ausgeführt werden darf, wenn eine höher priorisierte Anfrage (z.B. eine Einstellungsänderung) in die Warteschlange gestellt wird. Ein niedrigerer Wert sorgt für schnellere Reaktion auf Einstellungsänderungen, kann aber bei langsamen Kesselantworten zu häufigeren Abbrüchen führen. Dieser Wert muss eine ganze Zahl sein. Bereich: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
+              "recently_set_poll_ignore_window_s": "Zeitfenster (in Sekunden), in dem Aktualisierungen für Werte ignoriert werden, die kürzlich über Home Assistant gesetzt wurden. Verhindert, dass eine Benutzereingabe sofort wieder mit einem alten Wert vom Kessel überschrieben wird. Standard: {default_ignore_window}s, Bereich: {min_ignore_window}-{max_ignore_window}s.",
+              "log_level_threshold_for_connection_errors": "Die Anzahl aufeinanderfolgender Verbindungsfehler, nach der die Protokollierung dieser Fehler eskaliert wird. Liegt die Anzahl unter diesem Schwellenwert, werden Fehler als INFO geloggt. Bei Erreichen oder Überschreiten des Schwellenwerts werden Verbindungsfehler als ERROR und andere API-Fehler als WARNING geloggt. Bereich: 1-60",
+              "error_threshold": "Die Anzahl der aufeinanderfolgenden Fehler, bevor die Integration einen `UpdateFailed`-Fehler auslöst und für eine Weile keine neuen Verbindungsversuche unternimmt. Bereich: {min_error_threshold}-{max_error_threshold}.",
+              "log_level_threshold_for_preemption_errors": "Die Anzahl aufeinanderfolgender Vorrang-Unterbrechungsfehler, nach der die Protokollierung eskaliert. Darunter werden Fehler als INFO, darüber als WARNING protokolliert. Bereich: {min_preemption_threshold}-{max_preemption_threshold}."
+            }
+          }
+        }
       }
     },
     "error": {
@@ -28,44 +129,102 @@
     "step": {
       "init": {
         "title": "HDG Kessel Optionen",
-        "description": "Optionen für den HDG Kessel.",
-        "data": {
-          "device_alias": "Geräte-Alias",
-          "scan_interval_group_1": "Scan-Intervall: Echtzeit-Kernwerte (Sekunden)",
-          "scan_interval_group_2": "Scan-Intervall: Status-Werte Allgemein (Sekunden)",
-          "scan_interval_group_3": "Scan-Intervall: Konfig/Zähler 1 (Sekunden)",
-          "scan_interval_group_4": "Scan-Intervall: Konfig/Zähler 2 (Sekunden)",
-          "scan_interval_group_5": "Scan-Intervall: Konfig/Zähler 3 (Sekunden)",
-          "log_level": "Protokollierungsstufe",
-          "advanced_logging": "Erweiterte Protokollierung aktivieren",
-          "source_timezone": "Quell-Zeitzone (IANA-Format)",
-          "api_timeout": "API-Timeout (Sekunden)",
-          "connect_timeout": "Verbindungs-Timeout (Sekunden)",
-          "polling_preemption_timeout": "Polling-Vorrang-Timeout (Sekunden)",
-          "recently_set_poll_ignore_window_s": "Ignorier-Fenster für gesetzte Werte (Sekunden)",
-          "log_level_threshold_for_connection_errors": "Fehler-Schwellenwert für Verbindungsprobleme",
-          "error_threshold": "Fehlerschwelle",
-          "log_level_threshold_for_preemption_errors": "Fehler-Schwellenwert für Vorrang-Unterbrechungen",
-          "fallback_ping_interval": "Fallback-Ping-Intervall (Sekunden)"
-        },
-        "data_description": {
-          "device_alias": "Ein optionaler, benutzerfreundlicher Name für diesen Kessel in Home Assistant. Wenn leer, wird ein Standardname verwendet.",
-          "scan_interval_group_1": "Intervall für die Abfrage der wichtigsten Echtzeitdaten (z.B. Temperaturen, Status). Standard: {default_scan_interval_group_1}s.",
-          "scan_interval_group_2": "Intervall für die Abfrage allgemeiner Statusinformationen. Standard: {default_scan_interval_group_2}s.",
-          "scan_interval_group_3": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 1). Standard: {default_scan_interval_group_3}s.",
-          "scan_interval_group_4": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 2). Standard: {default_scan_interval_group_4}s.",
-          "scan_interval_group_5": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 3). Standard: {default_scan_interval_group_5}s.",
-          "log_level": "Legt die Detailtiefe der Protokolle für diese Integration fest. 'DEBUG' ist sehr ausführlich und nützlich für die Fehlersuche. 'INFO' ist der Standard für den normalen Betrieb.",
-          "advanced_logging": "Aktiviert zusätzliche INFO-Level-Protokolle für wichtige Aktionen (z.B. das Setzen von Werten), auch wenn die Protokollierungsstufe auf INFO steht. Nützlich, um Aktionen zu verfolgen, ohne die vollständige DEBUG-Protokollierung zu aktivieren.",
-          "source_timezone": "Die Zeitzone, in der der Kessel seine Zeitdaten liefert (z.B. 'Europe/Berlin'). Dies ist wichtig für die korrekte Interpretation von Datums-/Zeitwerten vom Kessel.",
-          "api_timeout": "Die maximale Wartezeit (in Sekunden) auf eine Antwort vom Kessel für jede API-Anfrage. Ein höherer Wert kann bei instabilen Netzwerken helfen, aber auch zu längeren Wartezeiten führen. Bereich: {min_api_timeout}-{max_api_timeout}s.",
-          "connect_timeout": "Die maximale Wartezeit (in Sekunden) für den Verbindungsaufbau zum Kessel. Bereich: {min_connect_timeout}-{max_connect_timeout}s.",
-          "polling_preemption_timeout": "Die maximale Zeit (in Sekunden), die eine Abfrageanfrage niedriger Priorität ausgeführt werden darf, wenn eine höher priorisierte Anfrage (z.B. eine Einstellungsänderung) in die Warteschlange gestellt wird. Ein niedrigerer Wert sorgt für schnellere Reaktion auf Einstellungsänderungen, kann aber bei langsamen Kesselantworten zu häufigeren Abbrüchen führen. Dieser Wert muss eine ganze Zahl sein. Bereich: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
-          "recently_set_poll_ignore_window_s": "Zeitfenster (in Sekunden), in dem Aktualisierungen für Werte ignoriert werden, die kürzlich über Home Assistant gesetzt wurden. Verhindert, dass eine Benutzereingabe sofort wieder mit einem alten Wert vom Kessel überschrieben wird. Standard: {default_ignore_window}s, Bereich: {min_ignore_window}-{max_ignore_window}s.",
-          "log_level_threshold_for_connection_errors": "Die Anzahl aufeinanderfolgender Verbindungsfehler, nach der die Protokollierung dieser Fehler eskaliert wird. Liegt die Anzahl unter diesem Schwellenwert, werden Fehler als INFO geloggt. Bei Erreichen oder Überschreiten des Schwellenwerts werden Verbindungsfehler als ERROR und andere API-Fehler als WARNING geloggt. Bereich: 1-60",
-          "error_threshold": "Die Anzahl der aufeinanderfolgenden Fehler, bevor die Integration einen `UpdateFailed`-Fehler auslöst und für eine Weile keine neuen Verbindungsversuche unternimmt. Bereich: {min_error_threshold}-{max_error_threshold}.",
-          "log_level_threshold_for_preemption_errors": "Die Anzahl aufeinanderfolgender Vorrang-Unterbrechungsfehler, nach der die Protokollierung eskaliert. Darunter werden Fehler als INFO, darüber als WARNING protokolliert. Bereich: {min_preemption_threshold}-{max_preemption_threshold}.",
-          "fallback_ping_interval": "Das Intervall in Sekunden, in dem der Host angepingt wird, wenn er als offline gilt. Ein erfolgreicher Ping löst einen sofortigen Aktualisierungsversuch aus. Bereich: {min_fallback_ping_interval}-{max_fallback_ping_interval}s, Standard: {default_fallback_ping_interval}s."
+        "sections": {
+          "components": {
+            "name": "Optionale Komponenten",
+            "data": {
+              "enable_hk2": "Heizkreis 2 (HK2)",
+              "enable_hk3": "Heizkreis 3 (HK3)",
+              "enable_hk4": "Heizkreis 4 (HK4)",
+              "enable_hk5": "Heizkreis 5 (HK5)",
+              "enable_hk6": "Heizkreis 6 (HK6)",
+              "enable_solar": "Solaranlage",
+              "enable_puffer_2": "Pufferspeicher 2",
+              "enable_ext_wq": "Externe Wärmequelle",
+              "enable_ww1": "Warmwasser (WW1)",
+              "enable_lager": "Lager-/Brennstoffüberwachung",
+              "enable_netzpumpe_1": "Netzpumpe 1",
+              "enable_netzpumpe_2": "Netzpumpe 2",
+              "enable_netzpumpe_3": "Netzpumpe 3"
+            },
+            "data_description": {
+              "enable_hk2": "Aktiviert die Entitäten für einen zweiten Heizkreis (HK2). Nur aktivieren, wenn der Kessel einen zweiten Heizkreis steuert.",
+              "enable_hk3": "Aktiviert die Entitäten für einen dritten Heizkreis (HK3). Nur aktivieren, wenn der Kessel einen dritten Heizkreis steuert.",
+              "enable_hk4": "Aktiviert die Entitäten für Heizkreis 4 (HK4). Nur aktivieren, wenn der Kessel diesen Heizkreis steuert.",
+              "enable_hk5": "Aktiviert die Entitäten für Heizkreis 5 (HK5). Nur aktivieren, wenn der Kessel diesen Heizkreis steuert.",
+              "enable_hk6": "Aktiviert die Entitäten für Heizkreis 6 (HK6). Nur aktivieren, wenn der Kessel diesen Heizkreis steuert.",
+              "enable_solar": "Aktiviert die Entitäten für eine thermische Solaranlage. Nur aktivieren, wenn der Kessel an eine Solaranlage angeschlossen ist.",
+              "enable_puffer_2": "Aktiviert die Entitäten für einen zweiten Pufferspeicher. Nur aktivieren, wenn ein zweiter Pufferspeicher installiert ist.",
+              "enable_ext_wq": "Aktiviert die Steuerungsentität für eine externe Wärmequelle. Nur aktivieren, wenn eine externe Wärmequelle (z. B. Wärmepumpe) angeschlossen ist.",
+              "enable_ww1": "Aktiviert die Entitäten für das Warmwassermodul (WW1). Aktivieren, wenn der Kessel einen Warmwasserspeicher steuert.",
+              "enable_lager": "Aktiviert die detaillierte Brennstoffüberwachung (Gesamtverbrauch, letztes Befülldatum). Der aktuelle Füllstand ist immer als Kernsensor verfügbar.",
+              "enable_netzpumpe_1": "Aktiviert die Entitäten für Netzpumpe 1 (NP1). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
+              "enable_netzpumpe_2": "Aktiviert die Entitäten für Netzpumpe 2 (NP2). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
+              "enable_netzpumpe_3": "Aktiviert die Entitäten für Netzpumpe 3 (NP3). Nur aktivieren, wenn diese Pumpe physisch installiert ist."
+            }
+          },
+          "polling": {
+            "name": "Abfrageintervalle",
+            "data": {
+              "scan_interval_group_1": "Scan-Intervall: Echtzeit-Kernwerte (Sekunden)",
+              "scan_interval_group_2": "Scan-Intervall: Status-Werte Allgemein (Sekunden)",
+              "scan_interval_group_3": "Scan-Intervall: Konfig/Zähler 1 (Sekunden)",
+              "scan_interval_group_4": "Scan-Intervall: Konfig/Zähler 2 (Sekunden)",
+              "scan_interval_group_5": "Scan-Intervall: Konfig/Zähler 3 (Sekunden)"
+            },
+            "data_description": {
+              "scan_interval_group_1": "Intervall für die Abfrage der wichtigsten Echtzeitdaten (z.B. Temperaturen, Status). Standard: {default_scan_interval_group_1}s.",
+              "scan_interval_group_2": "Intervall für die Abfrage allgemeiner Statusinformationen. Standard: {default_scan_interval_group_2}s.",
+              "scan_interval_group_3": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 1). Standard: {default_scan_interval_group_3}s.",
+              "scan_interval_group_4": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 2). Standard: {default_scan_interval_group_4}s.",
+              "scan_interval_group_5": "Intervall für die Abfrage von Konfigurations- und Zählerdaten (Teil 3). Standard: {default_scan_interval_group_5}s."
+            }
+          },
+          "connection": {
+            "name": "Verbindung",
+            "data": {
+              "api_timeout": "API-Timeout (Sekunden)",
+              "connect_timeout": "Verbindungs-Timeout (Sekunden)",
+              "fallback_ping_interval": "Fallback-Ping-Intervall (Sekunden)"
+            },
+            "data_description": {
+              "api_timeout": "Die maximale Wartezeit (in Sekunden) auf eine Antwort vom Kessel für jede API-Anfrage. Ein höherer Wert kann bei instabilen Netzwerken helfen, aber auch zu längeren Wartezeiten führen. Bereich: {min_api_timeout}-{max_api_timeout}s.",
+              "connect_timeout": "Die maximale Wartezeit (in Sekunden) für den Verbindungsaufbau zum Kessel. Bereich: {min_connect_timeout}-{max_connect_timeout}s.",
+              "fallback_ping_interval": "Das Intervall in Sekunden, in dem der Host angepingt wird, wenn er als offline gilt. Ein erfolgreicher Ping löst einen sofortigen Aktualisierungsversuch aus. Bereich: {min_fallback_ping_interval}-{max_fallback_ping_interval}s, Standard: {default_fallback_ping_interval}s."
+            }
+          },
+          "logging": {
+            "name": "Protokollierung",
+            "data": {
+              "log_level": "Protokollierungsstufe",
+              "advanced_logging": "Erweiterte Protokollierung aktivieren",
+              "log_version_prefix": "Version in Logs anzeigen",
+              "source_timezone": "Quell-Zeitzone (IANA-Format)"
+            },
+            "data_description": {
+              "log_level": "Legt die Detailtiefe der Protokolle für diese Integration fest. 'DEBUG' ist sehr ausführlich und nützlich für die Fehlersuche. 'INFO' ist der Standard für den normalen Betrieb.",
+              "advanced_logging": "Aktiviert zusätzliche INFO-Level-Protokolle für wichtige Aktionen (z.B. das Setzen von Werten), auch wenn die Protokollierungsstufe auf INFO steht. Nützlich, um Aktionen zu verfolgen, ohne die vollständige DEBUG-Protokollierung zu aktivieren.",
+              "log_version_prefix": "Stellt jedem Log-Eintrag dieser Integration [vX.Y.Z] voran. Macht die laufende Version in jedem Log-Ausschnitt sofort sichtbar.",
+              "source_timezone": "Die Zeitzone, in der der Kessel seine Zeitdaten liefert (z.B. 'Europe/Berlin'). Dies ist wichtig für die korrekte Interpretation von Datums-/Zeitwerten vom Kessel."
+            }
+          },
+          "advanced": {
+            "name": "Erweitert",
+            "data": {
+              "polling_preemption_timeout": "Polling-Vorrang-Timeout (Sekunden)",
+              "recently_set_poll_ignore_window_s": "Ignorier-Fenster für gesetzte Werte (Sekunden)",
+              "log_level_threshold_for_connection_errors": "Fehler-Schwellenwert für Verbindungsprobleme",
+              "error_threshold": "Fehlerschwelle",
+              "log_level_threshold_for_preemption_errors": "Fehler-Schwellenwert für Vorrang-Unterbrechungen"
+            },
+            "data_description": {
+              "polling_preemption_timeout": "Die maximale Zeit (in Sekunden), die eine Abfrageanfrage niedriger Priorität ausgeführt werden darf, wenn eine höher priorisierte Anfrage (z.B. eine Einstellungsänderung) in die Warteschlange gestellt wird. Ein niedrigerer Wert sorgt für schnellere Reaktion auf Einstellungsänderungen, kann aber bei langsamen Kesselantworten zu häufigeren Abbrüchen führen. Dieser Wert muss eine ganze Zahl sein. Bereich: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
+              "recently_set_poll_ignore_window_s": "Zeitfenster (in Sekunden), in dem Aktualisierungen für Werte ignoriert werden, die kürzlich über Home Assistant gesetzt wurden. Verhindert, dass eine Benutzereingabe sofort wieder mit einem alten Wert vom Kessel überschrieben wird. Standard: {default_ignore_window}s, Bereich: {min_ignore_window}-{max_ignore_window}s.",
+              "log_level_threshold_for_connection_errors": "Die Anzahl aufeinanderfolgender Verbindungsfehler, nach der die Protokollierung dieser Fehler eskaliert wird. Liegt die Anzahl unter diesem Schwellenwert, werden Fehler als INFO geloggt. Bei Erreichen oder Überschreiten des Schwellenwerts werden Verbindungsfehler als ERROR und andere API-Fehler als WARNING geloggt. Bereich: 1-60",
+              "error_threshold": "Die Anzahl der aufeinanderfolgenden Fehler, bevor die Integration einen `UpdateFailed`-Fehler auslöst und für eine Weile keine neuen Verbindungsversuche unternimmt. Bereich: {min_error_threshold}-{max_error_threshold}.",
+              "log_level_threshold_for_preemption_errors": "Die Anzahl aufeinanderfolgender Vorrang-Unterbrechungsfehler, nach der die Protokollierung eskaliert. Darunter werden Fehler als INFO, darüber als WARNING protokolliert. Bereich: {min_preemption_threshold}-{max_preemption_threshold}."
+            }
+          }
         }
       }
     },
@@ -1284,21 +1443,6 @@
       "puffer_2_rucklauf_extern": {
         "name": "Puffer 2 Rücklauf Extern"
       },
-      "puffer_2_ladung_aus_temperatur": {
-        "name": "Puffer 2 Ladung Aus Temperatur"
-      },
-      "puffer_2_ladung_ein_temperatur": {
-        "name": "Puffer 2 Ladung Ein Temperatur"
-      },
-      "netzpumpe_1_freigabetemperatur": {
-        "name": "Netzpumpe 1 Freigabetemperatur"
-      },
-      "netzpumpe_2_freigabetemperatur": {
-        "name": "Netzpumpe 2 Freigabetemperatur"
-      },
-      "netzpumpe_3_freigabetemperatur": {
-        "name": "Netzpumpe 3 Freigabetemperatur"
-      },
       "puffer_2_status": {
         "name": "Puffer 2 Status"
       },
@@ -1374,12 +1518,6 @@
       },
       "puffer_rucklauf_extern": {
         "name": "Puffer Rücklauf Extern"
-      },
-      "puffer_ladung_aus_temperatur": {
-        "name": "Pufferladung Aus Temperatur"
-      },
-      "puffer_ladung_ein_temperatur": {
-        "name": "Pufferladung Ein Temperatur"
       },
       "puffer_status": {
         "name": "Puffer Status"
@@ -1576,6 +1714,45 @@
       },
       "zeit_kesseluberhitzung_gesamt_std": {
         "name": "Zeit Kesselüberhitzung Gesamt (Std)"
+      },
+      "netzpumpe_1_temperatur": {
+        "name": "Netzpumpe 1 Temperatur"
+      },
+      "netzpumpe_1_status_text": {
+        "name": "Netzpumpe 1 Status"
+      },
+      "netzpumpe_1_betriebsart": {
+        "name": "Netzpumpe 1 Betriebsart"
+      },
+      "netzpumpe_2_temperatur": {
+        "name": "Netzpumpe 2 Temperatur"
+      },
+      "netzpumpe_2_status_text": {
+        "name": "Netzpumpe 2 Status"
+      },
+      "netzpumpe_2_betriebsart": {
+        "name": "Netzpumpe 2 Betriebsart"
+      },
+      "netzpumpe_3_temperatur": {
+        "name": "Netzpumpe 3 Temperatur"
+      },
+      "netzpumpe_3_status_text": {
+        "name": "Netzpumpe 3 Status"
+      },
+      "netzpumpe_3_betriebsart": {
+        "name": "Netzpumpe 3 Betriebsart"
+      },
+      "solar_kollektortemperatur": {
+        "name": "Solarkollektor Temperatur"
+      },
+      "solar_pumpe_prozent": {
+        "name": "Solarpumpe Auslastung"
+      },
+      "solar_pumpe_status_text": {
+        "name": "Solarpumpe Status"
+      },
+      "solar_ertrag_gesamt": {
+        "name": "Solar Gesamtertrag"
       }
     },
     "number": {
@@ -1854,6 +2031,27 @@
       },
       "ww2_waermequelle_ueberhoehung": {
         "name": "WW2 Wärmequelle Überhöhung"
+      },
+      "netzpumpe_1_freigabetemperatur": {
+        "name": "Netzpumpe 1 Freigabetemperatur"
+      },
+      "netzpumpe_2_freigabetemperatur": {
+        "name": "Netzpumpe 2 Freigabetemperatur"
+      },
+      "netzpumpe_3_freigabetemperatur": {
+        "name": "Netzpumpe 3 Freigabetemperatur"
+      },
+      "puffer_ladung_ein_temperatur": {
+        "name": "Pufferladung Ein Temperatur"
+      },
+      "puffer_ladung_aus_temperatur": {
+        "name": "Pufferladung Aus Temperatur"
+      },
+      "puffer_2_ladung_ein_temperatur": {
+        "name": "Puffer 2 Ladung Ein Temperatur"
+      },
+      "puffer_2_ladung_aus_temperatur": {
+        "name": "Puffer 2 Ladung Aus Temperatur"
       }
     },
     "select": {
@@ -1911,33 +2109,6 @@
           "sommer": "Sommerbetrieb",
           "urlaub": "Urlaubsbetrieb"
         }
-      },
-      "netzpumpe_1_temperatur": {
-        "name": "Netzpumpe 1 Temperatur"
-      },
-      "netzpumpe_1_status_text": {
-        "name": "Netzpumpe 1 Status"
-      },
-      "netzpumpe_1_betriebsart": {
-        "name": "Netzpumpe 1 Betriebsart"
-      },
-      "netzpumpe_2_temperatur": {
-        "name": "Netzpumpe 2 Temperatur"
-      },
-      "netzpumpe_2_status_text": {
-        "name": "Netzpumpe 2 Status"
-      },
-      "netzpumpe_2_betriebsart": {
-        "name": "Netzpumpe 2 Betriebsart"
-      },
-      "netzpumpe_3_temperatur": {
-        "name": "Netzpumpe 3 Temperatur"
-      },
-      "netzpumpe_3_status_text": {
-        "name": "Netzpumpe 3 Status"
-      },
-      "netzpumpe_3_betriebsart": {
-        "name": "Netzpumpe 3 Betriebsart"
       },
       "hk6_betriebsart": {
         "name": "HK6 Betriebsart",

@@ -5,8 +5,6 @@ the interaction with the HDG Bavaria boiler's API, allowing for more
 granular error handling and reporting within the integration.
 """
 
-__version__ = "0.1.4"
-
 __all__ = [
     "HdgApiError",
     "HdgApiConnectionError",

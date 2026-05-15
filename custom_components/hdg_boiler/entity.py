@@ -9,11 +9,10 @@ availability and attributes.
 
 from __future__ import annotations
 
-__version__ = "0.2.6"
 __all__ = ["HdgBaseEntity", "HdgNodeEntity"]
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.core import callback
@@ -22,9 +21,12 @@ from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
+    COMPONENT_GROUP_OPTIONS,
     CONF_DEVICE_ALIAS,
     CONF_HOST_IP,
+    CONF_SOURCE_TIMEZONE,
     DEFAULT_NAME,
+    DEFAULT_SOURCE_TIMEZONE,
     DOMAIN,
     ENTITY_DETAIL_LOGGER_NAME,
     HDG_DATETIME_SPECIAL_TEXT,
@@ -33,6 +35,7 @@ from .const import (
 )
 from .coordinator import HdgDataUpdateCoordinator
 from .helpers.logging_utils import format_for_log
+from .helpers.parsers import parse_sensor_value
 from .helpers.string_utils import normalize_unique_id_component, strip_hdg_node_suffix
 from .models import SensorDefinition
 
@@ -164,10 +167,23 @@ class HdgNodeEntity(HdgBaseEntity):
         if hasattr(description, "icon"):
             self._attr_icon = description.icon
 
-        # Propagate registry enabled default if present in the definition
-        enabled_default = self._entity_definition.get("entity_registry_enabled_default")
-        if enabled_default is not None:
-            self._attr_entity_registry_enabled_default = enabled_default
+        # Determine registry enabled default.
+        # Component-group entities defer to the group's config option so the
+        # user can activate entire hardware groups (HK2, Solar, …) at once.
+        component_group = self._entity_definition.get("component_group")
+        if component_group and (
+            group_opts := COMPONENT_GROUP_OPTIONS.get(component_group)
+        ):
+            conf_key, default_enabled = group_opts
+            self._attr_entity_registry_enabled_default = coordinator.entry.options.get(
+                conf_key, default_enabled
+            )
+        else:
+            enabled_default = self._entity_definition.get(
+                "entity_registry_enabled_default"
+            )
+            if enabled_default is not None:
+                self._attr_entity_registry_enabled_default = enabled_default
 
     async def async_added_to_hass(self) -> None:
         """Handle entity being added to Home Assistant."""
@@ -275,6 +291,41 @@ class HdgNodeEntity(HdgBaseEntity):
         """Log detailed entity information using _ENTITY_DETAIL_LOGGER."""
         _ENTITY_DETAIL_LOGGER.debug(
             "%s: Entity Details: %s", prefix, format_for_log(details)
+        )
+
+    def _get_value(self) -> Any:
+        """Return the current parsed value for this node.
+
+        If the definition provides a `value_fn`, it is called with the coordinator
+        (TH-style per-entity override). Otherwise, falls back to the default
+        `parse_sensor_value` path driven by definition metadata.
+        """
+        if (value_fn := self._entity_definition.get("value_fn")) is not None:
+            return value_fn(self.coordinator)
+        return parse_sensor_value(
+            raw_value=self.coordinator.data.get(self._node_id),
+            entity_definition=cast(dict[str, Any], self._entity_definition),
+            node_id_for_log=self._node_id,
+            entity_id_for_log=self._entity_definition.get("translation_key"),
+            configured_timezone=self.coordinator.entry.options.get(
+                CONF_SOURCE_TIMEZONE, DEFAULT_SOURCE_TIMEZONE
+            ),
+        )
+
+    async def _set_value(self, value: str) -> None:
+        """Write a new value for this node.
+
+        If the definition provides a `set_fn`, it is called with the coordinator
+        and value (TH-style per-entity override). Otherwise, routes through the
+        coordinator gateway (debounce + optimistic + rollback).
+        """
+        if (set_fn := self._entity_definition.get("set_fn")) is not None:
+            await set_fn(self.coordinator, value)
+            return
+        await self.coordinator.async_set_node_value(
+            node_id=self._node_id,
+            value=value,
+            entity_name_for_log=self.name or str(self.entity_id),
         )
 
     def _get_enum_key_from_value(self, raw_value: Any) -> str | None:

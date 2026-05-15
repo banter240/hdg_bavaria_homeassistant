@@ -9,7 +9,6 @@ corresponding Home Assistant entity configurations.
 
 from __future__ import annotations
 
-__version__ = "0.1.23"
 
 from typing import Final, cast
 
@@ -33,54 +32,19 @@ from .const import (
 from .models import SensorDefinition  # Import from new models.py
 
 
-# --------------------------------------------------------------------------------
-# Global Constants & Derived Keys
-# --------------------------------------------------------------------------------
+def _with_group(definition: SensorDefinition, group: str) -> SensorDefinition:
+    """Tag a definition with a component_group in-place and return it."""
+    definition["component_group"] = group
+    return definition
+
+
 POLLING_GROUP_KEYS: dict[str, str] = {
-    f"POLLING_GROUP_{i + 1}": group["key"]  # type: ignore[misc]
+    f"POLLING_GROUP_{i + 1}": group["key"]
     for i, group in enumerate(POLLING_GROUP_DEFINITIONS)
 }
 
-# Standard options for heating circuit operating modes
 HK_OPERATING_MODE_OPTIONS: Final = ["normal", "tag", "nacht", "party", "sommer"]
-# Options for external heat source operating mode (mapped to AUS, EIN, AUTO_EIN)
 EXT_WQ_OPERATING_MODE_OPTIONS: Final = ["aus", "ein", "auto_ein"]
-
-
-#
-# Entity Definition Factory Functions
-#
-# This section contains a set of "factory" functions designed to simplify the
-# creation of entity definitions in the `SENSOR_DEFINITIONS` dictionary below.
-# Instead of manually specifying every single parameter for each entity, you can
-# use these helpers to create standardized entities with fewer lines of code.
-#
-# How to add a new entity:
-# 1.  Identify the type of entity you want to add (e.g., a temperature sensor,
-#     a percentage, a duration, an enum, a writable number, etc.).
-# 2.  Choose the corresponding factory function (e.g., `create_temp_sensor`,
-#     `create_percentage_sensor`, `create_number_entity`).
-# 3.  Find the `SENSOR_DEFINITIONS` dictionary at the bottom of this file.
-# 4.  Add a new entry. The key should be a unique identifier, which MUST match
-#     the key you will add in the translation files (e.g., `en.json`).
-# 5.  Call the chosen factory function as the value for your new key.
-# 6.  Provide the required arguments, such as `key`, `node_id`, `polling_group`,
-#     and `icon`. The factory function will handle the rest of the boilerplate.
-#
-# Example: Adding a new temperature sensor
-#
-#    "my_new_temp_sensor": create_temp_sensor(
-#        key="my_new_temp_sensor",
-#        node_id="12345T",  # The API node ID from the HDG documentation
-#        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
-#        icon="mdi:thermometer-plus",
-#    ),
-#
-# If no specific factory function fits your needs, you can use the flexible
-# `create_general_sensor` function, which allows you to specify all parameters
-# manually. For highly unusual cases, you can fall back to the base
-# `_create_sensor_definition` function.
-#
 
 
 def _create_sensor_definition(
@@ -124,7 +88,6 @@ def _create_sensor_definition(
         if entity_registry_enabled_default is not None
         else True,
     }
-    # Add optional fields only if they are not None
     if hdg_formatter is not None:
         definition["hdg_formatter"] = hdg_formatter
     if ha_device_class is not None:
@@ -541,8 +504,8 @@ def create_select_entity(
         hdg_node_id=node_id,
         translation_key=key,
         polling_group=polling_group,
-        hdg_data_type="10",  # Assuming ENUM type for select
-        parse_as_type="enum_text",
+        hdg_data_type="10",
+        parse_as_type="text",  # Select values are raw strings; no enum-key mapping needed
         ha_platform="select",
         writable=True,
         entity_category=entity_category,
@@ -815,25 +778,29 @@ def get_hk_definitions(
             ),
         }
 
+    # Tag HK2+ entities with their component group so the config flow can
+    # enable/disable them as a unit.
+    if idx != 1:
+        for defn in defs.values():
+            defn["component_group"] = f"hk{idx}"
+
     return defs
 
 
 def get_netzpumpe_definitions(idx: int, base_node: int) -> dict[str, SensorDefinition]:
     """Generate entities for a network pump (Netzpumpe)."""
     p = f"netzpumpe_{idx}_"
-    # Enable NP1 by default, others disabled
-    enabled = idx == 1
 
-    return {
+    defs = {
         f"{p}temperatur": create_temp_sensor(
-            entity_registry_enabled_default=enabled,
+            entity_registry_enabled_default=False,
             key=f"{p}temperatur",
             node_id=f"{base_node + 1}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
             icon="mdi:thermometer",
         ),
         f"{p}status_text": create_enum_sensor(
-            entity_registry_enabled_default=enabled,
+            entity_registry_enabled_default=False,
             key=f"{p}status_text",
             node_id=f"{base_node + 2}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
@@ -841,7 +808,7 @@ def get_netzpumpe_definitions(idx: int, base_node: int) -> dict[str, SensorDefin
             entity_category=EntityCategory.DIAGNOSTIC,
         ),
         f"{p}betriebsart": create_diagnostic_enum_sensor(
-            entity_registry_enabled_default=enabled,
+            entity_registry_enabled_default=False,
             key=f"{p}betriebsart",
             node_id=f"{base_node + 3}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
@@ -849,17 +816,21 @@ def get_netzpumpe_definitions(idx: int, base_node: int) -> dict[str, SensorDefin
         ),
     }
 
+    for defn in defs.values():
+        defn["component_group"] = f"netzpumpe_{idx}"
+
+    return defs
+
 
 def get_netzpumpe_param_definitions(
     idx: int, base_node: int
 ) -> dict[str, SensorDefinition]:
     """Generate parameter entities for a network pump."""
     p = f"netzpumpe_{idx}_"
-    enabled = idx == 1
 
-    return {
+    defs = {
         f"{p}freigabetemperatur": create_number_entity(
-            entity_registry_enabled_default=enabled,
+            entity_registry_enabled_default=False,
             key=f"{p}freigabetemperatur",
             node_id=f"{base_node + 23}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
@@ -874,18 +845,12 @@ def get_netzpumpe_param_definitions(
         ),
     }
 
+    for defn in defs.values():
+        defn["component_group"] = f"netzpumpe_{idx}"
 
-# Master dictionary defining all sensors and entities for the integration.
-# Each key is a unique string identifier for the entity, typically matching its `translation_key`.
-# The value is a `SensorDefinition` TypedDict (defined in `models.py`) which specifies:
-#   - `hdg_node_id`: The raw ID used by the HDG API (e.g., "22003T").
-#   - `translation_key`: Used for localization of names and other UI elements.
-#   - `hdg_data_type`, `hdg_formatter`, `hdg_enum_type`: Info from HDG API about the node.
-#   - `ha_platform`: The Home Assistant platform (e.g., "sensor", "number").
-#   - `ha_device_class`, `ha_native_unit_of_measurement`, `ha_state_class`, `icon`, `entity_category`: HA entity properties.
-#   - `writable`: Boolean, true if the node's value can be set.
-#   - `parse_as_type`: Hint for how to parse the raw string value from the API.
-# Each key is a unique identifier (often matching the translation_key) for the entity.
+    return defs
+
+
 SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     **get_netzpumpe_definitions(1, 27000),
     **get_netzpumpe_definitions(2, 27100),
@@ -1824,6 +1789,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         ha_device_class=SensorDeviceClass.TEMPERATURE,
         ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         hdg_formatter="iTEMP",
+        entity_registry_enabled_default=False,
     ),
     "puffer_ladung_aus_temperatur": create_number_entity(
         key="puffer_ladung_aus_temperatur",
@@ -1837,6 +1803,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         ha_device_class=SensorDeviceClass.TEMPERATURE,
         ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         hdg_formatter="iTEMP",
+        entity_registry_enabled_default=False,
     ),
     "puffer_status": create_enum_sensor(
         key="puffer_status",
@@ -2216,37 +2183,49 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         icon="mdi:thermometer-plus",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "solar_kollektortemperatur": create_temp_sensor(
-        entity_registry_enabled_default=False,
-        key="solar_kollektortemperatur",
-        node_id="29000T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
-        icon="mdi:solar-panel-large",
+    "solar_kollektortemperatur": _with_group(
+        create_temp_sensor(
+            entity_registry_enabled_default=False,
+            key="solar_kollektortemperatur",
+            node_id="29000T",
+            polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+            icon="mdi:solar-panel-large",
+        ),
+        "solar",
     ),
-    "solar_pumpe_prozent": create_percentage_sensor(
-        entity_registry_enabled_default=False,
-        key="solar_pumpe_prozent",
-        node_id="29003T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
-        icon="mdi:pump",
+    "solar_pumpe_prozent": _with_group(
+        create_percentage_sensor(
+            entity_registry_enabled_default=False,
+            key="solar_pumpe_prozent",
+            node_id="29003T",
+            polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+            icon="mdi:pump",
+        ),
+        "solar",
     ),
-    "solar_pumpe_status_text": create_enum_sensor(
-        entity_registry_enabled_default=False,
-        key="solar_pumpe_status_text",
-        node_id="29007T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
-        icon="mdi:pump",
-        entity_category=EntityCategory.DIAGNOSTIC,
+    "solar_pumpe_status_text": _with_group(
+        create_enum_sensor(
+            entity_registry_enabled_default=False,
+            key="solar_pumpe_status_text",
+            node_id="29007T",
+            polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+            icon="mdi:pump",
+            entity_category=EntityCategory.DIAGNOSTIC,
+        ),
+        "solar",
     ),
-    "solar_ertrag_gesamt": create_energy_sensor(
-        entity_registry_enabled_default=False,
-        key="solar_ertrag_gesamt",
-        node_id="29011T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
-        icon="mdi:solar-power",
-        hdg_formatter="iKWH",
-        unit=UnitOfEnergy.KILO_WATT_HOUR,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
+    "solar_ertrag_gesamt": _with_group(
+        create_energy_sensor(
+            entity_registry_enabled_default=False,
+            key="solar_ertrag_gesamt",
+            node_id="29011T",
+            polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+            icon="mdi:solar-power",
+            hdg_formatter="iKWH",
+            unit=UnitOfEnergy.KILO_WATT_HOUR,
+            ha_state_class=SensorStateClass.TOTAL_INCREASING,
+        ),
+        "solar",
     ),
     "lager_pelletverbrauch_insgesamt": create_mass_sensor(
         entity_registry_enabled_default=False,
@@ -2259,16 +2238,8 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         ha_state_class=SensorStateClass.TOTAL_INCREASING,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "lager_aktueller_inhalt": create_mass_sensor(
-        entity_registry_enabled_default=False,
-        key="lager_aktueller_inhalt",
-        node_id="21006T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
-        icon="mdi:silo",
-        hdg_formatter="iKG",
-        unit=UnitOfMass.KILOGRAMS,
-        ha_state_class=SensorStateClass.MEASUREMENT,
-    ),
+    # lager_aktueller_inhalt removed — duplicate of lagerinhalt_aktuell (node 21006T).
+    # lagerinhalt_aktuell is enabled by default as a core metric.
     "lager_verbrauch_seit_fuellung": create_mass_sensor(
         entity_registry_enabled_default=False,
         key="lager_verbrauch_seit_fuellung",
@@ -2298,12 +2269,33 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         options=HK_OPERATING_MODE_OPTIONS,
         uppercase_value=True,
     ),
-    "externe_warmequelle_betriebsart": create_select_entity(
-        key="externe_warmequelle_betriebsart",
-        node_id="25001T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
-        icon="mdi:fire",
-        options=EXT_WQ_OPERATING_MODE_OPTIONS,
-        uppercase_value=True,
+    "externe_warmequelle_betriebsart": _with_group(
+        create_select_entity(
+            key="externe_warmequelle_betriebsart",
+            node_id="25001T",
+            polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
+            icon="mdi:fire",
+            options=EXT_WQ_OPERATING_MODE_OPTIONS,
+            uppercase_value=True,
+            entity_registry_enabled_default=False,
+        ),
+        "ext_wq",
     ),
 }
+
+# ---------------------------------------------------------------------------
+# Component group tagging — single source of truth for prefix → group mapping.
+# Applied after SENSOR_DEFINITIONS is fully assembled.
+# Netzpumpe 2/3 and HK2+ are tagged inside their factory functions.
+# ---------------------------------------------------------------------------
+_PREFIX_GROUP_MAP: Final[list[tuple[str, str]]] = [
+    ("puffer_2_", "puffer_2"),
+    ("ww1_", "ww1"),
+    ("lager_", "lager"),
+]
+
+for _k, _defn in SENSOR_DEFINITIONS.items():
+    for _prefix, _group in _PREFIX_GROUP_MAP:
+        if _k.startswith(_prefix):
+            _defn["component_group"] = _group
+            break

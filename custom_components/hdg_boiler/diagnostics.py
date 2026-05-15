@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-__version__ = "0.2.9"
 __all__ = ["async_get_config_entry_diagnostics"]
 
 import ipaddress

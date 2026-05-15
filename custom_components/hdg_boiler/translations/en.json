@@ -12,6 +12,107 @@
           "host_ip": "The IP address or hostname of your HDG Boiler (e.g., '192.168.1.100' or 'hdg-boiler.local').",
           "device_alias": "An optional, user-friendly name for this boiler in Home Assistant. If left empty, a default name will be used."
         }
+      },
+      "init": {
+        "title": "Optional Components & Settings",
+        "description": "Activate the optional hardware components connected to your boiler and adjust settings.",
+        "sections": {
+          "components": {
+            "name": "Optional Components",
+            "data": {
+              "enable_hk2": "Heating Circuit 2 (HK2)",
+              "enable_hk3": "Heating Circuit 3 (HK3)",
+              "enable_hk4": "Heating Circuit 4 (HK4)",
+              "enable_hk5": "Heating Circuit 5 (HK5)",
+              "enable_hk6": "Heating Circuit 6 (HK6)",
+              "enable_solar": "Solar System",
+              "enable_puffer_2": "Buffer Tank 2",
+              "enable_ext_wq": "External Heat Source",
+              "enable_ww1": "Domestic Hot Water (WW1)",
+              "enable_lager": "Fuel Storage Monitoring",
+              "enable_netzpumpe_1": "Network Pump 1",
+              "enable_netzpumpe_2": "Network Pump 2",
+              "enable_netzpumpe_3": "Network Pump 3"
+            },
+            "data_description": {
+              "enable_hk2": "Enable entities for a second heating circuit (HK2). Only activate if your boiler controls a second circuit.",
+              "enable_hk3": "Enable entities for a third heating circuit (HK3). Only activate if your boiler controls a third circuit.",
+              "enable_hk4": "Enable entities for heating circuit 4 (HK4). Only activate if your boiler controls this circuit.",
+              "enable_hk5": "Enable entities for heating circuit 5 (HK5). Only activate if your boiler controls this circuit.",
+              "enable_hk6": "Enable entities for heating circuit 6 (HK6). Only activate if your boiler controls this circuit.",
+              "enable_solar": "Enable entities for a solar thermal system. Only activate if your boiler is connected to a solar installation.",
+              "enable_puffer_2": "Enable entities for a second buffer tank. Only activate if a second buffer tank is installed.",
+              "enable_ext_wq": "Enable the external heat source control entity. Only activate if an external heat source (e.g. heat pump) is connected.",
+              "enable_ww1": "Enable entities for the domestic hot water module (WW1). Activate if your boiler manages a hot water tank.",
+              "enable_lager": "Enable detailed fuel storage tracking (total consumption, last fill date). The current fuel level is always available as a core sensor.",
+              "enable_netzpumpe_1": "Enable entities for network pump 1 (NP1). Only activate if this pump is physically installed.",
+              "enable_netzpumpe_2": "Enable entities for network pump 2 (NP2). Only activate if this pump is physically installed.",
+              "enable_netzpumpe_3": "Enable entities for network pump 3 (NP3). Only activate if this pump is physically installed."
+            }
+          },
+          "polling": {
+            "name": "Polling Intervals",
+            "data": {
+              "scan_interval_group_1": "Scan Interval: Real-time Core (seconds)",
+              "scan_interval_group_2": "Scan Interval: General Status (seconds)",
+              "scan_interval_group_3": "Scan Interval: Config/Counters 1 (seconds)",
+              "scan_interval_group_4": "Scan Interval: Config/Counters 2 (seconds)",
+              "scan_interval_group_5": "Scan Interval: Config/Counters 3 (seconds)"
+            },
+            "data_description": {
+              "scan_interval_group_1": "Interval for polling the most important real-time data (e.g., temperatures, status). Default: {default_scan_interval_group_1}s.",
+              "scan_interval_group_2": "Interval for polling general status information. Default: {default_scan_interval_group_2}s.",
+              "scan_interval_group_3": "Interval for polling configuration and counter data (Part 1). Default: {default_scan_interval_group_3}s.",
+              "scan_interval_group_4": "Interval for polling configuration and counter data (Part 2). Default: {default_scan_interval_group_4}s.",
+              "scan_interval_group_5": "Interval for polling configuration and counter data (Part 3). Default: {default_scan_interval_group_5}s."
+            }
+          },
+          "connection": {
+            "name": "Connection",
+            "data": {
+              "api_timeout": "API Timeout (seconds)",
+              "connect_timeout": "Connection Timeout (seconds)",
+              "fallback_ping_interval": "Fallback Ping Interval (seconds)"
+            },
+            "data_description": {
+              "api_timeout": "The maximum time (in seconds) to wait for a response from the boiler for any API request. A higher value can help with unstable networks but may lead to longer waits. Range: {min_api_timeout}-{max_api_timeout}s.",
+              "connect_timeout": "The maximum time (in seconds) to wait for a connection to be established with the boiler. Range: {min_connect_timeout}-{max_connect_timeout}s.",
+              "fallback_ping_interval": "The interval in seconds to ping the host when it is considered offline. A successful ping will trigger an immediate refresh attempt. Range: {min_fallback_ping_interval}-{max_fallback_ping_interval}s, Default: {default_fallback_ping_interval}s."
+            }
+          },
+          "logging": {
+            "name": "Logging",
+            "data": {
+              "log_level": "Logging Level",
+              "advanced_logging": "Enable Advanced Logging",
+              "log_version_prefix": "Show Version in Logs",
+              "source_timezone": "Source Timezone (IANA Format)"
+            },
+            "data_description": {
+              "log_level": "Sets the verbosity of logs for this integration. 'DEBUG' is very verbose and useful for troubleshooting. 'INFO' is the standard for normal operation.",
+              "advanced_logging": "Enables additional INFO-level logs for important actions (e.g., setting values, API request/response summaries), even when the main integration log level is set to `INFO`. Useful for tracking key operations without enabling full `DEBUG` logging, which can be very verbose.",
+              "log_version_prefix": "Prepends [vX.Y.Z] to every log message from this integration. Makes the running version immediately visible in any log snippet.",
+              "source_timezone": "The timezone in which the boiler provides its time data (e.g., 'Europe/Berlin'). This is important for correct interpretation of date/time values from the boiler."
+            }
+          },
+          "advanced": {
+            "name": "Advanced",
+            "data": {
+              "polling_preemption_timeout": "Polling Preemption Timeout (seconds)",
+              "recently_set_poll_ignore_window_s": "Recently Set Ignore Window (seconds)",
+              "log_level_threshold_for_connection_errors": "Connection Error Threshold",
+              "error_threshold": "Error Threshold",
+              "log_level_threshold_for_preemption_errors": "Preemption Error Threshold"
+            },
+            "data_description": {
+              "polling_preemption_timeout": "The maximum time (in seconds) a low-priority polling request is allowed to run if a higher-priority request (e.g., a setting change) is queued. A lower value ensures faster response to setting changes but may lead to more frequent interruptions with slow boiler responses. This value must be a whole number. Range: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
+              "recently_set_poll_ignore_window_s": "Time window (in seconds) to ignore updates for values that have been recently set via Home Assistant. This prevents the integration from immediately overwriting a user's change with an old value from the boiler. Default: {default_ignore_window}s, Range: {min_ignore_window}-{max_ignore_window}s.",
+              "log_level_threshold_for_connection_errors": "The number of consecutive connection failures after which the logging level for connection errors escalates. For example, if set to 5, the first 4 connection errors will be logged as INFO, and the 5th and subsequent errors will be logged as ERROR. Non-connection API errors will be logged as WARNING after this threshold. Range: 1-60",
+              "error_threshold": "The number of consecutive errors before the integration raises an `UpdateFailed` error and stops trying to reconnect for a while. Range: {min_error_threshold}-{max_error_threshold}.",
+              "log_level_threshold_for_preemption_errors": "The number of consecutive preemption errors before logging escalates. Below this, errors are logged as INFO. At or above, they are logged as WARNING. Range: {min_preemption_threshold}-{max_preemption_threshold}."
+            }
+          }
+        }
       }
     },
     "error": {
@@ -28,44 +129,102 @@
     "step": {
       "init": {
         "title": "HDG Bavaria Boiler Options",
-        "description": "Options for the HDG Boiler.",
-        "data": {
-          "device_alias": "Device Alias",
-          "scan_interval_group_1": "Scan Interval: Real-time Core (seconds)",
-          "scan_interval_group_2": "Scan Interval: General Status (seconds)",
-          "scan_interval_group_3": "Scan Interval: Config/Counters 1 (seconds)",
-          "scan_interval_group_4": "Scan Interval: Config/Counters 2 (seconds)",
-          "scan_interval_group_5": "Scan Interval: Config/Counters 3 (seconds)",
-          "log_level": "Logging Level",
-          "advanced_logging": "Enable Advanced Logging",
-          "source_timezone": "Source Timezone (IANA Format)",
-          "api_timeout": "API Timeout (seconds)",
-          "connect_timeout": "Connection Timeout (seconds)",
-          "polling_preemption_timeout": "Polling Preemption Timeout (seconds)",
-          "recently_set_poll_ignore_window_s": "Recently Set Ignore Window (seconds)",
-          "log_level_threshold_for_connection_errors": "Connection Error Threshold",
-          "error_threshold": "Error Threshold",
-          "log_level_threshold_for_preemption_errors": "Preemption Error Threshold",
-          "fallback_ping_interval": "Fallback Ping Interval (seconds)"
-        },
-        "data_description": {
-          "device_alias": "An optional, user-friendly name for this boiler in Home Assistant. If left empty, a default name will be used.",
-          "scan_interval_group_1": "Interval for polling the most important real-time data (e.g., temperatures, status). Default: {default_scan_interval_group_1}s.",
-          "scan_interval_group_2": "Interval for polling general status information. Default: {default_scan_interval_group_2}s.",
-          "scan_interval_group_3": "Interval for polling configuration and counter data (Part 1). Default: {default_scan_interval_group_3}s.",
-          "scan_interval_group_4": "Interval for polling configuration and counter data (Part 2). Default: {default_scan_interval_group_4}s.",
-          "scan_interval_group_5": "Interval for polling configuration and counter data (Part 3). Default: {default_scan_interval_group_5}s.",
-          "log_level": "Sets the verbosity of logs for this integration. 'DEBUG' is very verbose and useful for troubleshooting. 'INFO' is the standard for normal operation.",
-          "advanced_logging": "Enables additional INFO-level logs for important actions (e.g., setting values, API request/response summaries), even when the main integration log level is set to `INFO`. Useful for tracking key operations without enabling full `DEBUG` logging, which can be very verbose.",
-          "source_timezone": "The timezone in which the boiler provides its time data (e.g., 'Europe/Berlin'). This is important for correct interpretation of date/time values from the boiler.",
-          "api_timeout": "The maximum time (in seconds) to wait for a response from the boiler for any API request. A higher value can help with unstable networks but may lead to longer waits. Range: {min_api_timeout}-{max_api_timeout}s.",
-          "connect_timeout": "The maximum time (in seconds) to wait for a connection to be established with the boiler. Range: {min_connect_timeout}-{max_connect_timeout}s.",
-          "polling_preemption_timeout": "The maximum time (in seconds) a low-priority polling request is allowed to run if a higher-priority request (e.g., a setting change) is queued. A lower value ensures faster response to setting changes but may lead to more frequent interruptions with slow boiler responses. This value must be a whole number. Range: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
-          "recently_set_poll_ignore_window_s": "Time window (in seconds) to ignore updates for values that have been recently set via Home Assistant. This prevents the integration from immediately overwriting a user's change with an old value from the boiler. Default: {default_ignore_window}s, Range: {min_ignore_window}-{max_ignore_window}s.",
-          "log_level_threshold_for_connection_errors": "The number of consecutive connection failures after which the logging level for connection errors escalates. For example, if set to 5, the first 4 connection errors will be logged as INFO, and the 5th and subsequent errors will be logged as ERROR. Non-connection API errors will be logged as WARNING after this threshold. Range: 1-60",
-          "error_threshold": "The number of consecutive errors before the integration raises an `UpdateFailed` error and stops trying to reconnect for a while. Range: {min_error_threshold}-{max_error_threshold}.",
-          "log_level_threshold_for_preemption_errors": "The number of consecutive preemption errors before logging escalates. Below this, errors are logged as INFO. At or above, they are logged as WARNING. Range: {min_preemption_threshold}-{max_preemption_threshold}.",
-          "fallback_ping_interval": "The interval in seconds to ping the host when it is considered offline. A successful ping will trigger an immediate refresh attempt. Range: {min_fallback_ping_interval}-{max_fallback_ping_interval}s, Default: {default_fallback_ping_interval}s."
+        "sections": {
+          "components": {
+            "name": "Optional Components",
+            "data": {
+              "enable_hk2": "Heating Circuit 2 (HK2)",
+              "enable_hk3": "Heating Circuit 3 (HK3)",
+              "enable_hk4": "Heating Circuit 4 (HK4)",
+              "enable_hk5": "Heating Circuit 5 (HK5)",
+              "enable_hk6": "Heating Circuit 6 (HK6)",
+              "enable_solar": "Solar System",
+              "enable_puffer_2": "Buffer Tank 2",
+              "enable_ext_wq": "External Heat Source",
+              "enable_ww1": "Domestic Hot Water (WW1)",
+              "enable_lager": "Fuel Storage Monitoring",
+              "enable_netzpumpe_1": "Network Pump 1",
+              "enable_netzpumpe_2": "Network Pump 2",
+              "enable_netzpumpe_3": "Network Pump 3"
+            },
+            "data_description": {
+              "enable_hk2": "Enable entities for a second heating circuit (HK2). Only activate if your boiler controls a second circuit.",
+              "enable_hk3": "Enable entities for a third heating circuit (HK3). Only activate if your boiler controls a third circuit.",
+              "enable_hk4": "Enable entities for heating circuit 4 (HK4). Only activate if your boiler controls this circuit.",
+              "enable_hk5": "Enable entities for heating circuit 5 (HK5). Only activate if your boiler controls this circuit.",
+              "enable_hk6": "Enable entities for heating circuit 6 (HK6). Only activate if your boiler controls this circuit.",
+              "enable_solar": "Enable entities for a solar thermal system. Only activate if your boiler is connected to a solar installation.",
+              "enable_puffer_2": "Enable entities for a second buffer tank. Only activate if a second buffer tank is installed.",
+              "enable_ext_wq": "Enable the external heat source control entity. Only activate if an external heat source (e.g. heat pump) is connected.",
+              "enable_ww1": "Enable entities for the domestic hot water module (WW1). Activate if your boiler manages a hot water tank.",
+              "enable_lager": "Enable detailed fuel storage tracking (total consumption, last fill date). The current fuel level is always available as a core sensor.",
+              "enable_netzpumpe_1": "Enable entities for network pump 1 (NP1). Only activate if this pump is physically installed.",
+              "enable_netzpumpe_2": "Enable entities for network pump 2 (NP2). Only activate if this pump is physically installed.",
+              "enable_netzpumpe_3": "Enable entities for network pump 3 (NP3). Only activate if this pump is physically installed."
+            }
+          },
+          "polling": {
+            "name": "Polling Intervals",
+            "data": {
+              "scan_interval_group_1": "Scan Interval: Real-time Core (seconds)",
+              "scan_interval_group_2": "Scan Interval: General Status (seconds)",
+              "scan_interval_group_3": "Scan Interval: Config/Counters 1 (seconds)",
+              "scan_interval_group_4": "Scan Interval: Config/Counters 2 (seconds)",
+              "scan_interval_group_5": "Scan Interval: Config/Counters 3 (seconds)"
+            },
+            "data_description": {
+              "scan_interval_group_1": "Interval for polling the most important real-time data (e.g., temperatures, status). Default: {default_scan_interval_group_1}s.",
+              "scan_interval_group_2": "Interval for polling general status information. Default: {default_scan_interval_group_2}s.",
+              "scan_interval_group_3": "Interval for polling configuration and counter data (Part 1). Default: {default_scan_interval_group_3}s.",
+              "scan_interval_group_4": "Interval for polling configuration and counter data (Part 2). Default: {default_scan_interval_group_4}s.",
+              "scan_interval_group_5": "Interval for polling configuration and counter data (Part 3). Default: {default_scan_interval_group_5}s."
+            }
+          },
+          "connection": {
+            "name": "Connection",
+            "data": {
+              "api_timeout": "API Timeout (seconds)",
+              "connect_timeout": "Connection Timeout (seconds)",
+              "fallback_ping_interval": "Fallback Ping Interval (seconds)"
+            },
+            "data_description": {
+              "api_timeout": "The maximum time (in seconds) to wait for a response from the boiler for any API request. A higher value can help with unstable networks but may lead to longer waits. Range: {min_api_timeout}-{max_api_timeout}s.",
+              "connect_timeout": "The maximum time (in seconds) to wait for a connection to be established with the boiler. Range: {min_connect_timeout}-{max_connect_timeout}s.",
+              "fallback_ping_interval": "The interval in seconds to ping the host when it is considered offline. A successful ping will trigger an immediate refresh attempt. Range: {min_fallback_ping_interval}-{max_fallback_ping_interval}s, Default: {default_fallback_ping_interval}s."
+            }
+          },
+          "logging": {
+            "name": "Logging",
+            "data": {
+              "log_level": "Logging Level",
+              "advanced_logging": "Enable Advanced Logging",
+              "log_version_prefix": "Show Version in Logs",
+              "source_timezone": "Source Timezone (IANA Format)"
+            },
+            "data_description": {
+              "log_level": "Sets the verbosity of logs for this integration. 'DEBUG' is very verbose and useful for troubleshooting. 'INFO' is the standard for normal operation.",
+              "advanced_logging": "Enables additional INFO-level logs for important actions (e.g., setting values, API request/response summaries), even when the main integration log level is set to `INFO`. Useful for tracking key operations without enabling full `DEBUG` logging, which can be very verbose.",
+              "log_version_prefix": "Prepends [vX.Y.Z] to every log message from this integration. Makes the running version immediately visible in any log snippet.",
+              "source_timezone": "The timezone in which the boiler provides its time data (e.g., 'Europe/Berlin'). This is important for correct interpretation of date/time values from the boiler."
+            }
+          },
+          "advanced": {
+            "name": "Advanced",
+            "data": {
+              "polling_preemption_timeout": "Polling Preemption Timeout (seconds)",
+              "recently_set_poll_ignore_window_s": "Recently Set Ignore Window (seconds)",
+              "log_level_threshold_for_connection_errors": "Connection Error Threshold",
+              "error_threshold": "Error Threshold",
+              "log_level_threshold_for_preemption_errors": "Preemption Error Threshold"
+            },
+            "data_description": {
+              "polling_preemption_timeout": "The maximum time (in seconds) a low-priority polling request is allowed to run if a higher-priority request (e.g., a setting change) is queued. A lower value ensures faster response to setting changes but may lead to more frequent interruptions with slow boiler responses. This value must be a whole number. Range: {min_polling_preemption_timeout}-{max_polling_preemption_timeout}s.",
+              "recently_set_poll_ignore_window_s": "Time window (in seconds) to ignore updates for values that have been recently set via Home Assistant. This prevents the integration from immediately overwriting a user's change with an old value from the boiler. Default: {default_ignore_window}s, Range: {min_ignore_window}-{max_ignore_window}s.",
+              "log_level_threshold_for_connection_errors": "The number of consecutive connection failures after which the logging level for connection errors escalates. For example, if set to 5, the first 4 connection errors will be logged as INFO, and the 5th and subsequent errors will be logged as ERROR. Non-connection API errors will be logged as WARNING after this threshold. Range: 1-60",
+              "error_threshold": "The number of consecutive errors before the integration raises an `UpdateFailed` error and stops trying to reconnect for a while. Range: {min_error_threshold}-{max_error_threshold}.",
+              "log_level_threshold_for_preemption_errors": "The number of consecutive preemption errors before logging escalates. Below this, errors are logged as INFO. At or above, they are logged as WARNING. Range: {min_preemption_threshold}-{max_preemption_threshold}."
+            }
+          }
         }
       }
     },
@@ -1284,21 +1443,6 @@
       "puffer_2_rucklauf_extern": {
         "name": "Buffer 2 Return External"
       },
-      "puffer_2_ladung_aus_temperatur": {
-        "name": "Buffer 2 Charge Off Temperature"
-      },
-      "puffer_2_ladung_ein_temperatur": {
-        "name": "Buffer 2 Charge On Temperature"
-      },
-      "netzpumpe_1_freigabetemperatur": {
-        "name": "Network Pump 1 Enable Temperature"
-      },
-      "netzpumpe_2_freigabetemperatur": {
-        "name": "Network Pump 2 Enable Temperature"
-      },
-      "netzpumpe_3_freigabetemperatur": {
-        "name": "Network Pump 3 Enable Temperature"
-      },
       "puffer_2_status": {
         "name": "Buffer 2 Status"
       },
@@ -1374,12 +1518,6 @@
       },
       "puffer_rucklauf_extern": {
         "name": "Buffer Return External"
-      },
-      "puffer_ladung_aus_temperatur": {
-        "name": "Buffer Charge Off Temperature"
-      },
-      "puffer_ladung_ein_temperatur": {
-        "name": "Buffer Charge On Temperature"
       },
       "puffer_status": {
         "name": "Buffer Status"
@@ -1576,6 +1714,45 @@
       },
       "zeit_kesseluberhitzung_gesamt_std": {
         "name": "Boiler Overheating Time Total (Hrs)"
+      },
+      "netzpumpe_1_temperatur": {
+        "name": "Network Pump 1 Temperature"
+      },
+      "netzpumpe_1_status_text": {
+        "name": "Network Pump 1 Status"
+      },
+      "netzpumpe_1_betriebsart": {
+        "name": "Network Pump 1 Mode"
+      },
+      "netzpumpe_2_temperatur": {
+        "name": "Network Pump 2 Temperature"
+      },
+      "netzpumpe_2_status_text": {
+        "name": "Network Pump 2 Status"
+      },
+      "netzpumpe_2_betriebsart": {
+        "name": "Network Pump 2 Mode"
+      },
+      "netzpumpe_3_temperatur": {
+        "name": "Network Pump 3 Temperature"
+      },
+      "netzpumpe_3_status_text": {
+        "name": "Network Pump 3 Status"
+      },
+      "netzpumpe_3_betriebsart": {
+        "name": "Network Pump 3 Mode"
+      },
+      "solar_kollektortemperatur": {
+        "name": "Solar Collector Temperature"
+      },
+      "solar_pumpe_prozent": {
+        "name": "Solar Pump Load"
+      },
+      "solar_pumpe_status_text": {
+        "name": "Solar Pump Status"
+      },
+      "solar_ertrag_gesamt": {
+        "name": "Solar Total Yield"
       }
     },
     "number": {
@@ -1854,6 +2031,27 @@
       },
       "ww2_waermequelle_ueberhoehung": {
         "name": "DHW2 Heat Source Boost"
+      },
+      "netzpumpe_1_freigabetemperatur": {
+        "name": "Network Pump 1 Enable Temperature"
+      },
+      "netzpumpe_2_freigabetemperatur": {
+        "name": "Network Pump 2 Enable Temperature"
+      },
+      "netzpumpe_3_freigabetemperatur": {
+        "name": "Network Pump 3 Enable Temperature"
+      },
+      "puffer_ladung_ein_temperatur": {
+        "name": "Buffer Charge On Temperature"
+      },
+      "puffer_ladung_aus_temperatur": {
+        "name": "Buffer Charge Off Temperature"
+      },
+      "puffer_2_ladung_ein_temperatur": {
+        "name": "Buffer 2 Charge On Temperature"
+      },
+      "puffer_2_ladung_aus_temperatur": {
+        "name": "Buffer 2 Charge Off Temperature"
       }
     },
     "select": {
@@ -1911,33 +2109,6 @@
           "sommer": "Summer mode",
           "urlaub": "Holiday mode"
         }
-      },
-      "netzpumpe_1_temperatur": {
-        "name": "Network Pump 1 Temperature"
-      },
-      "netzpumpe_1_status_text": {
-        "name": "Network Pump 1 Status"
-      },
-      "netzpumpe_1_betriebsart": {
-        "name": "Network Pump 1 Mode"
-      },
-      "netzpumpe_2_temperatur": {
-        "name": "Network Pump 2 Temperature"
-      },
-      "netzpumpe_2_status_text": {
-        "name": "Network Pump 2 Status"
-      },
-      "netzpumpe_2_betriebsart": {
-        "name": "Network Pump 2 Mode"
-      },
-      "netzpumpe_3_temperatur": {
-        "name": "Network Pump 3 Temperature"
-      },
-      "netzpumpe_3_status_text": {
-        "name": "Network Pump 3 Status"
-      },
-      "netzpumpe_3_betriebsart": {
-        "name": "Network Pump 3 Mode"
       },
       "hk6_betriebsart": {
         "name": "HC6 Operating Mode",

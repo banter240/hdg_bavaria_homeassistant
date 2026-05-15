@@ -1,9 +1,60 @@
 [tool.mypy]
+platform = "linux"
 python_version = "3.13"
+follow_imports = "normal"
+ignore_missing_imports = true
+explicit_package_bases = true
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = false
+disallow_untyped_calls = false
+disallow_untyped_decorators = false
+disallow_untyped_defs = true
+no_implicit_optional = true
+strict_optional = true
+warn_incomplete_stub = true
+warn_no_return = true
+warn_redundant_casts = true
 warn_return_any = true
 warn_unused_configs = true
-ignore_missing_imports = true
-# exclude = ["tests/"]
+warn_unused_ignores = true
+exclude = ["testing_config/"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["B", "C", "E", "F", "W", "I", "UP", "PL", "RUF", "TID"]
+
+ignore = [
+    "E501",    # Line too long (handled by formatter)
+    "PLR0911", # Too many return statements (common in HA entity handlers and checkers)
+    "PLR0912", # Too many branches (branchy coordinator/checker functions)
+    "PLR0915", # Too many statements (complex setup/service functions)
+    "PLW0603", # Using the global statement (module-level flags for patches and log level)
+    "TID252",  # Relative imports are HA integration convention (..const, ..models etc.)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"custom_components/hdg_boiler/**/*.py" = ["PLC0415"]  # Conditional/lazy imports by design in HA
+"custom_components/hdg_boiler/definitions.py" = ["PLR0913"]  # Entity factory functions have many kwargs by design
+
+[tool.ruff.lint.pylint]
+max-args = 10
+
+[tool.ruff.lint.mccabe]
+max-complexity = 25
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components.hdg_boiler"]
+
+[tool.ruff.lint.flake8-pytest-style]
+fixture-parentheses = false
+
+[tool.ruff.lint.pyupgrade]
+keep-runtime-typing = true
 
 # --- Poetry Configuration ---
 [tool.poetry]
@@ -19,14 +70,15 @@ python = "^3.13"
 homeassistant = ">=2024.6.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.0"
-pytest-cov = "^4.0"
-pytest-homeassistant-custom-component = "^0.13"
+pytest = "9.0.0"
+pytest-cov = "7.0.0"
+pytest-homeassistant-custom-component = "0.13.320"
 
 # Recommended development tools:
-ruff = "^0.4.0"
-mypy = "^1.9.0"
-pre-commit = "^3.7.0"
+ruff = "0.15.8"
+mypy = "1.19.1"
+pre-commit = "4.5.1"
+yamllint = "1.38.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

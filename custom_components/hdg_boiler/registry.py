@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-__version__ = "0.3.4"
 __all__ = ["HdgEntityRegistry"]
 
 import logging
 from collections.abc import Iterable
 from itertools import groupby
-from typing import cast, Final, TYPE_CHECKING
+from typing import Final, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from homeassistant.helpers import entity_registry as er
@@ -68,11 +67,6 @@ class HdgEntityRegistry:
             key=lambda x: x.get("polling_group", ""),
         )
 
-    def generate_payload_str(self, nodes: list[str]) -> str:
-        """Generate a payload string for a given list of node IDs."""
-        payload_base_ids = [self._strip_trailing_t(nid) for nid in nodes]
-        return f"nodes={'T-'.join(payload_base_ids)}T"
-
     def _create_node_group_payload(
         self, group_key: str, nodes_in_group: list[str]
     ) -> NodeGroupPayload | None:
@@ -85,7 +79,6 @@ class HdgEntityRegistry:
                 "key": group_key,
                 "name": group_key.replace("_", " ").title(),
                 "nodes": nodes_in_group,
-                "payload_str": self.generate_payload_str(nodes_in_group),
                 "default_scan_interval": group_def["default_interval"],
             }
         return None
@@ -98,7 +91,7 @@ class HdgEntityRegistry:
             return
 
         nodes_in_group = sorted(
-            {cast(str, d["hdg_node_id"]) for d in group_iter if d.get("hdg_node_id")}
+            {d["hdg_node_id"] for d in group_iter if d.get("hdg_node_id")}
         )
         if not nodes_in_group:
             return
@@ -174,7 +167,8 @@ class HdgEntityRegistry:
 
     def get_node_id_by_key(self, key: str) -> str | None:
         """Return the HDG node ID for a given entity key."""
-        return self._sensor_definitions.get(key, {}).get("hdg_node_id")
+        definition = self._sensor_definitions.get(key)
+        return definition["hdg_node_id"] if definition is not None else None
 
     def increment_added_entity_count(self, platform: str, count: int) -> None:
         """Increment the count of successfully added entities for a given platform."""
@@ -216,15 +210,12 @@ class HdgEntityRegistry:
 
     def get_optimized_payload_for_group(
         self, group_key: str, active_node_ids: set[str]
-    ) -> tuple[str | None, int, int]:
-        """Return (payload_str, active_count, total_count) for a group."""
+    ) -> tuple[list[str] | None, int, int]:
+        """Return (active_nodes_list, active_count, total_count) for a group."""
         all_group_nodes = self.get_polling_group_payloads()[group_key]["nodes"]
-        active_group_nodes = [
+        if active_group_nodes := [
             n for n in all_group_nodes if strip_hdg_node_suffix(n) in active_node_ids
-        ]
-
-        if not active_group_nodes:
+        ]:
+            return active_group_nodes, len(active_group_nodes), len(all_group_nodes)
+        else:
             return None, 0, len(all_group_nodes)
-
-        payload_str = self.generate_payload_str(active_group_nodes)
-        return payload_str, len(active_group_nodes), len(all_group_nodes)

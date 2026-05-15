@@ -7,7 +7,6 @@ normalizing strings for comparison or use in unique identifiers.
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
 
 import logging
 import re
@@ -23,8 +22,7 @@ __all__ = [
     "normalize_unique_id_component",
 ]
 
-# Pre-compile the regex for stripping suffixes for efficiency.
-# This regex ensures we only strip a known suffix if the preceding part is numeric.
+# Only strips the suffix if the preceding part is numeric (avoids false matches on non-node strings).
 _SUFFIX_PATTERN = re.compile(
     rf"^(\d+)[{''.join(KNOWN_HDG_API_SETTER_SUFFIXES)}]?$", re.IGNORECASE
 )

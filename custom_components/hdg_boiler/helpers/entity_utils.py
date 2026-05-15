@@ -7,22 +7,28 @@ different platforms (sensor, number, select, etc.).
 
 from __future__ import annotations
 
-__version__ = "0.3.1"
 
 import logging
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.components.number import NumberEntityDescription, NumberMode
 from homeassistant.components.select import SelectEntityDescription
 from homeassistant.components.sensor import SensorEntityDescription
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityDescription
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from ..const import DOMAIN
+from ..const import DOMAIN, LIFECYCLE_LOGGER_NAME
 from ..models import SensorDefinition
 
-_LOGGER = logging.getLogger(DOMAIN)
+if TYPE_CHECKING:
+    from ..entity import HdgNodeEntity
 
-__all__ = ["create_entity_description"]
+_LOGGER = logging.getLogger(DOMAIN)
+_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
+
+__all__ = ["async_setup_hdg_platform", "create_entity_description"]
 
 
 def create_entity_description(
@@ -70,3 +76,39 @@ def create_entity_description(
         if v is not None
     }
     return description_class(**final_kwargs)
+
+
+async def async_setup_hdg_platform(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+    platform: str,
+    entity_class: type[HdgNodeEntity],
+) -> None:
+    """Set up entities for an HDG Bavaria platform.
+
+    Centralises the boilerplate that every platform's async_setup_entry would
+    otherwise duplicate: coordinator/registry lookup, entity list comprehension,
+    add_entities call, counter increment, and lifecycle log.
+    """
+    from ..coordinator import HdgDataUpdateCoordinator  # local to avoid circular
+    from ..registry import HdgEntityRegistry
+
+    integration_data = hass.data[DOMAIN][entry.entry_id]
+    coordinator: HdgDataUpdateCoordinator = integration_data["coordinator"]
+    hdg_entity_registry: HdgEntityRegistry = integration_data["hdg_entity_registry"]
+
+    definitions = hdg_entity_registry.get_entities_for_platform(platform)
+    if entities := [
+        entity_class(
+            coordinator,
+            create_entity_description(platform, key, entity_def),
+            entity_def,
+        )
+        for key, entity_def in definitions.items()
+    ]:
+        async_add_entities(entities)
+        hdg_entity_registry.increment_added_entity_count(platform, len(entities))
+        _LIFECYCLE_LOGGER.info(
+            "Added %d HDG Bavaria %s entities.", len(entities), platform
+        )

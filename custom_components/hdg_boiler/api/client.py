@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-__version__ = "0.3.0"
 __all__ = ["HdgApiClient"]
 
 import functools
@@ -13,14 +12,15 @@ from typing import Any, Concatenate
 import aiohttp
 from aiohttp import ClientError
 
-from .const import (
+from ..const import (
     ACCEPTED_CONTENT_TYPES,
     API_ENDPOINT_DATA_REFRESH,
     API_ENDPOINT_SET_VALUE,
 )
-from .exceptions import HdgApiConnectionError, HdgApiError, HdgApiResponseError
-from .helpers.logging_utils import _API_LOGGER, _LOGGER, format_for_log
-from .helpers.network_utils import prepare_base_url
+from ..exceptions import HdgApiConnectionError, HdgApiError, HdgApiResponseError
+from ..helpers.logging_utils import _API_LOGGER, _LOGGER, format_for_log
+from ..helpers.network_utils import prepare_base_url
+from .protocols import HdgApiProtocol, ProtocolV1, ProtocolV2
 
 
 def handle_api_errors[T, **P](
@@ -90,6 +90,9 @@ class HdgApiClient:
         self._url_data_refresh = f"{self._base_url}{API_ENDPOINT_DATA_REFRESH}"
         self._url_set_value_base = f"{self._base_url}{API_ENDPOINT_SET_VALUE}"
 
+        self.protocol: HdgApiProtocol = ProtocolV2()
+        self._protocol_auto_discovered = False
+
     @property
     def base_url(self) -> str:
         """Return the base URL of the HDG boiler API."""
@@ -132,11 +135,11 @@ class HdgApiClient:
             raise HdgApiResponseError(f"Failed to parse JSON: {err}") from err
 
     @handle_api_errors
-    async def async_get_nodes_data(self, node_payload_str: str) -> list[dict[str, Any]]:
+    async def async_get_nodes_data(self, node_ids: list[str]) -> list[dict[str, Any]]:
         """Fetch data for a specified set of nodes from the HDG boiler.
 
         Args:
-            node_payload_str: A string containing the node IDs for the data refresh.
+            node_ids: A list of node IDs for the data refresh.
 
         Returns:
             A list of dictionaries, where each dictionary represents a node's data.
@@ -145,24 +148,44 @@ class HdgApiClient:
             HdgApiResponseError: If the response is not a list of valid node dictionaries.
 
         """
-        _API_LOGGER.debug("Requesting data refresh with payload: %s", node_payload_str)
+        payload_str = self.protocol.generate_read_payload(node_ids)
+        _API_LOGGER.debug(
+            "Requesting data refresh (%s) with payload: %s",
+            self.protocol.version_name,
+            payload_str,
+        )
         headers = {"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"}
 
         async with self._session.post(
             self._url_data_refresh,
-            data=node_payload_str,
+            data=payload_str,
             headers=headers,
             timeout=self._aiohttp_timeout,
         ) as response:
             response.raise_for_status()
             json_response = await self._parse_response(response)
 
+            # Auto-Discovery Fallback Logic
+            if not self._protocol_auto_discovered and isinstance(json_response, dict):
+                status = json_response.get("status")
+                value = json_response.get("value")
+                if status == "error" and value == "nodes is not an array":
+                    # We are using ProtocolV2 on a ProtocolV1 boiler. Switch and retry.
+                    _LOGGER.info(
+                        "HDG Boiler reported 'nodes is not an array'. "
+                        "Automatically switching to Legacy API Protocol (V1)."
+                    )
+                    self.protocol = ProtocolV1()
+                    self._protocol_auto_discovered = True
+                    return await self.async_get_nodes_data(node_ids)
+
+            self._protocol_auto_discovered = True
+
             if not isinstance(json_response, list):
                 raise HdgApiResponseError(
                     f"Expected list, got {type(json_response).__name__}"
                 )
 
-            # Filter for valid node data to ensure integrity
             return [
                 item
                 for item in json_response
@@ -184,8 +207,13 @@ class HdgApiClient:
             HdgApiResponseError: If the API returns an error status or unexpected response.
 
         """
-        _API_LOGGER.debug("Setting node '%s' to value '%s'", node_id, value)
-        params = {"i": node_id, "v": value}
+        _API_LOGGER.debug(
+            "Setting node '%s' to value '%s' (%s)",
+            node_id,
+            value,
+            self.protocol.version_name,
+        )
+        params = self.protocol.generate_write_params(node_id, value)
 
         async with self._session.get(
             self._url_set_value_base, params=params, timeout=self._aiohttp_timeout

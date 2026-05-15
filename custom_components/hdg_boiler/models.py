@@ -7,69 +7,86 @@ API polling group configurations, and enumeration options.
 
 from __future__ import annotations
 
-__version__ = "0.1.7"
 
-
-from typing import TypedDict
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import StrEnum
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from homeassistant.helpers.entity import EntityCategory
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from .coordinator import HdgDataUpdateCoordinator
 
 __all__ = [
     "SensorDefinition",
     "NodeGroupPayload",
     "PollingGroupStaticDefinition",
     "EnumOption",
+    "CommandType",
+    "HdgCommand",
+    "PollingState",
 ]
 
 
-class SensorDefinition(TypedDict, total=False):
-    """Define the properties and HA platform configuration for an entity.
+class CommandType(StrEnum):
+    """Types of API commands."""
 
-    This dictionary structure is used within `SENSOR_DEFINITIONS` to specify how
-    raw data from a specific HDG node ID should be represented and handled
-    as a Home Assistant entity.
+    GET_NODES = "get_nodes"
+    SET_NODE = "set_node"
 
-    Attributes:
-        hdg_node_id: The raw HDG API node ID (e.g., "22003T").
-        translation_key: Key for localization of the entity name.
-        polling_group: The key of the polling group this sensor belongs to.
 
-        hdg_data_type: The data type code from the HDG API (e.g., "2" for numeric).
-        hdg_formatter: Specific formatter string from HDG API (e.g., "iTEMP").
-        hdg_enum_type: Key for `HDG_ENUM_MAPPINGS` if the node is an enumeration.
+@dataclass(slots=True)
+class HdgCommand:
+    """Represents a queued API command."""
 
-        ha_platform: The Home Assistant platform (e.g., "sensor", "number").
-        ha_device_class: The Home Assistant device class (e.g., `SensorDeviceClass.TEMPERATURE`).
-        ha_native_unit_of_measurement: The native unit for the HA entity.
-        ha_state_class: The Home Assistant state class (e.g., `SensorStateClass.MEASUREMENT`).
-        icon: Optional icon override for the HA entity.
-        entity_category: The Home Assistant entity category (e.g., `EntityCategory.DIAGNOSTIC`).
+    cmd_type: CommandType
+    context_key: str | None = None
+    node_id: str | None = None
+    node_ids: list[str] | None = None
+    value: str | None = None
 
-        writable: Boolean indicating if the node value can be set via the API.
-        parse_as_type: Internal type hint for parsing the raw string value (e.g., "float").
-        normalize_internal_whitespace: If True, normalizes internal whitespace in the raw string.
 
-        setter_type: For writable entities, the type expected by the API setter (e.g., "int").
-        setter_min_val: Minimum allowed value for writable entities.
-        setter_max_val: Maximum allowed value for writable entities.
-        setter_step: Step value for writable entities.
-        options: A list of valid string options for a `select` entity.
+@dataclass(slots=True)
+class PollingState:
+    """Represents the current state of API polling."""
 
-    """
+    consecutive_failures: int = 0
+    consecutive_connection_failures: int = 0
+    consecutive_preemption_failures: int = 0
+    last_update_success_time: datetime | None = None
+    last_update_times: dict[str, float] = field(default_factory=dict)
+    failed_group_retry_info: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+
+class _SensorDefinitionRequired(TypedDict):
+    """Required fields present on every entity definition."""
 
     hdg_node_id: str
     translation_key: str
     polling_group: str
+    ha_platform: str
+    writable: bool
+    entity_registry_enabled_default: bool
+
+
+class SensorDefinition(_SensorDefinitionRequired, total=False):
+    """Define the properties and HA platform configuration for an entity.
+
+    Required fields (always present) are inherited from _SensorDefinitionRequired.
+    All fields below are optional — present only when explicitly set.
+    """
+
     hdg_data_type: str | None
     hdg_formatter: str | None
     hdg_enum_type: str | None
-    ha_platform: str
     ha_device_class: str | None
     ha_native_unit_of_measurement: str | None
     ha_state_class: str | None
     icon: str | None
     entity_category: EntityCategory | None
-    writable: bool
     parse_as_type: str | None
     setter_type: str | None
     setter_min_val: float | None
@@ -78,50 +95,35 @@ class SensorDefinition(TypedDict, total=False):
     options: list[str] | None
     normalize_internal_whitespace: bool | None
     uppercase_value: bool | None
-    entity_registry_enabled_default: bool | None
+    # Optional hardware group this entity belongs to.
+    # When set, entity_registry_enabled_default is driven by the corresponding
+    # CONF_ENABLE_* option rather than the hardcoded definition value.
+    component_group: str | None
+    # Definition-based value/set hooks.
+    # When set, entity classes delegate all read/write logic to these callables
+    # instead of the default parse_sensor_value / async_set_node_value paths.
+    value_fn: Callable[[HdgDataUpdateCoordinator], Any] | None
+    set_fn: Callable[[HdgDataUpdateCoordinator, str], Awaitable[None]] | None
 
 
 class NodeGroupPayload(TypedDict):
-    """Define the structure for an HDG API node polling group.
-
-    Used in `polling_groups.py` to define `HDG_NODE_PAYLOADS`.
-
-    Attributes:
-        key: The unique key of the polling group (e.g., "group_1").
-        name: A human-readable name for the polling group.
-        nodes: A list of HDG node IDs belonging to this group.
-        payload_str: The formatted string for the 'nodes' API parameter.
-        default_scan_interval: The default scan interval in seconds.
-
-    """
+    """Define the structure for an HDG API node polling group."""
 
     key: str
     name: str
     nodes: list[str]
-    payload_str: str
     default_scan_interval: int
 
 
 class PollingGroupStaticDefinition(TypedDict):
-    """Define the static configuration of a polling group.
-
-    Used in `const.py` for the main list of polling group definitions.
-
-    Attributes:
-        key: Unique key for the polling group (e.g., "group_1").
-        default_interval: The default scan interval in seconds.
-
-    """
+    """Define the static configuration of a polling group."""
 
     key: str
     default_interval: int
 
 
 class EnumOption(TypedDict):
-    """Represent a single option within an enumeration, with translations.
-
-    Used in `enums.py` for `HDG_ENUM_MAPPINGS`.
-    """
+    """Represent a single option within an enumeration, with translations."""
 
     de: str
     en: str
