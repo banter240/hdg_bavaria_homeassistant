@@ -1,3 +1,25 @@
+## [2.0.0-dev.4](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.3...v2.0.0-dev.4) (2026-05-17)
+
+### 🐛 Bug Fixes
+
+* fix(coordinator): restore periodic polling and registry-based node pre-population
+
+Two regressions introduced in the dev.3 refactor:
+
+1. update_interval was set to None, so HA never called _async_update_data
+   after the initial refresh. All sensors froze at startup values.
+   Fix: set update_interval=timedelta(seconds=MIN_SCAN_INTERVAL) so HA drives
+   the 15 s tick loop; _get_groups_to_fetch() gates slower groups internally.
+
+2. _setup_initial_active_nodes() (which read enabled entities from the HA
+   entity registry) was replaced by get_default_active_node_ids(), which only
+   includes entities with entity_registry_enabled_default=True. Manually-enabled
+   sensors in slow polling groups (group_5, 24 h interval) were absent from
+   _active_node_ids on the first poll, causing them to be unavailable for up to
+   24 hours after every restart.
+   Fix: add _sync_active_nodes_from_registry() called before first_refresh,
+   restoring the dev.2 behaviour.
+
 ## [2.0.0-dev.3](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.2...v2.0.0-dev.3) (2026-05-15)
 
 ### ✨ New Features
