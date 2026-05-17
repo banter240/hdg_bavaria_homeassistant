@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -25,6 +26,7 @@ from .const import (
     DEFAULT_SET_VALUE_DEBOUNCE_DELAY_S,
     DOMAIN,
     MAX_CONCURRENT_POLL_REQUESTS,
+    MIN_SCAN_INTERVAL,
     POLLING_RETRY_BACKOFF_FACTOR,
     POLLING_RETRY_INITIAL_DELAY_S,
     POLLING_RETRY_MAX_DELAY_S,
@@ -84,7 +86,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{self._hostname}",
-            update_interval=None,
+            update_interval=timedelta(seconds=MIN_SCAN_INTERVAL),
         )
 
         self._polling_response_processor = HdgPollingResponseProcessor(self)
@@ -231,8 +233,38 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         return any_success
 
+    def _sync_active_nodes_from_registry(self) -> None:
+        """Pre-populate active nodes from the HA entity registry.
+
+        Entities with entity_registry_enabled_default=False (e.g. lager sensors)
+        are excluded from get_default_active_node_ids(). If the user previously
+        enabled them manually they would be missed on the first poll — which sets
+        the 24 h group timer — leaving them unavailable until the next day.
+        This method walks the registry so any already-enabled entity is polled
+        on the very first cycle, regardless of its enabled-by-default flag.
+        """
+        ent_reg = er.async_get(self.hass)
+        added = 0
+        for reg_entry in er.async_entries_for_config_entry(
+            ent_reg, self.entry.entry_id
+        ):
+            if not reg_entry.disabled:
+                if (
+                    node_id
+                    := self.hdg_entity_registry.resolve_node_id_from_entity_entry(
+                        reg_entry
+                    )
+                ):
+                    self._active_node_ids.add(node_id)
+                    added += 1
+        if added:
+            _LIFECYCLE_LOGGER.debug(
+                "Pre-populated %d active nodes from entity registry.", added
+            )
+
     async def async_config_entry_first_refresh(self) -> None:
         """Perform initial sequential data refresh for all polling groups."""
+        self._sync_active_nodes_from_registry()
         _LIFECYCLE_LOGGER.info("Initiating first data refresh for %s.", self.name)
         all_groups = list(self.hdg_entity_registry.get_polling_group_payloads().keys())
         try:
