@@ -29,6 +29,7 @@
               "enable_puffer_2": "Pufferspeicher 2",
               "enable_ext_wq": "Externe Wärmequelle",
               "enable_ww1": "Warmwasser (WW1)",
+              "enable_ww2": "Warmwasser (WW2)",
               "enable_lager": "Lager-/Brennstoffüberwachung",
               "enable_netzpumpe_1": "Netzpumpe 1",
               "enable_netzpumpe_2": "Netzpumpe 2",
@@ -44,10 +45,22 @@
               "enable_puffer_2": "Aktiviert die Entitäten für einen zweiten Pufferspeicher. Nur aktivieren, wenn ein zweiter Pufferspeicher installiert ist.",
               "enable_ext_wq": "Aktiviert die Steuerungsentität für eine externe Wärmequelle. Nur aktivieren, wenn eine externe Wärmequelle (z. B. Wärmepumpe) angeschlossen ist.",
               "enable_ww1": "Aktiviert die Entitäten für das Warmwassermodul (WW1). Aktivieren, wenn der Kessel einen Warmwasserspeicher steuert.",
+              "enable_ww2": "Aktiviert die Entitäten für das Warmwassermodul (WW2). Aktivieren, wenn der Kessel einen zweiten Warmwasserspeicher / -kreis steuert.",
               "enable_lager": "Aktiviert die detaillierte Brennstoffüberwachung (Gesamtverbrauch, letztes Befülldatum). Der aktuelle Füllstand ist immer als Kernsensor verfügbar.",
               "enable_netzpumpe_1": "Aktiviert die Entitäten für Netzpumpe 1 (NP1). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
               "enable_netzpumpe_2": "Aktiviert die Entitäten für Netzpumpe 2 (NP2). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
               "enable_netzpumpe_3": "Aktiviert die Entitäten für Netzpumpe 3 (NP3). Nur aktivieren, wenn diese Pumpe physisch installiert ist."
+            }
+          },
+          "puffer": {
+            "name": "Puffer Fühler (individuelle Node-IDs)",
+            "data": {
+              "puffer_mitte_oben_node_id": "Puffer Fühler Mitte-Oben (Node-ID)",
+              "puffer_mitte_unten_node_id": "Puffer Fühler Mitte-Unten (Node-ID)"
+            },
+            "data_description": {
+              "puffer_mitte_oben_node_id": "Node-ID aus dem Boiler-Webinterface für den Fühler 'Puffer mitte-oben' (z. B. 24024). Leer lassen, wenn nicht vorhanden – dann werden nur die klassischen 3 Puffer-Temperatursensoren verwendet.",
+              "puffer_mitte_unten_node_id": "Node-ID aus dem Boiler-Webinterface für den Fühler 'Puffer mitte-unten' (z. B. 24025). Leer lassen, wenn nicht vorhanden."
             }
           },
           "polling": {
@@ -142,6 +155,7 @@
               "enable_puffer_2": "Pufferspeicher 2",
               "enable_ext_wq": "Externe Wärmequelle",
               "enable_ww1": "Warmwasser (WW1)",
+              "enable_ww2": "Warmwasser (WW2)",
               "enable_lager": "Lager-/Brennstoffüberwachung",
               "enable_netzpumpe_1": "Netzpumpe 1",
               "enable_netzpumpe_2": "Netzpumpe 2",
@@ -157,10 +171,22 @@
               "enable_puffer_2": "Aktiviert die Entitäten für einen zweiten Pufferspeicher. Nur aktivieren, wenn ein zweiter Pufferspeicher installiert ist.",
               "enable_ext_wq": "Aktiviert die Steuerungsentität für eine externe Wärmequelle. Nur aktivieren, wenn eine externe Wärmequelle (z. B. Wärmepumpe) angeschlossen ist.",
               "enable_ww1": "Aktiviert die Entitäten für das Warmwassermodul (WW1). Aktivieren, wenn der Kessel einen Warmwasserspeicher steuert.",
+              "enable_ww2": "Aktiviert die Entitäten für das Warmwassermodul (WW2). Aktivieren, wenn der Kessel einen zweiten Warmwasserspeicher / -kreis steuert.",
               "enable_lager": "Aktiviert die detaillierte Brennstoffüberwachung (Gesamtverbrauch, letztes Befülldatum). Der aktuelle Füllstand ist immer als Kernsensor verfügbar.",
               "enable_netzpumpe_1": "Aktiviert die Entitäten für Netzpumpe 1 (NP1). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
               "enable_netzpumpe_2": "Aktiviert die Entitäten für Netzpumpe 2 (NP2). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
               "enable_netzpumpe_3": "Aktiviert die Entitäten für Netzpumpe 3 (NP3). Nur aktivieren, wenn diese Pumpe physisch installiert ist."
+            }
+          },
+          "puffer": {
+            "name": "Puffer Fühler (individuelle Node-IDs)",
+            "data": {
+              "puffer_mitte_oben_node_id": "Puffer Fühler Mitte-Oben (Node-ID)",
+              "puffer_mitte_unten_node_id": "Puffer Fühler Mitte-Unten (Node-ID)"
+            },
+            "data_description": {
+              "puffer_mitte_oben_node_id": "Node-ID aus dem Boiler-Webinterface für den Fühler 'Puffer mitte-oben' (z. B. 24024). Leer lassen, wenn nicht vorhanden – dann werden nur die klassischen 3 Puffer-Temperatursensoren verwendet.",
+              "puffer_mitte_unten_node_id": "Node-ID aus dem Boiler-Webinterface für den Fühler 'Puffer mitte-unten' (z. B. 24025). Leer lassen, wenn nicht vorhanden."
             }
           },
           "polling": {
@@ -1524,6 +1550,12 @@
       },
       "puffer_temperatur_mitte": {
         "name": "Puffer Temperatur Mitte"
+      },
+      "puffer_temperatur_mitte_oben": {
+        "name": "Puffer Temperatur Mitte-Oben"
+      },
+      "puffer_temperatur_mitte_unten": {
+        "name": "Puffer Temperatur Mitte-Unten"
       },
       "puffer_temperatur_oben": {
         "name": "Puffer Temperatur Oben"

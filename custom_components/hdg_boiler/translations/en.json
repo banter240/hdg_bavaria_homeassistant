@@ -29,6 +29,7 @@
               "enable_puffer_2": "Buffer Tank 2",
               "enable_ext_wq": "External Heat Source",
               "enable_ww1": "Domestic Hot Water (WW1)",
+              "enable_ww2": "Domestic Hot Water (WW2)",
               "enable_lager": "Fuel Storage Monitoring",
               "enable_netzpumpe_1": "Network Pump 1",
               "enable_netzpumpe_2": "Network Pump 2",
@@ -44,10 +45,22 @@
               "enable_puffer_2": "Enable entities for a second buffer tank. Only activate if a second buffer tank is installed.",
               "enable_ext_wq": "Enable the external heat source control entity. Only activate if an external heat source (e.g. heat pump) is connected.",
               "enable_ww1": "Enable entities for the domestic hot water module (WW1). Activate if your boiler manages a hot water tank.",
+              "enable_ww2": "Enable entities for the domestic hot water module (WW2). Activate if your boiler manages a second hot water tank/circuit.",
               "enable_lager": "Enable detailed fuel storage tracking (total consumption, last fill date). The current fuel level is always available as a core sensor.",
               "enable_netzpumpe_1": "Enable entities for network pump 1 (NP1). Only activate if this pump is physically installed.",
               "enable_netzpumpe_2": "Enable entities for network pump 2 (NP2). Only activate if this pump is physically installed.",
               "enable_netzpumpe_3": "Enable entities for network pump 3 (NP3). Only activate if this pump is physically installed."
+            }
+          },
+          "puffer": {
+            "name": "Buffer Sensors (custom node IDs)",
+            "data": {
+              "puffer_mitte_oben_node_id": "Buffer Sensor Middle-Upper (Node ID)",
+              "puffer_mitte_unten_node_id": "Buffer Sensor Middle-Lower (Node ID)"
+            },
+            "data_description": {
+              "puffer_mitte_oben_node_id": "Node ID from the boiler web interface for the 'Fühler Puffer mitte-oben' sensor (e.g. 24024). Leave empty if not present — only the classic 3 buffer temperature sensors will be used.",
+              "puffer_mitte_unten_node_id": "Node ID from the boiler web interface for the 'Fühler Puffer mitte-unten' sensor (e.g. 24025). Leave empty if not present."
             }
           },
           "polling": {
@@ -142,6 +155,7 @@
               "enable_puffer_2": "Buffer Tank 2",
               "enable_ext_wq": "External Heat Source",
               "enable_ww1": "Domestic Hot Water (WW1)",
+              "enable_ww2": "Domestic Hot Water (WW2)",
               "enable_lager": "Fuel Storage Monitoring",
               "enable_netzpumpe_1": "Network Pump 1",
               "enable_netzpumpe_2": "Network Pump 2",
@@ -157,10 +171,22 @@
               "enable_puffer_2": "Enable entities for a second buffer tank. Only activate if a second buffer tank is installed.",
               "enable_ext_wq": "Enable the external heat source control entity. Only activate if an external heat source (e.g. heat pump) is connected.",
               "enable_ww1": "Enable entities for the domestic hot water module (WW1). Activate if your boiler manages a hot water tank.",
+              "enable_ww2": "Enable entities for the domestic hot water module (WW2). Activate if your boiler manages a second hot water tank/circuit.",
               "enable_lager": "Enable detailed fuel storage tracking (total consumption, last fill date). The current fuel level is always available as a core sensor.",
               "enable_netzpumpe_1": "Enable entities for network pump 1 (NP1). Only activate if this pump is physically installed.",
               "enable_netzpumpe_2": "Enable entities for network pump 2 (NP2). Only activate if this pump is physically installed.",
               "enable_netzpumpe_3": "Enable entities for network pump 3 (NP3). Only activate if this pump is physically installed."
+            }
+          },
+          "puffer": {
+            "name": "Buffer Sensors (custom node IDs)",
+            "data": {
+              "puffer_mitte_oben_node_id": "Buffer Sensor Middle-Upper (Node ID)",
+              "puffer_mitte_unten_node_id": "Buffer Sensor Middle-Lower (Node ID)"
+            },
+            "data_description": {
+              "puffer_mitte_oben_node_id": "Node ID from the boiler web interface for the 'Fühler Puffer mitte-oben' sensor (e.g. 24024). Leave empty if not present — only the classic 3 buffer temperature sensors will be used.",
+              "puffer_mitte_unten_node_id": "Node ID from the boiler web interface for the 'Fühler Puffer mitte-unten' sensor (e.g. 24025). Leave empty if not present."
             }
           },
           "polling": {
@@ -1524,6 +1550,12 @@
       },
       "puffer_temperatur_mitte": {
         "name": "Buffer Temperature Middle"
+      },
+      "puffer_temperatur_mitte_oben": {
+        "name": "Buffer Temperature Middle Upper"
+      },
+      "puffer_temperatur_mitte_unten": {
+        "name": "Buffer Temperature Middle Lower"
       },
       "puffer_temperatur_oben": {
         "name": "Buffer Temperature Top"

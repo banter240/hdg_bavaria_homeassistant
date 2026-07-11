@@ -1,4 +1,3 @@
-# ruff: noqa: F401
 """Constants for the HDG Bavaria Boiler integration."""
 
 from __future__ import annotations
@@ -38,11 +37,18 @@ __all__: Final[list[str]] = [
     "CONF_ENABLE_PUFFER_2",
     "CONF_ENABLE_EXT_WQ",
     "CONF_ENABLE_WW1",
+    "CONF_ENABLE_WW2",
     "CONF_ENABLE_LAGER",
     "CONF_ENABLE_NETZPUMPE_1",
     "CONF_ENABLE_NETZPUMPE_2",
     "CONF_ENABLE_NETZPUMPE_3",
+    "CONF_PUFFER_MITTE_OBEN_NODE_ID",
+    "CONF_PUFFER_MITTE_UNTEN_NODE_ID",
+    "DEFAULT_PUFFER_MITTE_OBEN_NODE_ID",
+    "DEFAULT_PUFFER_MITTE_UNTEN_NODE_ID",
+    "PUFFER_MITTE_NODE_MAP",
     "DEFAULT_ENABLE_WW1",
+    "DEFAULT_ENABLE_WW2",
     "DEFAULT_ENABLE_HK2",
     "DEFAULT_ENABLE_HK3",
     "DEFAULT_ENABLE_HK4",
@@ -127,7 +133,6 @@ __all__: Final[list[str]] = [
 ]
 
 
-# Home Assistant versions before 2025.x might not have TONNES in UnitOfMass
 UNIT_MASS_TONNES: Final[str] = getattr(UnitOfMass, "TONNES", "t")
 
 DOMAIN: Final[str] = "hdg_boiler"
@@ -155,10 +160,8 @@ CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS: Final[str] = (
 )
 CONF_FALLBACK_PING_INTERVAL: Final[str] = "fallback_ping_interval"
 
-# Component group enable/disable toggles (optional hardware / boiler packages).
-# Each group maps 1-to-1 to a real installable package or hardware option —
-# never combine unrelated options into one toggle.
 CONF_ENABLE_WW1: Final[str] = "enable_ww1"
+CONF_ENABLE_WW2: Final[str] = "enable_ww2"
 CONF_ENABLE_HK2: Final[str] = "enable_hk2"
 CONF_ENABLE_HK3: Final[str] = "enable_hk3"
 CONF_ENABLE_HK4: Final[str] = "enable_hk4"
@@ -173,6 +176,7 @@ CONF_ENABLE_NETZPUMPE_2: Final[str] = "enable_netzpumpe_2"
 CONF_ENABLE_NETZPUMPE_3: Final[str] = "enable_netzpumpe_3"
 
 DEFAULT_ENABLE_WW1: Final[bool] = False
+DEFAULT_ENABLE_WW2: Final[bool] = False
 DEFAULT_ENABLE_HK2: Final[bool] = False
 DEFAULT_ENABLE_HK3: Final[bool] = False
 DEFAULT_ENABLE_HK4: Final[bool] = False
@@ -186,10 +190,20 @@ DEFAULT_ENABLE_NETZPUMPE_1: Final[bool] = False
 DEFAULT_ENABLE_NETZPUMPE_2: Final[bool] = False
 DEFAULT_ENABLE_NETZPUMPE_3: Final[bool] = False
 
-# Maps component_group identifier → (conf_key, default_enabled).
-# This is the single source of truth used by entity.py and __init__.py.
+CONF_PUFFER_MITTE_OBEN_NODE_ID: Final[str] = "puffer_mitte_oben_node_id"
+CONF_PUFFER_MITTE_UNTEN_NODE_ID: Final[str] = "puffer_mitte_unten_node_id"
+
+DEFAULT_PUFFER_MITTE_OBEN_NODE_ID: Final[str] = ""
+DEFAULT_PUFFER_MITTE_UNTEN_NODE_ID: Final[str] = ""
+
+PUFFER_MITTE_NODE_MAP: Final[dict[str, str]] = {
+    "puffer_temperatur_mitte_oben": CONF_PUFFER_MITTE_OBEN_NODE_ID,
+    "puffer_temperatur_mitte_unten": CONF_PUFFER_MITTE_UNTEN_NODE_ID,
+}
+
 COMPONENT_GROUP_OPTIONS: Final[dict[str, tuple[str, bool]]] = {
     "ww1": (CONF_ENABLE_WW1, DEFAULT_ENABLE_WW1),
+    "ww2": (CONF_ENABLE_WW2, DEFAULT_ENABLE_WW2),
     "hk2": (CONF_ENABLE_HK2, DEFAULT_ENABLE_HK2),
     "hk3": (CONF_ENABLE_HK3, DEFAULT_ENABLE_HK3),
     "hk4": (CONF_ENABLE_HK4, DEFAULT_ENABLE_HK4),

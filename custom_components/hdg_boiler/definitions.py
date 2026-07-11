@@ -10,7 +10,7 @@ corresponding Home Assistant entity configurations.
 from __future__ import annotations
 
 
-from typing import Final, cast
+from typing import Any, Final, cast
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
@@ -26,10 +26,12 @@ from homeassistant.const import (
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import (
-    POLLING_GROUP_DEFINITIONS,  # We will derive the keys from here
+    POLLING_GROUP_DEFINITIONS,
+    PUFFER_MITTE_NODE_MAP,
     UNIT_MASS_TONNES,
 )
-from .models import SensorDefinition  # Import from new models.py
+from .helpers.string_utils import normalize_hdg_node_id
+from .models import SensorDefinition
 
 
 def _with_group(definition: SensorDefinition, group: str) -> SensorDefinition:
@@ -761,7 +763,6 @@ def get_hk_definitions(
         ),
     }
 
-    # Add HK1 specific sensors
     if idx == 1:
         defs |= {
             "heizgrenze_sommer": create_temp_sensor(
@@ -778,8 +779,6 @@ def get_hk_definitions(
             ),
         }
 
-    # Tag HK2+ entities with their component group so the config flow can
-    # enable/disable them as a unit.
     if idx != 1:
         for defn in defs.values():
             defn["component_group"] = f"hk{idx}"
@@ -848,6 +847,25 @@ def get_netzpumpe_param_definitions(
     for defn in defs.values():
         defn["component_group"] = f"netzpumpe_{idx}"
 
+    return defs
+
+
+def get_sensor_definitions(
+    options: dict[str, Any] | None = None,
+) -> dict[str, SensorDefinition]:
+    """Return sensor definitions, adding puffer middle sensors only if node IDs are configured."""
+    defs = dict(SENSOR_DEFINITIONS)
+    opts = options or {}
+    for key, conf in PUFFER_MITTE_NODE_MAP.items():
+        raw = opts.get(conf)
+        if raw and str(raw).strip():
+            if nid := normalize_hdg_node_id(raw):
+                defs[key] = create_temp_sensor(
+                    key=key,
+                    node_id=nid,
+                    polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+                    icon="mdi:coolant-temperature",
+                )
     return defs
 
 
@@ -2183,6 +2201,66 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         icon="mdi:thermometer-plus",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    "ww2_temperatur_ist": create_temp_sensor(
+        entity_registry_enabled_default=False,
+        key="ww2_temperatur_ist",
+        node_id="28100T",
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+        icon="mdi:thermometer",
+    ),
+    "ww2_temperatur_vorlauf_solar_ist": create_temp_sensor(
+        entity_registry_enabled_default=False,
+        key="ww2_temperatur_vorlauf_solar_ist",
+        node_id="28103T",
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+        icon="mdi:solar-power-variant",
+    ),
+    "ww2_ladungspumpe_status_text": create_enum_sensor(
+        entity_registry_enabled_default=False,
+        key="ww2_ladungspumpe_status_text",
+        node_id="28104T",
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+        icon="mdi:pump",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "ww2_erhitzen_an_schwelle": create_number_entity(
+        entity_registry_enabled_default=False,
+        key="ww2_erhitzen_an_schwelle",
+        node_id="8121T",
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+        icon="mdi:thermometer-chevron-up",
+        setter_type="int",
+        setter_min_val=10.0,
+        setter_max_val=60.0,
+        setter_step=1.0,
+        ha_device_class=SensorDeviceClass.TEMPERATURE,
+        ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        hdg_formatter="iTEMP",
+        ha_state_class=SensorStateClass.MEASUREMENT,
+    ),
+    "ww2_erhitzen_aus_schwelle": create_number_entity(
+        entity_registry_enabled_default=False,
+        key="ww2_erhitzen_aus_schwelle",
+        node_id="8122T",
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+        icon="mdi:thermometer-chevron-down",
+        setter_type="int",
+        setter_min_val=20.0,
+        setter_max_val=70.0,
+        setter_step=1.0,
+        ha_device_class=SensorDeviceClass.TEMPERATURE,
+        ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        hdg_formatter="iTEMP",
+        ha_state_class=SensorStateClass.MEASUREMENT,
+    ),
+    "ww2_angeforderte_temperatur_status": create_enum_sensor(
+        entity_registry_enabled_default=False,
+        key="ww2_angeforderte_temperatur_status",
+        node_id="28199T",
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+        icon="mdi:thermometer-plus",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
     "solar_kollektortemperatur": _with_group(
         create_temp_sensor(
             entity_registry_enabled_default=False,
@@ -2238,8 +2316,6 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         ha_state_class=SensorStateClass.TOTAL_INCREASING,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    # lager_aktueller_inhalt removed — duplicate of lagerinhalt_aktuell (node 21006T).
-    # lagerinhalt_aktuell is enabled by default as a core metric.
     "lager_verbrauch_seit_fuellung": create_mass_sensor(
         entity_registry_enabled_default=False,
         key="lager_verbrauch_seit_fuellung",
@@ -2283,14 +2359,10 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     ),
 }
 
-# ---------------------------------------------------------------------------
-# Component group tagging — single source of truth for prefix → group mapping.
-# Applied after SENSOR_DEFINITIONS is fully assembled.
-# Netzpumpe 2/3 and HK2+ are tagged inside their factory functions.
-# ---------------------------------------------------------------------------
 _PREFIX_GROUP_MAP: Final[list[tuple[str, str]]] = [
     ("puffer_2_", "puffer_2"),
     ("ww1_", "ww1"),
+    ("ww2_", "ww2"),
     ("lager_", "lager"),
 ]
 

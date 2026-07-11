@@ -15,7 +15,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity_registry import RegistryEntryDisabler
 
@@ -27,6 +26,8 @@ from .const import (
     CONF_ERROR_THRESHOLD,
     CONF_HOST_IP,
     CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    CONF_PUFFER_MITTE_OBEN_NODE_ID,
+    CONF_PUFFER_MITTE_UNTEN_NODE_ID,
     DEFAULT_API_TIMEOUT,
     DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_ERROR_THRESHOLD,
@@ -34,8 +35,13 @@ from .const import (
     DOMAIN,
     LIFECYCLE_LOGGER_NAME,
 )
+from .helpers.entity_registry_utils import async_sync_entities_by_key
+from .helpers.string_utils import normalize_hdg_node_id
 from .coordinator import HdgDataUpdateCoordinator, async_create_and_refresh_coordinator
-from .definitions import POLLING_GROUP_DEFINITIONS, SENSOR_DEFINITIONS
+from .definitions import (
+    POLLING_GROUP_DEFINITIONS,
+    get_sensor_definitions,
+)
 from .helpers.api_access_manager import HdgApiAccessManager
 from .helpers.logging_utils import configure_loggers
 from .registry import HdgEntityRegistry
@@ -94,7 +100,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HdgConfigEntry) -> bool:
 
     api_client, api_access_manager = _create_api_and_access_manager(hass, entry)
     hdg_entity_registry = HdgEntityRegistry(
-        SENSOR_DEFINITIONS, POLLING_GROUP_DEFINITIONS
+        get_sensor_definitions(entry.options), POLLING_GROUP_DEFINITIONS
     )
     api_access_manager.start(entry)  # Start the worker before awaiting the coordinator
     log_level_threshold = entry.options.get(
@@ -128,6 +134,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HdgConfigEntry) -> bool:
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    await _async_sync_puffer_sensors(hass, entry)
+
     _LIFECYCLE_LOGGER.info(
         "HDG Boiler for %s setup complete. Added %d entities.",
         entry.data[CONF_HOST_IP],
@@ -160,67 +169,68 @@ async def async_unload_entry(hass: HomeAssistant, entry: HdgConfigEntry) -> bool
 async def _async_sync_component_groups(
     hass: HomeAssistant, entry: HdgConfigEntry
 ) -> None:
-    """Enable or disable entity registry entries based on component group options.
-
-    Called before reloading so that entities already in the registry pick up
-    the new enabled/disabled state without waiting for a second reload.
-    """
-    # Build a lookup: translation_key → component_group
+    """Enable or disable entities for component groups."""
     group_by_key: dict[str, str] = {
         key: group
-        for key, defn in SENSOR_DEFINITIONS.items()
+        for key, defn in get_sensor_definitions(entry.options).items()
         if (group := defn.get("component_group"))
     }
     if not group_by_key:
         return
 
-    # Platform suffixes used in unique_id construction: domain::device::key_platform
-    platform_suffixes = ("_sensor", "_number", "_select")
-
-    ent_reg = er.async_get(hass)
-    for reg_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
-        parts = reg_entry.unique_id.split("::")
-        if len(parts) != 3:
-            continue
-
-        suffix = parts[2]
-        for plat_sfx in platform_suffixes:
-            if suffix.endswith(plat_sfx):
-                suffix = suffix[: -len(plat_sfx)]
-                break
-
-        group = group_by_key.get(suffix)
-        if group is None:
-            continue
-
+    suffix_to_enabled: dict[str, bool] = {}
+    for suffix, group in group_by_key.items():
         conf_key, default_enabled = COMPONENT_GROUP_OPTIONS[group]
         is_enabled = entry.options.get(conf_key, default_enabled)
+        suffix_to_enabled[suffix] = is_enabled
 
-        if is_enabled and reg_entry.disabled_by == RegistryEntryDisabler.INTEGRATION:
-            ent_reg.async_update_entity(reg_entry.entity_id, disabled_by=None)
-            _LIFECYCLE_LOGGER.debug(
-                "Enabled entity %s (group '%s' toggled on).",
-                reg_entry.entity_id,
-                group,
-            )
-        elif not is_enabled and reg_entry.disabled_by is None:
-            ent_reg.async_update_entity(
-                reg_entry.entity_id,
-                disabled_by=RegistryEntryDisabler.INTEGRATION,
-            )
-            _LIFECYCLE_LOGGER.debug(
-                "Disabled entity %s (group '%s' toggled off).",
-                reg_entry.entity_id,
-                group,
-            )
+    await async_sync_entities_by_key(
+        hass,
+        entry,
+        suffix_to_enabled,
+        disabler=RegistryEntryDisabler.INTEGRATION,
+        log_prefix="entity",
+        logger=_LIFECYCLE_LOGGER,
+        key_to_log_name=group_by_key,
+    )
+
+
+async def _async_sync_puffer_sensors(
+    hass: HomeAssistant, entry: HdgConfigEntry
+) -> None:
+    """Enable/disable puffer middle sensors based on configured node IDs."""
+    opts = entry.options
+    oben = opts.get(CONF_PUFFER_MITTE_OBEN_NODE_ID)
+    unten = opts.get(CONF_PUFFER_MITTE_UNTEN_NODE_ID)
+    oben_set = (
+        bool(normalize_hdg_node_id(oben)) if oben and str(oben).strip() else False
+    )
+    unten_set = (
+        bool(normalize_hdg_node_id(unten)) if unten and str(unten).strip() else False
+    )
+
+    puffer_keys = {
+        "puffer_temperatur_mitte_oben": oben_set,
+        "puffer_temperatur_mitte_unten": unten_set,
+    }
+
+    await async_sync_entities_by_key(
+        hass,
+        entry,
+        puffer_keys,
+        disabler=RegistryEntryDisabler.INTEGRATION,
+        log_prefix="puffer sensor",
+        logger=_LIFECYCLE_LOGGER,
+    )
 
 
 async def _async_options_update_listener(
     hass: HomeAssistant, entry: HdgConfigEntry
 ) -> None:
-    """Handle options update: sync component groups, then reload."""
+    """Handle options update: sync component groups + puffer sensors, then reload."""
     _LIFECYCLE_LOGGER.debug(
-        "Options updated for %s, syncing component groups.", entry.entry_id
+        "Options updated for %s, syncing components and puffer sensors.", entry.entry_id
     )
     await _async_sync_component_groups(hass, entry)
+    await _async_sync_puffer_sensors(hass, entry)
     await hass.config_entries.async_reload(entry.entry_id)

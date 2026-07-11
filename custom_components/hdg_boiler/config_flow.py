@@ -4,7 +4,7 @@ from __future__ import annotations
 
 __all__ = ["HdgBoilerConfigFlow"]
 
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlparse
 
 import voluptuous as vol
@@ -42,7 +42,10 @@ from .const import (
     CONF_ENABLE_PUFFER_2,
     CONF_ENABLE_SOLAR,
     CONF_ENABLE_WW1,
+    CONF_ENABLE_WW2,
     CONF_ERROR_THRESHOLD,
+    CONF_PUFFER_MITTE_OBEN_NODE_ID,
+    CONF_PUFFER_MITTE_UNTEN_NODE_ID,
     CONF_FALLBACK_PING_INTERVAL,
     CONF_HOST_IP,
     CONF_LOG_LEVEL,
@@ -70,6 +73,9 @@ from .const import (
     DEFAULT_ENABLE_PUFFER_2,
     DEFAULT_ENABLE_SOLAR,
     DEFAULT_ENABLE_WW1,
+    DEFAULT_ENABLE_WW2,
+    DEFAULT_PUFFER_MITTE_OBEN_NODE_ID,
+    DEFAULT_PUFFER_MITTE_UNTEN_NODE_ID,
     DEFAULT_ERROR_THRESHOLD,
     DEFAULT_FALLBACK_PING_INTERVAL,
     DEFAULT_LOG_LEVEL,
@@ -128,6 +134,7 @@ _SECTION_KEYS: dict[str, list[str]] = {
     ],
     "components": [
         CONF_ENABLE_WW1,
+        CONF_ENABLE_WW2,
         CONF_ENABLE_HK2,
         CONF_ENABLE_HK3,
         CONF_ENABLE_HK4,
@@ -140,6 +147,10 @@ _SECTION_KEYS: dict[str, list[str]] = {
         CONF_ENABLE_NETZPUMPE_1,
         CONF_ENABLE_NETZPUMPE_2,
         CONF_ENABLE_NETZPUMPE_3,
+    ],
+    "puffer": [
+        CONF_PUFFER_MITTE_OBEN_NODE_ID,
+        CONF_PUFFER_MITTE_UNTEN_NODE_ID,
     ],
 }
 
@@ -218,9 +229,24 @@ class HdgBoilerCommonFlow:
     ) -> config_entries.ConfigFlowResult:
         """Show the combined options + component-group form."""
         if user_input is not None:
-            return await self._async_finish_flow(self._flatten_section_data(user_input))
+            processed = self._flatten_section_data(user_input)
 
-        return self.async_show_form(  # type: ignore[attr-defined]
+            if (
+                not processed.get(CONF_PUFFER_MITTE_OBEN_NODE_ID)
+                or not str(processed.get(CONF_PUFFER_MITTE_OBEN_NODE_ID, "")).strip()
+            ):
+                processed[CONF_PUFFER_MITTE_OBEN_NODE_ID] = None
+
+            if (
+                not processed.get(CONF_PUFFER_MITTE_UNTEN_NODE_ID)
+                or not str(processed.get(CONF_PUFFER_MITTE_UNTEN_NODE_ID, "")).strip()
+            ):
+                processed[CONF_PUFFER_MITTE_UNTEN_NODE_ID] = None
+
+            return await self._async_finish_flow(processed)
+
+        show_form = cast(Any, self).async_show_form
+        return show_form(
             step_id="init",
             data_schema=self._build_options_schema(),
             description_placeholders=self._build_description_placeholders(),
@@ -361,6 +387,9 @@ class HdgBoilerCommonFlow:
                 CONF_ENABLE_WW1, default=get(CONF_ENABLE_WW1, DEFAULT_ENABLE_WW1)
             ): BooleanSelector(),
             vol.Optional(
+                CONF_ENABLE_WW2, default=get(CONF_ENABLE_WW2, DEFAULT_ENABLE_WW2)
+            ): BooleanSelector(),
+            vol.Optional(
                 CONF_ENABLE_HK2, default=get(CONF_ENABLE_HK2, DEFAULT_ENABLE_HK2)
             ): BooleanSelector(),
             vol.Optional(
@@ -403,11 +432,38 @@ class HdgBoilerCommonFlow:
             ): BooleanSelector(),
         }
 
+        puffer_fields: dict[Any, Any] = {
+            vol.Optional(
+                CONF_PUFFER_MITTE_OBEN_NODE_ID,
+                description={
+                    "suggested_value": get(
+                        CONF_PUFFER_MITTE_OBEN_NODE_ID,
+                        DEFAULT_PUFFER_MITTE_OBEN_NODE_ID,
+                    )
+                    or "",
+                },
+            ): TextSelector(),
+            vol.Optional(
+                CONF_PUFFER_MITTE_UNTEN_NODE_ID,
+                description={
+                    "suggested_value": get(
+                        CONF_PUFFER_MITTE_UNTEN_NODE_ID,
+                        DEFAULT_PUFFER_MITTE_UNTEN_NODE_ID,
+                    )
+                    or "",
+                },
+            ): TextSelector(),
+        }
+
         return vol.Schema(
             {
                 vol.Required("components"): data_entry_flow.section(
                     vol.Schema(components_fields),
                     {"collapsed": False},
+                ),
+                vol.Required("puffer"): data_entry_flow.section(
+                    vol.Schema(puffer_fields),
+                    {"collapsed": True},
                 ),
                 vol.Required("polling"): data_entry_flow.section(
                     vol.Schema(polling_fields),
@@ -442,6 +498,8 @@ class HdgBoilerCommonFlow:
                 for key in keys:
                     if key in section_data:
                         result[key] = section_data[key]
+                    elif section_name == "puffer":
+                        result[key] = None
         return result
 
     # ------------------------------------------------------------------
@@ -502,7 +560,7 @@ class HdgBoilerConfigFlow(HdgBoilerCommonFlow, config_entries.ConfigFlow):
         config_entry: config_entries.ConfigEntry,
     ) -> HdgBoilerOptionsFlowHandler:
         """Get the options flow for this handler."""
-        return HdgBoilerOptionsFlowHandler(config_entry)
+        return HdgBoilerOptionsFlowHandler()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -547,15 +605,48 @@ class HdgBoilerConfigFlow(HdgBoilerCommonFlow, config_entries.ConfigFlow):
 class HdgBoilerOptionsFlowHandler(HdgBoilerCommonFlow, config_entries.OptionsFlow):
     """Handle an options flow for HDG Bavaria Boiler."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+    def __init__(self) -> None:
         """Initialize options flow."""
+        self._data: dict[str, Any] = {}
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Start the options flow."""
+        return await super().async_step_init(user_input)
 
     def _get_current_options(self) -> dict[str, Any]:
-        """Return the current config entry options as form defaults."""
-        return dict(self.config_entry.options)
+        """Return current options for form."""
+        opts = dict(self.config_entry.options)
+        for conf in (
+            CONF_PUFFER_MITTE_OBEN_NODE_ID,
+            CONF_PUFFER_MITTE_UNTEN_NODE_ID,
+        ):
+            val = opts.get(conf)
+            if val is None or not str(val).strip():
+                opts[conf] = ""
+        return opts
 
     async def _async_finish_flow(
         self, options: dict[str, Any]
     ) -> config_entries.ConfigFlowResult:
-        """Persist updated options."""
-        return self.async_create_entry(title="", data=options)
+        """Update the config entry."""
+        self._data |= options
+
+        new_options = dict(self.config_entry.options) | self._data
+        if (
+            not new_options.get(CONF_PUFFER_MITTE_OBEN_NODE_ID)
+            or not str(new_options.get(CONF_PUFFER_MITTE_OBEN_NODE_ID, "")).strip()
+        ):
+            new_options[CONF_PUFFER_MITTE_OBEN_NODE_ID] = None
+
+        if (
+            not new_options.get(CONF_PUFFER_MITTE_UNTEN_NODE_ID)
+            or not str(new_options.get(CONF_PUFFER_MITTE_UNTEN_NODE_ID, "")).strip()
+        ):
+            new_options[CONF_PUFFER_MITTE_UNTEN_NODE_ID] = None
+
+        self.hass.config_entries.async_update_entry(
+            self.config_entry, options=new_options
+        )
+        return self.async_create_entry(title="", data=new_options)

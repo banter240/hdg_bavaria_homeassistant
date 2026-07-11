@@ -18,7 +18,7 @@ repos:
 
   # Ruff hook for fast linting and formatting.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.8
+    rev: v0.15.20
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -31,11 +31,11 @@ repos:
         name: mypy
         entry: mypy
         language: python
-        language_version: python3
+        language_version: python3.14
         types: [python]
-        args: [--ignore-missing-imports, --explicit-package-bases]
+        args: [--explicit-package-bases]
         additional_dependencies:
-          - "mypy>=1.8"
+          - "mypy==2.1.0"
 
   # Sourcery hook for AI-powered refactoring.
   - repo: https://github.com/sourcery-ai/sourcery
@@ -47,7 +47,7 @@ repos:
 
   # Gitleaks hook for detecting secrets and sensitive information.
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.0 # Use the latest stable version
+    rev: v8.30.1 # Use the latest stable version
     hooks:
       - id: gitleaks
 
