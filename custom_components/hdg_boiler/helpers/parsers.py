@@ -253,11 +253,6 @@ def parse_sensor_value(
             timezone=configured_timezone,
         )
 
-        # iT (tonnes) values can be *100 on some boilers (see #48)
-        hdg_formatter = entity_definition.get("hdg_formatter")
-        if hdg_formatter == "iT" and isinstance(parsed_value, (int, float)):
-            parsed_value = parsed_value / 100.0
-
         return parsed_value
     except Exception as e:
         _LOGGER.warning(
