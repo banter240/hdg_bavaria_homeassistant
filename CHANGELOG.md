@@ -1,3 +1,16 @@
+## [2.0.0-dev.5](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.4...v2.0.0-dev.5) (2026-07-13)
+* feat(hdg_boiler): add WW2 toggle, configurable puffer middle sensors, DRY refactor, Python 3.14 alignment and cleanups
+
+- Add WW2 toggle (enable_ww2) in config flow, COMPONENT_GROUP_OPTIONS and entity defs, mirroring WW1 exactly (CONF_ENABLE_WW2, definitions with 281xx/812x nodes, translations)
+- Configurable puffer middle sensors (mitte-oben/unten): node IDs via options, only polled/created when set, normalize helper, support T suffix, group_1 polling like other puffer temps
+- Proper clearing of puffer IDs: normalize empty to None on save, sync disables entities via registry
+- Refactor duplicated registry sync logic: extract async_sync_entities_by_key helper in helpers/entity_registry_utils.py; keep thin wrappers in __init__.py for component groups + puffer (DRY)
+- Remove all tado_hijack references and excessive comments/slops throughout (config_flow, __init__, helpers, const, definitions); retain only essential docs
+- Options flow UX: do not await full reload on save (closes immediately); syncs + reload happen via update listener in background
+- Python 3.14 + tooling alignment (to match standards): workflows, pre-commit, pyproject.toml, hacs.json, requirements; min HA 2026.3; pinned tools (mypy 2.1.0 etc.); removed lock.yaml
+- Full pre-commit clean on project; translations updated for WW2 + puffer
+- Other fixes: options clear/save for puffer, no more blocking config window on polls
+
 ## [2.0.0-dev.4](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.3...v2.0.0-dev.4) (2026-05-17)
 
 ### 🐛 Bug Fixes
