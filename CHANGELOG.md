@@ -1,3 +1,9 @@
+## [2.0.0-dev.8](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.7...v2.0.0-dev.8) (2026-07-13)
+* fix(hdg_boiler): correct iT pellet consumption scaling
+
+- Apply /100 for hdg_formatter="iT" exactly once after parse in processor
+- Guard in _get_value for already-parsed numeric values
+
 ## [2.0.0-dev.7](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.6...v2.0.0-dev.7) (2026-07-13)
 * fix(sensor): remove iT scaling for pellet consumption
 
