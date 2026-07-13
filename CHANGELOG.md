@@ -1,3 +1,10 @@
+## [2.0.0-dev.7](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.6...v2.0.0-dev.7) (2026-07-13)
+* fix(sensor): remove iT scaling for pellet consumption
+
+The previous /100 heuristic for hdg_formatter='iT' (node 21005) was causing incorrect values for some users (e.g. 963 t -> 0.0963 t).
+
+Reverting to direct float parse from the API value.
+
 ## [2.0.0-dev.6](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.5...v2.0.0-dev.6) (2026-07-13)
 * feat(hdg_boiler): extend Betriebsart mappings for HK3+ and external heat source + fix pellet consumption scaling
 
