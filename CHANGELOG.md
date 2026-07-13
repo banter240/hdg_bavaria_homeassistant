@@ -1,3 +1,14 @@
+## [2.0.0-dev.6](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.5...v2.0.0-dev.6) (2026-07-13)
+* feat(hdg_boiler): extend Betriebsart mappings for HK3+ and external heat source + fix pellet consumption scaling
+
+- Add enum mappings for hk3_betriebsart..hk6_betriebsart and hkX_aktuelle_betriebsart
+- Add auto_aus option and mapping for externe_warmequelle_betriebsart to support Ein/Auto/Aus (and Auto Aus)
+- Update HdgBoilerSelect.current_option to resolve raw boiler values (e.g. 'Sommer- betrieb', 'AUTO_EIN') to canonical keys
+- Update translations for auto_aus state
+- Add iT formatter scaling correction in parsers (divide by 100 for some boilers, e.g. 718.0 -> 7.18 t for node 21005)
+
+This improves reliability for higher heating circuits (HK3+) and hybrid external heat source operating mode, and fixes wrong decimal in total pellet consumption.
+
 ## [2.0.0-dev.5](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.4...v2.0.0-dev.5) (2026-07-13)
 * feat(hdg_boiler): add WW2 toggle, configurable puffer middle sensors, DRY refactor, Python 3.14 alignment and cleanups
 
