@@ -46,7 +46,7 @@ POLLING_GROUP_KEYS: dict[str, str] = {
 }
 
 HK_OPERATING_MODE_OPTIONS: Final = ["normal", "tag", "nacht", "party", "sommer"]
-EXT_WQ_OPERATING_MODE_OPTIONS: Final = ["aus", "ein", "auto_ein"]
+EXT_WQ_OPERATING_MODE_OPTIONS: Final = ["aus", "ein", "auto_ein", "auto_aus"]
 
 
 def _create_sensor_definition(

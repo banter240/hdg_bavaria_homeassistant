@@ -16,6 +16,7 @@ from .const import DOMAIN, USER_ACTION_LOGGER_NAME
 from .coordinator import HdgDataUpdateCoordinator
 from .entity import HdgNodeEntity
 from .helpers.entity_utils import async_setup_hdg_platform
+from .helpers.enum_mappings import HDG_ENUM_TEXT_TO_KEY_MAPPINGS
 from .models import SensorDefinition
 
 _LOGGER = logging.getLogger(DOMAIN)
@@ -60,6 +61,13 @@ class HdgBoilerSelect(HdgNodeEntity, SelectEntity):
         if val is None:
             return None
         processed = str(val)
+        translation_key = self._entity_definition.get("translation_key")
+        if translation_key and translation_key in HDG_ENUM_TEXT_TO_KEY_MAPPINGS:
+            enum_map = HDG_ENUM_TEXT_TO_KEY_MAPPINGS[translation_key]
+            for text, key in enum_map.items():
+                if text.lower() == processed.lower():
+                    processed = key
+                    break
         return processed.lower() if uppercase else processed
 
     async def async_select_option(self, option: str) -> None:

@@ -2157,6 +2157,7 @@
         "name": "Ext. Heat Source Operating Mode",
         "state": {
           "auto_ein": "Auto",
+          "auto_aus": "Auto Off",
           "ein": "On",
           "aus": "Off"
         }

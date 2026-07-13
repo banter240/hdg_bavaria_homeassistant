@@ -2157,6 +2157,7 @@
         "name": "Ext. Wärmequelle Betriebsart",
         "state": {
           "auto_ein": "Auto",
+          "auto_aus": "Auto Aus",
           "ein": "Ein",
           "aus": "Aus"
         }
