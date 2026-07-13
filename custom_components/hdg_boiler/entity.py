@@ -296,14 +296,20 @@ class HdgNodeEntity(HdgBaseEntity):
     def _get_value(self) -> Any:
         """Return the current parsed value for this node.
 
-        If the definition provides a `value_fn`, it is called with the coordinator
-        (TH-style per-entity override). Otherwise, falls back to the default
-        `parse_sensor_value` path driven by definition metadata.
+        If the definition provides a `value_fn`, it is called with the coordinator.
+        Otherwise, falls back to the default `parse_sensor_value` path driven by
+        definition metadata.
         """
         if (value_fn := self._entity_definition.get("value_fn")) is not None:
             return value_fn(self.coordinator)
+
+        stored = self.coordinator.data.get(self._node_id)
+        parse_as = self._entity_definition.get("parse_as_type")
+        if isinstance(stored, (int, float)) and parse_as in ("int", "float"):
+            return stored
+
         return parse_sensor_value(
-            raw_value=self.coordinator.data.get(self._node_id),
+            raw_value=stored,
             entity_definition=cast(dict[str, Any], self._entity_definition),
             node_id_for_log=self._node_id,
             entity_id_for_log=self._entity_definition.get("translation_key"),
@@ -316,8 +322,8 @@ class HdgNodeEntity(HdgBaseEntity):
         """Write a new value for this node.
 
         If the definition provides a `set_fn`, it is called with the coordinator
-        and value (TH-style per-entity override). Otherwise, routes through the
-        coordinator gateway (debounce + optimistic + rollback).
+        and value. Otherwise, routes through the coordinator gateway (debounce +
+        optimistic + rollback).
         """
         if (set_fn := self._entity_definition.get("set_fn")) is not None:
             await set_fn(self.coordinator, value)

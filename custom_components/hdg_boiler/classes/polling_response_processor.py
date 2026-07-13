@@ -151,6 +151,10 @@ class HdgPollingResponseProcessor:
             entity_id_for_log=definition.get("translation_key"),
         )
 
+        hdg_formatter = definition.get("hdg_formatter")
+        if hdg_formatter == "iT" and isinstance(parsed_value, (int, float)):
+            parsed_value = parsed_value / 100.0
+
         if self._should_ignore_polled_value(node_id, parsed_value, group_key):
             return
 
