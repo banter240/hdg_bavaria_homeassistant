@@ -277,13 +277,13 @@ Read the current raw value from the integration's cache (debugging).
 
 ## Frequently Asked Questions (FAQ)
 
-**Q: Why are many entities disabled by default?**  
+**Q: Why are many entities disabled by default?**
 A: To keep your Home Assistant clean. Only enable the components (HK2, WW2, Solar, etc.) that you actually have.
 
-**Q: Can I set puffer middle temperatures?**  
+**Q: Can I set puffer middle temperatures?**
 A: Yes — enter the node IDs in the integration options under the Puffer section. The entities will be created dynamically.
 
-**Q: Does it support my second hot water tank (WW2)?**  
+**Q: Does it support my second hot water tank (WW2)?**
 A: Yes. Enable `enable_ww2` in the options.
 
 ---

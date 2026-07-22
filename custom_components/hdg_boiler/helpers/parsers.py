@@ -246,14 +246,12 @@ def parse_sensor_value(
         return cleaned_value  # Return raw or cleaned value if no parser found
 
     try:
-        parsed_value = parser(
+        return parser(
             cleaned_value,
             log_prefix,
             entity_definition,
             timezone=configured_timezone,
         )
-
-        return parsed_value
     except Exception as e:
         _LOGGER.warning(
             "%sError parsing value '%s' as %s: %s. Returning raw.",

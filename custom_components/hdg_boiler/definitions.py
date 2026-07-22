@@ -1797,7 +1797,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     ),
     "puffer_ladung_ein_temperatur": create_number_entity(
         key="puffer_ladung_ein_temperatur",
-        node_id="24004T",
+        node_id="4022T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
         icon="mdi:thermometer-chevron-up",
         setter_type="int",
@@ -1811,7 +1811,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     ),
     "puffer_ladung_aus_temperatur": create_number_entity(
         key="puffer_ladung_aus_temperatur",
-        node_id="24006T",
+        node_id="4024T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
         icon="mdi:thermometer-chevron-down",
         setter_type="int",
@@ -1928,7 +1928,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     "puffer_2_ladung_ein_temperatur": create_number_entity(
         entity_registry_enabled_default=False,
         key="puffer_2_ladung_ein_temperatur",
-        node_id="24104T",
+        node_id="4122T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
         icon="mdi:thermometer-chevron-up",
         setter_type="int",
@@ -1942,7 +1942,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     "puffer_2_ladung_aus_temperatur": create_number_entity(
         entity_registry_enabled_default=False,
         key="puffer_2_ladung_aus_temperatur",
-        node_id="24106T",
+        node_id="4124T",
         polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
         icon="mdi:thermometer-chevron-down",
         setter_type="int",
