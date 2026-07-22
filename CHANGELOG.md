@@ -1,3 +1,12 @@
+## [2.0.0-dev.9](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.8...v2.0.0-dev.9) (2026-07-22)
+* fix(definitions): remap Pufferladung number entities to settings nodes
+
+Pufferladung EIN/AUS used INFO mirror nodes (24004/24006, 24104/24106),
+so writes appeared to stick then reverted on the next poll.
+
+Remap to the writable settings nodes:
+4022/4024 (Puffer 1) and 4122/4124 (Puffer 2).
+
 ## [2.0.0-dev.8](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.7...v2.0.0-dev.8) (2026-07-13)
 * fix(hdg_boiler): correct iT pellet consumption scaling
 
