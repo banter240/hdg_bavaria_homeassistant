@@ -1,14 +1,17 @@
-# This workflow runs automatically on every pull request targeting the 'dev' branch.
-# It ensures that code changes are linted before they can be merged.
-
 name: PR Tests
 
 on:
   pull_request:
-    branches: ['dev']
+    branches: ['dev', 'main']
     paths: ['custom_components/hdg_boiler/**']
 
 jobs:
-  # This job calls the reusable linting workflow.
+  # Job 1: Call the reusable linting workflow.
   lint:
+    name: "Run Linter"
     uses: ./.github/workflows/lint.yml
+
+  # Job 2: Call the reusable HACS and hassfest validation workflow.
+  validation:
+    name: "Run Validation"
+    uses: ./.github/workflows/validate.yml

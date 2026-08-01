@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-__version__ = "0.6.0"
-
+import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -13,8 +13,10 @@ from ..const import (
     API_LOGGER_NAME,
     CONF_ADVANCED_LOGGING,
     CONF_LOG_LEVEL,
+    CONF_LOG_VERSION_PREFIX,
     DEFAULT_ADVANCED_LOGGING,
     DEFAULT_LOG_LEVEL,
+    DEFAULT_LOG_VERSION_PREFIX,
     DOMAIN,
     ENTITY_DETAIL_LOGGER_NAME,
     HEURISTICS_LOGGER_NAME,
@@ -28,6 +30,8 @@ __all__ = [
     "format_for_log",
     "make_log_prefix",
     "AdvancedLoggingFilter",
+    "HdgVersionFilter",
+    "set_version_prefix_enabled",
     "_LOGGER",
     "_LIFECYCLE_LOGGER",
     "_ENTITY_DETAIL_LOGGER",
@@ -37,10 +41,17 @@ __all__ = [
     "_USER_ACTION_LOGGER",
 ]
 
-# Main logger for the integration
-_LOGGER = logging.getLogger(DOMAIN)
+try:
+    _INTEGRATION_VERSION: str = json.loads(
+        (Path(__file__).parent.parent / "manifest.json").read_text()
+    ).get("version", "unknown")
+except Exception:
+    _INTEGRATION_VERSION = "unknown"
 
-# Specific loggers for different parts of the integration
+_VERSION_PREFIX_ENABLED: bool = DEFAULT_LOG_VERSION_PREFIX
+_VERSION_PREFIX: str = f"[v{_INTEGRATION_VERSION}] "
+
+_LOGGER = logging.getLogger(DOMAIN)
 _LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
 _ENTITY_DETAIL_LOGGER = logging.getLogger(ENTITY_DETAIL_LOGGER_NAME)
 _API_LOGGER = logging.getLogger(API_LOGGER_NAME)
@@ -48,7 +59,6 @@ _HEURISTICS_LOGGER = logging.getLogger(HEURISTICS_LOGGER_NAME)
 _PROCESSOR_LOGGER = logging.getLogger(PROCESSOR_LOGGER_NAME)
 _USER_ACTION_LOGGER = logging.getLogger(USER_ACTION_LOGGER_NAME)
 
-# List of loggers that produce verbose output, controlled by advanced logging setting
 _SPAMMY_LOGGERS = [
     _ENTITY_DETAIL_LOGGER,
     _API_LOGGER,
@@ -58,6 +68,22 @@ _SPAMMY_LOGGERS = [
     _USER_ACTION_LOGGER,
 ]
 _SPAMMY_LOGGER_NAMES = {logger.name for logger in _SPAMMY_LOGGERS}
+
+
+class HdgVersionFilter(logging.Filter):
+    """Prepend integration version to every log message when enabled."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Prepend version tag to the log message."""
+        if _VERSION_PREFIX_ENABLED and isinstance(record.msg, str):
+            record.msg = _VERSION_PREFIX + record.msg
+        return True
+
+
+def set_version_prefix_enabled(enabled: bool) -> None:
+    """Enable or disable version prefix injection in log messages."""
+    global _VERSION_PREFIX_ENABLED
+    _VERSION_PREFIX_ENABLED = enabled
 
 
 class AdvancedLoggingFilter(logging.Filter):
@@ -102,17 +128,21 @@ def configure_loggers(entry: ConfigEntry) -> None:
     is_advanced = bool(
         entry.options.get(CONF_ADVANCED_LOGGING, DEFAULT_ADVANCED_LOGGING)
     )
+    version_prefix = bool(
+        entry.options.get(CONF_LOG_VERSION_PREFIX, DEFAULT_LOG_VERSION_PREFIX)
+    )
 
-    # This filter is attached to spammy loggers to suppress their output
-    # unless advanced logging is explicitly enabled by the user.
+    set_version_prefix_enabled(version_prefix)
+
     advanced_filter = AdvancedLoggingFilter(entry)
+    version_filter = HdgVersionFilter()
 
-    # Configure all integration loggers
     all_loggers = [_LOGGER] + _SPAMMY_LOGGERS
     for logger in all_loggers:
         logger.setLevel(log_level)
         # Remove any existing filters to prevent duplication on reload
         logger.filters.clear()
+        logger.addFilter(version_filter)
         if logger in _SPAMMY_LOGGERS:
             logger.addFilter(advanced_filter)
         # Ensure logs are passed up to the parent Home Assistant logger

@@ -1,31 +1,45 @@
 repos:
   # Standard hooks for file integrity and basic checks.
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-yaml
+      - id: check-json
+      - id: pretty-format-json
+        args: [--autofix, --no-sort-keys, --indent=2, --no-ensure-ascii]
       - id: end-of-file-fixer
       - id: trailing-whitespace
 
+  # yamllint for YAML file validation.
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+
   # Ruff hook for fast linting and formatting.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.2
+    rev: v0.15.20
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
 
   # mypy hook for static type checking.
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.16.1"
+  - repo: local
     hooks:
       - id: mypy
-        args: [--ignore-missing-imports, --explicit-package-bases]
-        additional_dependencies: []
+        name: mypy
+        entry: mypy
+        language: python
+        language_version: python3.14
+        types: [python]
+        args: [--explicit-package-bases]
+        additional_dependencies:
+          - "mypy==2.1.0"
 
   # Sourcery hook for AI-powered refactoring.
   - repo: https://github.com/sourcery-ai/sourcery
-    rev: "v1.37.0"
+    rev: "v1.43.0"
     hooks:
       - id: sourcery
         # Automatically apply fixes suggested by Sourcery
@@ -33,6 +47,25 @@ repos:
 
   # Gitleaks hook for detecting secrets and sensitive information.
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.27.2 # Use the latest stable version
+    rev: v8.30.1 # Use the latest stable version
     hooks:
       - id: gitleaks
+
+  # Local hooks for Home Assistant & HACS validation (Parity with GitHub Actions)
+  - repo: local
+    hooks:
+      - id: hassfest
+        name: local hassfest validation
+        entry: "../.venv/bin/python3 -m homeassistant.helpers.check_config --config ."
+        language: system
+        pass_filenames: false
+        always_run: true
+        description: "Run Home Assistant's internal config validation (Parity with CI Hassfest)."
+
+      - id: hacs-validation
+        name: local HACS validation
+        entry: "./scripts/local_hacs_validate.py"
+        language: system
+        pass_filenames: false
+        always_run: true
+        description: "Run basic HACS compliance checks (Parity with CI HACS Validation)."

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
 __all__ = ["async_handle_set_node_value", "async_handle_get_node_value"]
 
 import logging
@@ -11,7 +10,7 @@ from typing import Any, cast
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
-from .const import DEFAULT_SET_VALUE_DEBOUNCE_DELAY_S, DOMAIN
+from .const import DOMAIN
 from .coordinator import HdgDataUpdateCoordinator
 from .exceptions import HdgApiError
 from .helpers.parsers import format_value_for_api
@@ -88,11 +87,10 @@ async def async_handle_set_node_value(
         node_id, value_to_set, entity_name = _validate_and_prepare_node_value(
             call, hdg_entity_registry
         )
-        success = await coordinator.async_set_node_value(
+        success, final_value = await coordinator.async_set_node_value(
             node_id=node_id,
             value=value_to_set,
             entity_name_for_log=entity_name,
-            debounce_delay=DEFAULT_SET_VALUE_DEBOUNCE_DELAY_S,
         )
         if not success:
             raise HomeAssistantError(f"Failed to set node '{entity_name}' ({node_id}).")

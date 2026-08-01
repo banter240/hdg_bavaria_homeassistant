@@ -1,4 +1,3 @@
-# ruff: noqa: F401
 """Constants for the HDG Bavaria Boiler integration."""
 
 from __future__ import annotations
@@ -24,10 +23,44 @@ __all__: Final[list[str]] = [
     "CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S",
     "CONF_LOG_LEVEL",
     "CONF_ADVANCED_LOGGING",
+    "CONF_LOG_VERSION_PREFIX",
     "CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS",
     "CONF_ERROR_THRESHOLD",
     "CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS",
     "CONF_FALLBACK_PING_INTERVAL",
+    "CONF_ENABLE_HK2",
+    "CONF_ENABLE_HK3",
+    "CONF_ENABLE_HK4",
+    "CONF_ENABLE_HK5",
+    "CONF_ENABLE_HK6",
+    "CONF_ENABLE_SOLAR",
+    "CONF_ENABLE_PUFFER_2",
+    "CONF_ENABLE_EXT_WQ",
+    "CONF_ENABLE_WW1",
+    "CONF_ENABLE_WW2",
+    "CONF_ENABLE_LAGER",
+    "CONF_ENABLE_NETZPUMPE_1",
+    "CONF_ENABLE_NETZPUMPE_2",
+    "CONF_ENABLE_NETZPUMPE_3",
+    "CONF_PUFFER_MITTE_OBEN_NODE_ID",
+    "CONF_PUFFER_MITTE_UNTEN_NODE_ID",
+    "DEFAULT_PUFFER_MITTE_OBEN_NODE_ID",
+    "DEFAULT_PUFFER_MITTE_UNTEN_NODE_ID",
+    "PUFFER_MITTE_NODE_MAP",
+    "DEFAULT_ENABLE_WW1",
+    "DEFAULT_ENABLE_WW2",
+    "DEFAULT_ENABLE_HK2",
+    "DEFAULT_ENABLE_HK3",
+    "DEFAULT_ENABLE_HK4",
+    "DEFAULT_ENABLE_HK5",
+    "DEFAULT_ENABLE_HK6",
+    "DEFAULT_ENABLE_SOLAR",
+    "DEFAULT_ENABLE_PUFFER_2",
+    "DEFAULT_ENABLE_EXT_WQ",
+    "DEFAULT_ENABLE_LAGER",
+    "DEFAULT_ENABLE_NETZPUMPE_2",
+    "DEFAULT_ENABLE_NETZPUMPE_3",
+    "COMPONENT_GROUP_OPTIONS",
     "CONFIG_FLOW_API_TIMEOUT",
     "DEFAULT_API_TIMEOUT",
     "MIN_API_TIMEOUT",
@@ -46,6 +79,7 @@ __all__: Final[list[str]] = [
     "MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S",
     "DEFAULT_LOG_LEVEL",
     "DEFAULT_ADVANCED_LOGGING",
+    "DEFAULT_LOG_VERSION_PREFIX",
     "DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS",
     "MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS",
     "MAX_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS",
@@ -59,12 +93,11 @@ __all__: Final[list[str]] = [
     "API_ENDPOINT_DATA_REFRESH",
     "API_ENDPOINT_SET_VALUE",
     "CONFIG_FLOW_TEST_PAYLOAD",
-    "API_REQUEST_TYPE_SET_NODE_VALUE",
-    "API_REQUEST_TYPE_GET_NODES_DATA",
     "ACCEPTED_CONTENT_TYPES",
     "HDG_UNAVAILABLE_STRINGS",
     "HDG_DATETIME_SPECIAL_TEXT",
     "KNOWN_HDG_API_SETTER_SUFFIXES",
+    "HDG_PRIMARY_NODE_SUFFIX",
     "INITIAL_REFRESH_API_TIMEOUT_OVERRIDE",
     "POST_INITIAL_REFRESH_COOLDOWN_S",
     "INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S",
@@ -72,7 +105,8 @@ __all__: Final[list[str]] = [
     "DEFAULT_SET_VALUE_DEBOUNCE_DELAY_S",
     "MIN_SCAN_INTERVAL",
     "MAX_SCAN_INTERVAL",
-    "COORDINATOR_FALLBACK_UPDATE_INTERVAL_MINUTES",
+    "MAX_CONCURRENT_POLL_REQUESTS",
+    "OPTIMISTIC_GRACE_PERIOD_S",
     "COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK",
     "FALLBACK_PING_INTERVAL_S",
     "POLLING_RETRY_INITIAL_DELAY_S",
@@ -98,26 +132,15 @@ __all__: Final[list[str]] = [
     "POLLING_GROUP_DEFINITIONS",
 ]
 
-__version__: Final[str] = "1.2.7"
 
-# --------------------------------------------------------------------------------
-# Compatibility Shims
-# --------------------------------------------------------------------------------
-# Home Assistant versions before 2025.x might not have TONNES in UnitOfMass
 UNIT_MASS_TONNES: Final[str] = getattr(UnitOfMass, "TONNES", "t")
 
-# --------------------------------------------------------------------------------
-# Core Integration Constants
-# --------------------------------------------------------------------------------
 DOMAIN: Final[str] = "hdg_boiler"
 DEFAULT_NAME: Final[str] = "HDG Boiler"
 MANUFACTURER: Final[str] = "HDG Bavaria GmbH"
 MODEL_PREFIX: Final[str] = "HDG"
 
 
-# --------------------------------------------------------------------------------
-# Configuration Keys (used in config flows and options)
-# --------------------------------------------------------------------------------
 CONF_DEVICE_ALIAS: Final[str] = "device_alias"
 CONF_HOST_IP: Final[str] = "host_ip"
 CONF_SOURCE_TIMEZONE: Final[str] = "source_timezone"
@@ -127,6 +150,7 @@ CONF_POLLING_PREEMPTION_TIMEOUT: Final[str] = "polling_preemption_timeout"
 CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S: Final[str] = "recently_set_poll_ignore_window_s"
 CONF_LOG_LEVEL: Final[str] = "log_level"
 CONF_ADVANCED_LOGGING: Final[str] = "advanced_logging"
+CONF_LOG_VERSION_PREFIX: Final[str] = "log_version_prefix"
 CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS: Final[str] = (
     "log_level_threshold_for_connection_errors"
 )
@@ -136,10 +160,64 @@ CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS: Final[str] = (
 )
 CONF_FALLBACK_PING_INTERVAL: Final[str] = "fallback_ping_interval"
 
-# --------------------------------------------------------------------------------
-# Default Values & Limits for Configuration
-# --------------------------------------------------------------------------------
-# Timeouts
+CONF_ENABLE_WW1: Final[str] = "enable_ww1"
+CONF_ENABLE_WW2: Final[str] = "enable_ww2"
+CONF_ENABLE_HK2: Final[str] = "enable_hk2"
+CONF_ENABLE_HK3: Final[str] = "enable_hk3"
+CONF_ENABLE_HK4: Final[str] = "enable_hk4"
+CONF_ENABLE_HK5: Final[str] = "enable_hk5"
+CONF_ENABLE_HK6: Final[str] = "enable_hk6"
+CONF_ENABLE_SOLAR: Final[str] = "enable_solar"
+CONF_ENABLE_PUFFER_2: Final[str] = "enable_puffer_2"
+CONF_ENABLE_EXT_WQ: Final[str] = "enable_ext_wq"
+CONF_ENABLE_LAGER: Final[str] = "enable_lager"
+CONF_ENABLE_NETZPUMPE_1: Final[str] = "enable_netzpumpe_1"
+CONF_ENABLE_NETZPUMPE_2: Final[str] = "enable_netzpumpe_2"
+CONF_ENABLE_NETZPUMPE_3: Final[str] = "enable_netzpumpe_3"
+
+DEFAULT_ENABLE_WW1: Final[bool] = False
+DEFAULT_ENABLE_WW2: Final[bool] = False
+DEFAULT_ENABLE_HK2: Final[bool] = False
+DEFAULT_ENABLE_HK3: Final[bool] = False
+DEFAULT_ENABLE_HK4: Final[bool] = False
+DEFAULT_ENABLE_HK5: Final[bool] = False
+DEFAULT_ENABLE_HK6: Final[bool] = False
+DEFAULT_ENABLE_SOLAR: Final[bool] = False
+DEFAULT_ENABLE_PUFFER_2: Final[bool] = False
+DEFAULT_ENABLE_EXT_WQ: Final[bool] = False
+DEFAULT_ENABLE_LAGER: Final[bool] = False
+DEFAULT_ENABLE_NETZPUMPE_1: Final[bool] = False
+DEFAULT_ENABLE_NETZPUMPE_2: Final[bool] = False
+DEFAULT_ENABLE_NETZPUMPE_3: Final[bool] = False
+
+CONF_PUFFER_MITTE_OBEN_NODE_ID: Final[str] = "puffer_mitte_oben_node_id"
+CONF_PUFFER_MITTE_UNTEN_NODE_ID: Final[str] = "puffer_mitte_unten_node_id"
+
+DEFAULT_PUFFER_MITTE_OBEN_NODE_ID: Final[str] = ""
+DEFAULT_PUFFER_MITTE_UNTEN_NODE_ID: Final[str] = ""
+
+PUFFER_MITTE_NODE_MAP: Final[dict[str, str]] = {
+    "puffer_temperatur_mitte_oben": CONF_PUFFER_MITTE_OBEN_NODE_ID,
+    "puffer_temperatur_mitte_unten": CONF_PUFFER_MITTE_UNTEN_NODE_ID,
+}
+
+COMPONENT_GROUP_OPTIONS: Final[dict[str, tuple[str, bool]]] = {
+    "ww1": (CONF_ENABLE_WW1, DEFAULT_ENABLE_WW1),
+    "ww2": (CONF_ENABLE_WW2, DEFAULT_ENABLE_WW2),
+    "hk2": (CONF_ENABLE_HK2, DEFAULT_ENABLE_HK2),
+    "hk3": (CONF_ENABLE_HK3, DEFAULT_ENABLE_HK3),
+    "hk4": (CONF_ENABLE_HK4, DEFAULT_ENABLE_HK4),
+    "hk5": (CONF_ENABLE_HK5, DEFAULT_ENABLE_HK5),
+    "hk6": (CONF_ENABLE_HK6, DEFAULT_ENABLE_HK6),
+    "solar": (CONF_ENABLE_SOLAR, DEFAULT_ENABLE_SOLAR),
+    "puffer_2": (CONF_ENABLE_PUFFER_2, DEFAULT_ENABLE_PUFFER_2),
+    "ext_wq": (CONF_ENABLE_EXT_WQ, DEFAULT_ENABLE_EXT_WQ),
+    "lager": (CONF_ENABLE_LAGER, DEFAULT_ENABLE_LAGER),
+    "netzpumpe_1": (CONF_ENABLE_NETZPUMPE_1, DEFAULT_ENABLE_NETZPUMPE_1),
+    "netzpumpe_2": (CONF_ENABLE_NETZPUMPE_2, DEFAULT_ENABLE_NETZPUMPE_2),
+    "netzpumpe_3": (CONF_ENABLE_NETZPUMPE_3, DEFAULT_ENABLE_NETZPUMPE_3),
+}
+
 CONFIG_FLOW_API_TIMEOUT: Final[int] = 15
 DEFAULT_API_TIMEOUT: Final[int] = 15
 MIN_API_TIMEOUT: Final[int] = 5
@@ -153,8 +231,6 @@ DEFAULT_POLLING_PREEMPTION_TIMEOUT: Final[int] = 5
 MIN_POLLING_PREEMPTION_TIMEOUT: Final[int] = 1
 MAX_POLLING_PREEMPTION_TIMEOUT: Final[int] = 20
 
-# Polling & Fallback
-
 DEFAULT_FALLBACK_PING_INTERVAL: Final[int] = 30
 MIN_FALLBACK_PING_INTERVAL: Final[int] = 5
 MAX_FALLBACK_PING_INTERVAL: Final[int] = 300
@@ -163,9 +239,9 @@ DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S: Final[int] = 10
 MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S: Final[int] = 5
 MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S: Final[int] = 30
 
-# Logging & Error Thresholds
 DEFAULT_LOG_LEVEL: Final[str] = "INFO"
 DEFAULT_ADVANCED_LOGGING: Final[bool] = False
+DEFAULT_LOG_VERSION_PREFIX: Final[bool] = True
 
 DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS: Final[int] = 5
 MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS: Final[int] = 1
@@ -179,45 +255,34 @@ DEFAULT_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS: Final[int] = 3
 MIN_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS: Final[int] = 1
 MAX_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS: Final[int] = 10
 
-# Other
 DEFAULT_SOURCE_TIMEZONE: Final[str] = "Europe/Berlin"
 
 
-# --------------------------------------------------------------------------------
-# API Communication
-# --------------------------------------------------------------------------------
-# API Endpoints
 API_ENDPOINT_DATA_REFRESH: Final[str] = "/ApiManager.php?action=dataRefresh"
 API_ENDPOINT_SET_VALUE: Final[str] = "/ActionManager.php?action=set_value_changed"
 
-# API Payloads & Request Types
-CONFIG_FLOW_TEST_PAYLOAD: Final[str] = "nodes=1T-2T-3T-4T"
-API_REQUEST_TYPE_SET_NODE_VALUE: Final[str] = "set_node_value"
-API_REQUEST_TYPE_GET_NODES_DATA: Final[str] = "get_nodes_data"
+CONFIG_FLOW_TEST_PAYLOAD: Final[list[str]] = ["1", "2", "3", "4"]
 
-# API Data Interpretation
 ACCEPTED_CONTENT_TYPES: Final[set[str]] = {"application/json", "text/plain"}
 HDG_UNAVAILABLE_STRINGS: Final[set[str]] = {"---", "unavailable", "none", "n/a"}
 HDG_DATETIME_SPECIAL_TEXT: Final[str] = "größer 7 tage"
 KNOWN_HDG_API_SETTER_SUFFIXES: Final[set[str]] = {"T", "U", "V", "W", "X", "Y"}
+HDG_PRIMARY_NODE_SUFFIX: Final[str] = "T"
 
 
-# --------------------------------------------------------------------------------
-# Polling & Update Behavior
-# --------------------------------------------------------------------------------
-# Timing & Delays
 INITIAL_REFRESH_API_TIMEOUT_OVERRIDE: Final[float] = 30.0
 POST_INITIAL_REFRESH_COOLDOWN_S: Final[float] = 5.0
 INITIAL_SEQUENTIAL_INTER_GROUP_DELAY_S: Final[float] = 0.5
 SET_NODE_COOLDOWN_S: Final[float] = 2.0
 DEFAULT_SET_VALUE_DEBOUNCE_DELAY_S: Final[float] = 2.0
 
-# Scan Intervals
 MIN_SCAN_INTERVAL: Final[int] = 15
 MAX_SCAN_INTERVAL: Final[int] = 86430
 
-# Fallback & Retry Mechanisms
-COORDINATOR_FALLBACK_UPDATE_INTERVAL_MINUTES: Final[int] = 5
+MAX_CONCURRENT_POLL_REQUESTS: Final[int] = 5
+
+OPTIMISTIC_GRACE_PERIOD_S: Final[float] = 30.0
+
 COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK: Final[int] = 3
 FALLBACK_PING_INTERVAL_S: Final[int] = 30
 POLLING_RETRY_INITIAL_DELAY_S: Final[float] = 60.0
@@ -228,18 +293,12 @@ SET_VALUE_RETRY_ATTEMPTS: Final[int] = 3
 SET_VALUE_RETRY_DELAY_S: Final[float] = 2.0
 
 
-# --------------------------------------------------------------------------------
-# Service Definitions
-# --------------------------------------------------------------------------------
 SERVICE_GET_NODE_VALUE: Final[str] = "get_node_value"
 SERVICE_SET_NODE_VALUE: Final[str] = "set_node_value"
 ATTR_NODE_ID: Final[str] = "node_id"
 ATTR_VALUE: Final[str] = "value"
 
 
-# --------------------------------------------------------------------------------
-# Logging
-# --------------------------------------------------------------------------------
 LOG_LEVELS: Final[list[str]] = ["DEBUG", "INFO", "WARNING", "ERROR"]
 LIFECYCLE_LOGGER_NAME: Final[str] = f"{DOMAIN}.lifecycle"
 ENTITY_DETAIL_LOGGER_NAME: Final[str] = f"{DOMAIN}.entity_detail"
@@ -249,9 +308,6 @@ PROCESSOR_LOGGER_NAME: Final[str] = f"{DOMAIN}.processor"
 USER_ACTION_LOGGER_NAME: Final[str] = f"{DOMAIN}.user_action"
 
 
-# --------------------------------------------------------------------------------
-# Diagnostics
-# --------------------------------------------------------------------------------
 DIAGNOSTICS_TO_REDACT_CONFIG_KEYS: Final[set[str]] = {CONF_HOST_IP}
 DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS: Final[set[str]] = {
     "20026",
@@ -261,9 +317,6 @@ DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS: Final[set[str]] = {
 DIAGNOSTICS_REDACTED_PLACEHOLDER: Final[str] = "REDACTED"
 
 
-# --------------------------------------------------------------------------------
-# Static Definitions
-# --------------------------------------------------------------------------------
 POLLING_GROUP_DEFINITIONS: Final[list[PollingGroupStaticDefinition]] = [
     {"key": "group_1", "default_interval": 15},
     {"key": "group_2", "default_interval": 304},

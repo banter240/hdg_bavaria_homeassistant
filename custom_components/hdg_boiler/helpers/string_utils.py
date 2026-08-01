@@ -7,7 +7,6 @@ normalizing strings for comparison or use in unique identifiers.
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
 
 import logging
 import re
@@ -21,10 +20,10 @@ __all__ = [
     "strip_hdg_node_suffix",
     "normalize_alias_for_comparison",
     "normalize_unique_id_component",
+    "normalize_hdg_node_id",
 ]
 
-# Pre-compile the regex for stripping suffixes for efficiency.
-# This regex ensures we only strip a known suffix if the preceding part is numeric.
+# Only strips the suffix if the preceding part is numeric (avoids false matches on non-node strings).
 _SUFFIX_PATTERN = re.compile(
     rf"^(\d+)[{''.join(KNOWN_HDG_API_SETTER_SUFFIXES)}]?$", re.IGNORECASE
 )
@@ -73,13 +72,14 @@ def normalize_alias_for_comparison(alias: str) -> str:
 
 
 def normalize_unique_id_component(component: str) -> str:
-    """URL-safe encode a component for robust use in unique IDs.
-
-    Args:
-        component: The string component to normalize.
-
-    Returns:
-        A URL-safe encoded version of the component string.
-
-    """
+    """URL-safe encode a component for robust use in unique IDs."""
     return quote(component, safe="")
+
+
+def normalize_hdg_node_id(raw: str) -> str:
+    """Normalize HDG node ID input (e.g. 24024 or 24024T) to form with T suffix."""
+    if not raw:
+        return ""
+    s = raw.strip().upper()
+    base = strip_hdg_node_suffix(s)
+    return f"{base}T" if base.isdigit() else s

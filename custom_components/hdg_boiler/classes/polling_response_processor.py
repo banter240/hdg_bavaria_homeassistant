@@ -7,15 +7,14 @@ to manage the state of boiler data nodes.
 
 from __future__ import annotations
 
-__version__ = "0.4.0"
 
 import logging
-import time
 from typing import TYPE_CHECKING, Any, cast
 
 from ..const import (
     CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
     DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+    HDG_PRIMARY_NODE_SUFFIX,
     PROCESSOR_LOGGER_NAME,
 )
 from ..helpers.logging_utils import _LOGGER, format_for_log
@@ -43,7 +42,7 @@ class HdgPollingResponseProcessor:
         """Retrieve the entity definition for a given node ID."""
         node_id_for_lookup = (
             node_id_with_suffix
-            if node_id_with_suffix.endswith("T")
+            if node_id_with_suffix.endswith(HDG_PRIMARY_NODE_SUFFIX)
             else f"{node_id_with_suffix}T"
         )
         definition = (
@@ -58,22 +57,14 @@ class HdgPollingResponseProcessor:
         return definition
 
     def _is_recently_set(self, node_id: str) -> bool:
-        """Check if a node's value was recently set via an API call."""
-        # Accesses the refactored state in the coordinator
-        last_set_time = self._coordinator._setter_state["last_set_times"].get(
-            node_id, 0.0
-        )
-        if last_set_time == 0.0:
-            return False
-
-        timeout = cast(
-            float,
+        """Return True if a node was recently SET and its poll should be ignored."""
+        window_s = float(
             self._coordinator.entry.options.get(
                 CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
                 DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
-            ),
+            )
         )
-        return (time.monotonic() - last_set_time) < timeout
+        return self._coordinator.optimistic.is_recently_set(node_id, window_s)
 
     def _should_ignore_polled_value(
         self, node_id: str, parsed_polled_value: Any, group_key: str
@@ -160,6 +151,10 @@ class HdgPollingResponseProcessor:
             entity_id_for_log=definition.get("translation_key"),
         )
 
+        hdg_formatter = definition.get("hdg_formatter")
+        if hdg_formatter == "iT" and isinstance(parsed_value, (int, float)):
+            parsed_value = parsed_value / 100.0
+
         if self._should_ignore_polled_value(node_id, parsed_value, group_key):
             return
 
@@ -167,7 +162,7 @@ class HdgPollingResponseProcessor:
             self._handle_duplicate_node_id(node_id, parsed_value, group_key, api_id)
             return
 
-        self._coordinator.data[node_id] = parsed_value
+        self._coordinator.update_node(node_id, parsed_value)
         processed_ids.add(node_id)
 
     def process_api_items(
