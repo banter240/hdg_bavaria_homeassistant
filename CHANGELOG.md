@@ -1,3 +1,139 @@
+## [2.0.0](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v1.0.0...v2.0.0) (2026-08-01)
+* feat(core): circuit expansion, component groups, architecture overhaul, and reliability fixes
+
+Squashed 2.x release (tree equivalent to 2.0.0-dev.9): multi-circuit coverage,
+definition-driven entities, hardened control path, and redesigned options flow.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔥 HEATING CIRCUITS (HK1–HK6)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Unified get_hk_definitions() generation for all six circuits (shared config/status
+  node offsets)
+- Per circuit: Betriebsart select; room setpoints (normal/reduced), parallel shift,
+  slope, pump-off and eco outdoor thresholds; flow actual/target and diagnostic status
+- HK1 on by default; HK2–HK6 via enable_hk2…enable_hk6
+- Betriebsart enum mappings through HK6; select resolves raw boiler labels to
+  canonical option keys
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💧 HOT WATER (WW1 + WW2)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Full WW1 and WW2 coverage (status + writable charge thresholds 8021/8022, 8121/8122)
+- Tank temperature, charge pump status, requested temperature, solar flow temperature
+- Toggles: enable_ww1, enable_ww2
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚰 NETWORK PUMPS (NP1–NP3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Temperature/status sensors (27xxx) and freigabetemperatur numbers (7023/7123/7223)
+- Toggles: enable_netzpumpe_1…3
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☀️ SOLAR THERMAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Collector temperature, total yield, pump percent, pump status
+- Toggle: enable_solar
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛢️ BUFFER, STORAGE & EXTERNAL HEAT SOURCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Buffer (Puffer) 1/2:
+- Writable charge on/off temperatures on settings nodes 4022/4024 and 4122/4124
+  (MyHDG Grundeinstellungen — not the overview display nodes 24004/24006/24104/24106)
+- Optional middle sensors (mitte-oben/unten): node IDs in options; created and polled
+  only when configured; empty IDs remove them from the registry
+- Energy, charge level, external flow/return sensors
+
+Pellet storage (Lager):
+- lagerinhalt_aktuell (21006) mass sensor; toggle enable_lager
+
+External heat source:
+- Betriebsart select (25001): Ein / Auto / Aus (incl. AUTO_AUS → auto_aus)
+- Toggle: enable_ext_wq
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧩 COMPONENT GROUPS & OPTIONS FLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Grouped options UI: connection, polling, logging, components, puffer node IDs
+- Component flags sync entity-registry enabled state per group
+- Host accepts IPv4 or DNS hostname (validation + reachability ping)
+- Optional CONF_LOG_VERSION_PREFIX on log lines
+- Options save returns immediately; sync + reload run via the update listener
+- Shared async_sync_entities_by_key for component groups and puffer middle sensors
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏗️ ARCHITECTURE: ENTITIES, COORDINATOR, API
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Definition-driven layer:
+- Factory helpers in definitions.py; thin sensor/number/select platforms
+- HdgNodeEntity base; optional value_fn / set_fn on SensorDefinition
+- HdgEntityRegistry: active-node poll payloads, indexes, writable lookup, groups
+
+Write path:
+- HdgOptimisticManager (grace period, ignore stale polls, cleanup)
+- HdgCommandExecutor for GET/SET dispatch
+- Coordinator update_node(); debounced last-write-wins SETs with rollback on failure
+- Priority API queue (user sets preempt background polls)
+
+API:
+- api/client.py + api/protocols.py (V1/V2 payload/param dialects)
+
+Polling:
+- HA update_interval tick (MIN_SCAN_INTERVAL); per-group intervals gate fetches
+- Active nodes synced from the entity registry before first refresh (including
+  manually enabled entities in slow groups)
+- Concurrent group fetch with MAX_CONCURRENT_POLL_REQUESTS
+
+Also: migration scaffold, stricter SensorDefinition typing, redacted diagnostics,
+set_node_value / get_node_value services.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 PELLET TOTAL CONSUMPTION (iT)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Node 21005 (hdg_formatter iT): divide by 100 once at ingest in the poll processor
+- Entities reuse the already-numeric coordinator value (no second parse/scale)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛠️ TOOLING, CI & DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Python 3.14 / Home Assistant >= 2026.3 tooling (pyproject, hacs.json)
+- Pre-commit: ruff, mypy, yamllint, gitleaks, local HACS validation
+- CI: CodeQL, stale bot; lint/validate/semantic-release updates
+- README overhaul (features, component table, architecture, FAQ)
+- Expanded DE/EN translations for new and renamed entities
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+☕ SUPPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If this integration helps your setup, you can buy me a coffee:
+https://buymeacoffee.com/banter240
+
+* fix: resolve diagnostics AttributeError and refactor coordinator state
+
+Refactored the internal coordinator polling state to use a dataclass for better type safety and centralized state management. This resolves the reported AttributeError during diagnostics download. Improved robustness of diagnostic data by introducing a public accessor with real UTC timestamps and monotonic values, and implemented a factory method for clean state initialization.
+
+* chore(release): 🚀 publish version 1.0.1
+
+## [1.0.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v1.0.0...v1.0.1) (2026-01-03)
+
+### 🐛 Bug Fixes
+
+* fix: resolve diagnostics AttributeError and refactor coordinator state
+
+Refactored the internal coordinator polling state to use a dataclass for better type safety and centralized state management. This resolves the reported AttributeError during diagnostics download. Improved robustness of diagnostic data by introducing a public accessor with real UTC timestamps and monotonic values, and implemented a factory method for clean state initialization.
+
+[skip ci]
+
 ## [1.0.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v1.0.0...v1.0.1) (2026-01-03)
 
 ### 🐛 Bug Fixes
