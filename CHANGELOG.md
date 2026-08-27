@@ -1,3 +1,134 @@
+## [2.0.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v1.0.0...v2.0.0-dev.1) (2026-08-27)
+
+### ⚠ BREAKING CHANGES
+
+* HK entity naming changed (heizkreis_X_system → hkX_system)
+
+### ✨ New Features
+
+* feat!: add WW/NP/Solar support, HK loop generation, and code quality improvements
+
+  ## New Features
+  - Hot Water Circuits (WW1-WW2): Full support via get_ww_definitions() loop
+  - Network Pumps (NP1-NP2): Full support via get_np_definitions() loop
+  - Solar Thermal: Zone 1-3 temps, collector protection
+  - Heating Circuits (HK1-HK6): Unified loop generation, fixed offset 48 bug
+
+  ## Architecture
+  - Factory Functions with Smart Defaults (60%+ code reduction)
+  - Package Definitions for future config flow
+
+  ## Translations
+  - Complete DE/EN translations for all new entities (HK3-6, WW1-2, NP1-2, Solar)
+
+  ## Documentation
+  - Updated README with breaking changes documentation
+  - Expanded "Enabling Additional Entities" section with component table
+* feat(hdg_boiler): add WW2 toggle, configurable puffer middle sensors, DRY refactor, Python 3.14 alignment and cleanups
+
+  - Add WW2 toggle (enable_ww2) in config flow, COMPONENT_GROUP_OPTIONS and entity defs, mirroring WW1 exactly (CONF_ENABLE_WW2, definitions with 281xx/812x nodes, translations)
+  - Configurable puffer middle sensors (mitte-oben/unten): node IDs via options, only polled/created when set, normalize helper, support T suffix, group_1 polling like other puffer temps
+  - Proper clearing of puffer IDs: normalize empty to None on save, sync disables entities via registry
+  - Refactor duplicated registry sync logic: extract async_sync_entities_by_key helper in helpers/entity_registry_utils.py; keep thin wrappers in __init__.py for component groups + puffer (DRY)
+  - Remove all tado_hijack references and excessive comments/slops throughout (config_flow, __init__, helpers, const, definitions); retain only essential docs
+  - Options flow UX: do not await full reload on save (closes immediately); syncs + reload happen via update listener in background
+  - Python 3.14 + tooling alignment (to match standards): workflows, pre-commit, pyproject.toml, hacs.json, requirements; min HA 2026.3; pinned tools (mypy 2.1.0 etc.); removed lock.yaml
+  - Full pre-commit clean on project; translations updated for WW2 + puffer
+  - Other fixes: options clear/save for puffer, no more blocking config window on polls
+* feat(hdg_boiler): enhance sensor definitions, add controls and fix scaling
+
+  * Add 'lagerinhalt_aktuell' (21006) as mass sensor.
+  * Add 'externe_warmequelle_betriebsart' (25001) as select entity with status mapping.
+  * Convert Puffer 1/2 charge parameters (24004, 24006, 24104, 24106) to writable Number entities.
+  * Rename Puffer keys to match controller text ('puffer_ladung_ein/aus').
+  * Add 'netzpumpe_freigabetemperatur' (7023, 7123, 7223) as Number entities.
+  * Add missing Netzpumpe status entities (1-3) and translations.
+  * Correct scaling (factor 100) and unit logic for pellet consumption (21005T).
+* feat(hdg_boiler): extend Betriebsart mappings for HK3+ and external heat source + fix pellet consumption scaling
+
+  - Add enum mappings for hk3_betriebsart..hk6_betriebsart and hkX_aktuelle_betriebsart
+  - Add auto_aus option and mapping for externe_warmequelle_betriebsart to support Ein/Auto/Aus (and Auto Aus)
+  - Update HdgBoilerSelect.current_option to resolve raw boiler values (e.g. 'Sommer- betrieb', 'AUTO_EIN') to canonical keys
+  - Update translations for auto_aus state
+  - Add iT formatter scaling correction in parsers (divide by 100 for some boilers, e.g. 718.0 -> 7.18 t for node 21005)
+
+  This improves reliability for higher heating circuits (HK3+) and hybrid external heat source operating mode, and fixes wrong decimal in total pellet consumption.
+* feat(hdg_boiler): per-circuit component groups, config flow overhaul, and entity architecture refactor
+
+  Component groups & options flow:
+  * Add individual enable/disable toggles for all optional hardware circuits:
+    WW1, HK2–HK6, Solar, Puffer 2, Ext. Wärmequelle, Lager, Netzpumpen 1–3
+  * Options flow grouped into collapsible sections (connection, polling, logging, components)
+  * Hostname/DNS resolution support for CONF_HOST_IP — accepts both IP and hostname
+  * Add CONF_LOG_VERSION_PREFIX: prefix every log entry with the integration version string
+
+  Entity architecture:
+  * Rewrite entity.py as thin HdgNodeEntity base; sensor/number/select platforms reduced
+    to setup-only modules
+  * Add HdgOptimisticManager (helpers/optimistic_manager.py) — tracks pending writes,
+    blocks stale poll overrides, and auto-cleans after grace period
+  * Add HdgCommandExecutor (helpers/executor.py) — isolates command dispatch from coordinator
+  * Coordinator: fix init sequence, async_stop cleanup, and entity registration ordering
+  * Coordinator: add update_node() as single write path; get_optimistic_value() public API
+  * Fix translation key mismatches across en.json / de.json (full parity)
+
+  Migration infrastructure:
+  * Add helpers/migration.py with v2 migration scaffold (config entry VERSION stays at 1;
+    no active migration triggered — infrastructure only, ready for dev.3 activation)
+
+  CI / dev tooling:
+  * Add CodeQL, stale-bot, and lock-bot GitHub Actions workflows
+  * Add yamllint config (.yamllint) and integrate into pre-commit pipeline
+  * Migrate workflow standards and pre-commit baseline
+  * Add dev/ AI workspace to .gitignore
+
+### 🐛 Bug Fixes
+
+* fix(ci): unblock semantic-release notes with changelog writer v9
+
+  conventional-changelog-conventionalcommits 10.4.0 requires writer v9.
+  semantic-release 25 still pulls writer 8, so generateNotes crashed.
+  Pin the release toolchain, override writer to 9.2.1, and switch
+  commitPartial to a render function (Handlebars strings are gone).
+
+  Ignore local AI agent files (AGENTS.md, CLAUDE.md, GROK.md) like tado.
+* fix(coordinator): restore periodic polling and registry-based node pre-population
+
+  Two regressions introduced in the dev.3 refactor:
+
+  1. update_interval was set to None, so HA never called _async_update_data
+     after the initial refresh. All sensors froze at startup values.
+     Fix: set update_interval=timedelta(seconds=MIN_SCAN_INTERVAL) so HA drives
+     the 15 s tick loop; _get_groups_to_fetch() gates slower groups internally.
+
+  2. _setup_initial_active_nodes() (which read enabled entities from the HA
+     entity registry) was replaced by get_default_active_node_ids(), which only
+     includes entities with entity_registry_enabled_default=True. Manually-enabled
+     sensors in slow polling groups (group_5, 24 h interval) were absent from
+     _active_node_ids on the first poll, causing them to be unavailable for up to
+     24 hours after every restart.
+     Fix: add _sync_active_nodes_from_registry() called before first_refresh,
+     restoring the dev.2 behaviour.
+* fix(definitions): remap Pufferladung number entities to settings nodes
+
+  Pufferladung EIN/AUS used INFO mirror nodes (24004/24006, 24104/24106),
+  so writes appeared to stick then reverted on the next poll.
+
+  Remap to the writable settings nodes:
+  4022/4024 (Puffer 1) and 4122/4124 (Puffer 2).
+* fix(hdg_boiler): correct iT pellet consumption scaling
+
+  - Apply /100 for hdg_formatter="iT" exactly once after parse in processor
+  - Guard in _get_value for already-parsed numeric values
+* fix: resolve diagnostics AttributeError and refactor coordinator state
+
+  Refactored the internal coordinator polling state to use a dataclass for better type safety and centralized state management. This resolves the reported AttributeError during diagnostics download. Improved robustness of diagnostic data by introducing a public accessor with real UTC timestamps and monotonic values, and implemented a factory method for clean state initialization.
+* fix(sensor): remove iT scaling for pellet consumption
+
+  The previous /100 heuristic for hdg_formatter='iT' (node 21005) was causing incorrect values for some users (e.g. 963 t -> 0.0963 t).
+
+  Reverting to direct float parse from the API value.
+
 ## [2.0.0-dev.9](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0-dev.8...v2.0.0-dev.9) (2026-07-22)
 * fix(definitions): remap Pufferladung number entities to settings nodes
 
