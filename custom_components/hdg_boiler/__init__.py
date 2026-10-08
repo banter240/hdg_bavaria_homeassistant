@@ -136,6 +136,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HdgConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     await _async_sync_puffer_sensors(hass, entry)
+    await _async_sync_component_groups(hass, entry)
 
     _LIFECYCLE_LOGGER.info(
         "HDG Boiler for %s setup complete. Added %d entities.",

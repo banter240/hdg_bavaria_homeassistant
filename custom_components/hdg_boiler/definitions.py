@@ -2357,6 +2357,16 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         ),
         "ext_wq",
     ),
+    "externe_warmequelle_temperatur": _with_group(
+        create_temp_sensor(
+            entity_registry_enabled_default=False,
+            key="externe_warmequelle_temperatur",
+            node_id="25006T",
+            polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
+            icon="mdi:thermometer",
+        ),
+        "ext_wq",
+    ),
 }
 
 _PREFIX_GROUP_MAP: Final[list[tuple[str, str]]] = [
@@ -2364,6 +2374,7 @@ _PREFIX_GROUP_MAP: Final[list[tuple[str, str]]] = [
     ("ww1_", "ww1"),
     ("ww2_", "ww2"),
     ("lager_", "lager"),
+    ("externe_warmequelle_", "ext_wq"),
 ]
 
 for _k, _defn in SENSOR_DEFINITIONS.items():
