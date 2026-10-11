@@ -14,7 +14,6 @@ __all__ = ["HdgBaseEntity", "HdgNodeEntity"]
 import logging
 from typing import Any, cast
 
-from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
@@ -29,7 +28,6 @@ from .const import (
     DEFAULT_SOURCE_TIMEZONE,
     DOMAIN,
     ENTITY_DETAIL_LOGGER_NAME,
-    HDG_DATETIME_SPECIAL_TEXT,
     HDG_UNAVAILABLE_STRINGS,
     LIFECYCLE_LOGGER_NAME,
 )
@@ -238,12 +236,7 @@ class HdgNodeEntity(HdgBaseEntity):
             return False
 
         text_lower = raw_value.lower().strip()
-        if text_lower in HDG_UNAVAILABLE_STRINGS:
-            return True
-        return (
-            self.device_class == SensorDeviceClass.TIMESTAMP
-            and HDG_DATETIME_SPECIAL_TEXT in text_lower
-        )
+        return text_lower in HDG_UNAVAILABLE_STRINGS
 
     @property
     def available(self) -> bool:
