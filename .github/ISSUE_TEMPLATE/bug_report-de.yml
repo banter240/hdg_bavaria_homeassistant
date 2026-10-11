@@ -1,0 +1,130 @@
+name: Fehler melden (Deutsch)
+description: Etwas funktioniert nicht wie erwartet
+labels: ["type:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Vor dem Absenden
+        - [Offene Issues](https://github.com/banter240/hdg_bavaria_homeassistant/issues)
+          prüfen. Vielleicht ist der Fehler schon gemeldet.
+        - [FAQ und Fehlersuche](https://github.com/banter240/hdg_bavaria_homeassistant#troubleshooting)
+          ansehen.
+        - Kurze Fragen gehören in die
+          [Discussions](https://github.com/banter240/hdg_bavaria_homeassistant/discussions).
+
+  - type: dropdown
+    id: boiler_model
+    attributes:
+      label: Kesselmodell
+      description: Welcher HDG-Bavaria-Kessel ist das?
+      options:
+        - Euro
+        - K-Serie
+        - Compact
+        - Anderes
+        - Weiß ich nicht
+    validations:
+      required: true
+
+  - type: input
+    id: integration_version
+    attributes:
+      label: Version der Integration
+      description: >
+        Einstellungen -> Geräte & Dienste -> HDG Bavaria Boiler -> drei Punkte
+        -> Integrationsinformationen. Oder in HACS nachsehen.
+      placeholder: "z. B. 2.0.0 oder 2.0.0-dev.1"
+    validations:
+      required: true
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home-Assistant-Version
+      description: Einstellungen -> System -> Über
+      placeholder: "z. B. 2026.3.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Installationsart
+      options:
+        - HACS - stabile Version
+        - HACS - Vorabversion / Dev-Kanal
+        - Manuell (Dateien kopiert)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Was ist passiert?
+      description: Was hast du beobachtet, und wann?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Was hättest du erwartet?
+      description: Was hätte stattdessen passieren sollen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Schritte zum Nachvollziehen
+      description: So können wir den Fehler zuverlässig nachstellen.
+      placeholder: |
+        1. ...
+        2. ...
+        3. Fehler oder falsches Verhalten
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnosedatei
+      description: |
+        Am hilfreichsten ist die Diagnosedatei. Sie enthält die
+        Integration-Version und die gepollten Node-Werte. Seriennummer, MAC
+        und Host stehen als `**REDACTED**` drin. Temperaturen und
+        Betriebsarten bleiben sichtbar.
+
+        So kommst du dran:
+        **Einstellungen -> Geräte & Dienste -> HDG Bavaria Boiler -> drei Punkte
+        -> Diagnose herunterladen**
+
+        Die heruntergeladene `.json`-Datei hier ablegen oder den Inhalt einfügen.
+      placeholder: Diagnosedatei hier ablegen oder den Inhalt einfügen.
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevante Logs
+      description: |
+        Logzeilen einfügen oder eine Logdatei hier ablegen.
+        Zeilen beginnen mit `[vX.Y.Z]`. Suche nach `hdg_boiler`.
+
+        Die Stufe stellst du in den Integrationsoptionen ein:
+        **Einstellungen -> Geräte & Dienste -> HDG Bavaria Boiler -> Konfigurieren
+        -> Protokollierung**. Die Integration setzt die Stufe beim Start.
+      placeholder: Logdatei hier ablegen oder die relevanten Zeilen einfügen.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Weiterer Kontext
+      description: >
+        Screenshots, Automatisierungen, Firmware-Stand oder alles, was sonst hilft.
+    validations:
+      required: false

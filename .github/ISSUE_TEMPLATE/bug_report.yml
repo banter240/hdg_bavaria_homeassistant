@@ -1,0 +1,126 @@
+name: Bug Report (English)
+description: Something isn't working as expected
+labels: ["type:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Before You Submit
+        - Check [existing issues](https://github.com/banter240/hdg_bavaria_homeassistant/issues).
+          It may already be reported.
+        - Check [FAQ & Troubleshooting](https://github.com/banter240/hdg_bavaria_homeassistant#troubleshooting).
+        - Use [Discussions](https://github.com/banter240/hdg_bavaria_homeassistant/discussions) for quick questions.
+
+  - type: dropdown
+    id: boiler_model
+    attributes:
+      label: Boiler Model
+      description: Which HDG Bavaria boiler is this?
+      options:
+        - Euro
+        - K-series
+        - Compact
+        - Other
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: integration_version
+    attributes:
+      label: HDG Bavaria Boiler Version
+      description: >
+        Settings -> Devices & Services -> HDG Bavaria Boiler -> three dots -> Integration information.
+        Or check HACS.
+      placeholder: "e.g. 2.0.0 or 2.0.0-dev.1"
+    validations:
+      required: true
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant Version
+      description: Settings -> System -> About
+      placeholder: "e.g. 2026.3.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Installation Method
+      options:
+        - HACS - stable release
+        - HACS - pre-release / dev channel
+        - Manual (copied files)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What Happened?
+      description: Clear description of the bug. What did you observe, and when?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What Did You Expect?
+      description: What should have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Help us reproduce the issue consistently.
+      placeholder: |
+        1. ...
+        2. ...
+        3. See error / wrong behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics File
+      description: |
+        **Most useful:** the diagnostics file. It contains the integration version
+        and the polled node values. Plant serial, MAC address, and host are
+        replaced with `**REDACTED**`. Temperatures and operating modes stay.
+
+        How to get it:
+        **Settings -> Devices & Services -> HDG Bavaria Boiler -> three dots -> Download diagnostics**
+
+        Drag & drop the downloaded `.json` file directly into this field, or paste its contents.
+      placeholder: Drag & drop the diagnostics JSON file here, or paste its contents.
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: |
+        Paste relevant log lines or drag & drop a log file.
+        Lines start with `[vX.Y.Z]`. Search for `hdg_boiler`.
+
+        Set the level in the integration options:
+        **Settings -> Devices & Services -> HDG Bavaria Boiler -> Configure -> Logging**.
+        The integration applies that level on startup.
+      placeholder: Drag & drop a log file here, or paste relevant log lines.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: >
+        Screenshots, automations, firmware version, or anything else that helps.
+    validations:
+      required: false

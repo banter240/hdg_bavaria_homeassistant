@@ -1,0 +1,44 @@
+name: Feature-Wunsch (Deutsch)
+description: Neue Funktion oder Verbesserung vorschlagen
+labels: ["type:feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Vor dem Absenden
+        - [Offene Issues](https://github.com/banter240/hdg_bavaria_homeassistant/issues)
+          und [Discussions](https://github.com/banter240/hdg_bavaria_homeassistant/discussions)
+          prüfen. Vielleicht hat das schon jemand vorgeschlagen.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Welches Problem löst das?
+      description: Wobei fehlts gerade? Je konkreter, desto besser.
+      placeholder: "z. B. Ich will X automatisieren, aber dafür gibt es aktuell keinen Weg..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Vorgeschlagene Lösung
+      description: Was soll dazu kommen oder sich ändern?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Schon überlegte Alternativen
+      description: Workarounds, die du probiert hast, oder andere Wege, die das lösen könnten.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Weiterer Kontext
+      description: Screenshots, Links, Node-IDs oder alles, was den Wunsch greifbar macht.
+    validations:
+      required: false
