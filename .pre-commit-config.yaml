@@ -18,7 +18,7 @@ repos:
 
   # Ruff hook for fast linting and formatting.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+    rev: v0.16.5
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -35,11 +35,11 @@ repos:
         types: [python]
         args: [--explicit-package-bases]
         additional_dependencies:
-          - "mypy==2.1.0"
+          - "mypy==2.3.1"
 
   # Sourcery hook for AI-powered refactoring.
   - repo: https://github.com/sourcery-ai/sourcery
-    rev: "v1.43.0"
+    rev: "v1.45.0"
     hooks:
       - id: sourcery
         # Automatically apply fixes suggested by Sourcery
