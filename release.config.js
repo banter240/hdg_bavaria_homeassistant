@@ -69,7 +69,13 @@ export default {
     ],
     [
       "@semantic-release/github",
-      { assets: ["dist/*.zip"] },
+      {
+        assets: ["dist/*.zip"],
+        // main -> status:released; rc/dev -> status:released-<channel>
+        releasedLabels: [
+          "status:released<%= nextRelease.channel ? '-' + nextRelease.channel : '' %>",
+        ],
+      },
     ],
   ],
 };
