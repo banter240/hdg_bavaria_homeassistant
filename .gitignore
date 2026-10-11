@@ -177,6 +177,9 @@ GEMINI.md
 # Temporary files
 .old/*
 
+# Node (semantic-release CI tooling)
+node_modules/
+
 # Local testing directory
 testing_config/
 
