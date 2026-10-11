@@ -23,7 +23,7 @@ from ..const import (
     HDG_DATETIME_SPECIAL_TEXT,
     HEURISTICS_LOGGER_NAME,
 )
-from .enum_mappings import HDG_ENUM_TEXT_TO_KEY_MAPPINGS
+from .enum_mappings import HDG_ENUM_TEXT_TO_KEY_MAPPINGS, resolve_hdg_enum_key
 from .logging_utils import make_log_prefix
 
 _LOGGER = logging.getLogger(DOMAIN)
@@ -165,9 +165,7 @@ def _convert_enum_text_to_key(
     if not enum_map:
         return value
 
-    if key := next(
-        (k for text, k in enum_map.items() if text.lower() == value.lower()), None
-    ):
+    if key := resolve_hdg_enum_key(value, enum_map):
         _LOGGER.debug("%sMapped enum '%s' to key '%s'.", log_prefix, value, key)
         return key
 

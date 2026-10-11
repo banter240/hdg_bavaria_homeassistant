@@ -8,10 +8,49 @@ translation files.
 
 from __future__ import annotations
 
-
+import re
 from typing import Final
 
-__all__ = ["HDG_ENUM_TEXT_TO_KEY_MAPPINGS"]
+__all__ = ["HDG_ENUM_TEXT_TO_KEY_MAPPINGS", "resolve_hdg_enum_key"]
+
+# Touch labels wrap long words as "Sommer-\r\nbetrieb". Polls also arrive as
+# "Sommer- betrieb", "Sommer-betrieb", or with a <br> tag.
+_BR_TAG_RE = re.compile(r"(?i)<br\s*/?>")
+_WHITESPACE_RE = re.compile(r"\s+")
+_HYPHEN_BREAK_RE = re.compile(r"-\s*")
+_DASH_RE = re.compile(r"[\u00ad\u2010\u2011\u2012\u2013\u2014\u2212]")
+
+
+def _fold_hdg_enum_text(value: str) -> str:
+    """Collapse line breaks so wrapped HDG labels compare equal."""
+    text = _DASH_RE.sub("-", value)
+    text = _BR_TAG_RE.sub(" ", text)
+    text = text.replace("\r", " ").replace("\n", " ")
+    return _WHITESPACE_RE.sub(" ", text).strip().casefold()
+
+
+def _compact_hdg_enum_text(value: str) -> str:
+    """Drop a line-break hyphen: 'Sommer- betrieb' and 'Sommerbetrieb' match."""
+    return _HYPHEN_BREAK_RE.sub("", _fold_hdg_enum_text(value))
+
+
+def resolve_hdg_enum_key(raw_value: str, enum_map: dict[str, str]) -> str | None:
+    """Return the canonical key for a raw HDG enum label, if one is known."""
+    folded = _fold_hdg_enum_text(raw_value)
+    compact = _compact_hdg_enum_text(raw_value)
+    return next(
+        (
+            key
+            for text, key in enum_map.items()
+            if (
+                _fold_hdg_enum_text(text) == folded
+                or _compact_hdg_enum_text(text) == compact
+                or key.casefold() == folded
+            )
+        ),
+        None,
+    )
+
 
 HDG_ENUM_TEXT_TO_KEY_MAPPINGS: Final[dict[str, dict[str, str]]] = {
     "hk1_betriebsart": {
