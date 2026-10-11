@@ -263,6 +263,11 @@
     "abort": {}
   },
   "entity": {
+    "button": {
+      "poll_everything": {
+        "name": "Poll everything"
+      }
+    },
     "sensor": {
       "abgasleitwert_ist": {
         "name": "Flue Gas Conductance Actual"

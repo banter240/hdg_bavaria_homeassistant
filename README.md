@@ -224,6 +224,7 @@ Entities are created from a central definition file. Only nodes belonging to ena
 - `sensor` — temperatures, percentages, counters, status, diagnostics
 - `number` — writable setpoints and configuration values
 - `select` — operating modes and discrete settings
+- `button` — **Poll everything** polls all five groups at once. Groups 3 to 5 otherwise wait about a day.
 
 **Component Groups**
 

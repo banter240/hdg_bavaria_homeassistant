@@ -263,6 +263,11 @@
     "abort": {}
   },
   "entity": {
+    "button": {
+      "poll_everything": {
+        "name": "Alles aktualisieren"
+      }
+    },
     "sensor": {
       "abgasleitwert_ist": {
         "name": "Abgasleitwert Ist"

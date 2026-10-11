@@ -114,11 +114,12 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
     async def async_added_to_hass(self) -> None:
         """Handle entity being added to Home Assistant."""
         await super().async_added_to_hass()
+        description = getattr(self, "entity_description", None)
         _LIFECYCLE_LOGGER.debug(
             "HdgBaseEntity added to HASS: %s (Name: %s, TranslationKey: %s)",
             self.unique_id,
             self.name,
-            getattr(self.entity_description, "translation_key", "N/A"),
+            getattr(description, "translation_key", "N/A"),
         )
 
     @property
@@ -132,6 +133,12 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
             )
             return False
         return True
+
+    def _log_entity_details(self, prefix: str, details: dict[str, Any]) -> None:
+        """Log detailed entity information using _ENTITY_DETAIL_LOGGER."""
+        _ENTITY_DETAIL_LOGGER.debug(
+            "%s: Entity Details: %s", prefix, format_for_log(details)
+        )
 
 
 class HdgNodeEntity(HdgBaseEntity):
@@ -286,12 +293,6 @@ class HdgNodeEntity(HdgBaseEntity):
                 attributes["hdg_raw_value"] = str(raw_value)[:100]
 
         return {k: v for k, v in attributes.items() if v is not None}
-
-    def _log_entity_details(self, prefix: str, details: dict[str, Any]) -> None:
-        """Log detailed entity information using _ENTITY_DETAIL_LOGGER."""
-        _ENTITY_DETAIL_LOGGER.debug(
-            "%s: Entity Details: %s", prefix, format_for_log(details)
-        )
 
     def _get_value(self) -> Any:
         """Return the current parsed value for this node.

@@ -104,6 +104,8 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # DataUpdateCoordinator initialises self.data to None; we need a dict
         # from the very first poll so update_node() can write into it safely.
         self.data: dict[str, Any] = {}
+        self._poll_all_requested = False
+        self._last_poll_all_success = True
 
     @property
     def scan_intervals(self) -> dict[str, timedelta]:
@@ -359,21 +361,41 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 delay,
             )
 
+    async def async_poll_everything(self) -> bool:
+        """Poll every group now, ignoring scan intervals."""
+        self._sync_active_nodes_from_registry()
+        self._poll_all_requested = True
+        await self.async_refresh()
+        return self._last_poll_all_success
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data for all due polling groups."""
-        groups_to_fetch = self._get_groups_to_fetch(time.monotonic())
+        poll_all = self._poll_all_requested
+        self._poll_all_requested = False
+        if poll_all:
+            groups_to_fetch = set(self.hdg_entity_registry.get_polling_group_payloads())
+            priority = ApiPriority.MEDIUM
+        else:
+            groups_to_fetch = self._get_groups_to_fetch(time.monotonic())
+            priority = ApiPriority.LOW
         if not groups_to_fetch:
+            if poll_all:
+                self._last_poll_all_success = True
             return self.data
 
         try:
             any_success = await self._concurrently_fetch_groups(
-                list(groups_to_fetch), ApiPriority.LOW
+                list(groups_to_fetch), priority
             )
+            if poll_all:
+                self._last_poll_all_success = any_success
             self._set_boiler_online_status(any_success)
             self._update_polling_status(any_success, list(groups_to_fetch))
             self.optimistic.cleanup()
 
         except HdgApiConnectionError as err:
+            if poll_all:
+                self._last_poll_all_success = False
             self._on_connection_failure()
             result = self._handle_update_failure("connection", context={"error": err})
             if result is not None:

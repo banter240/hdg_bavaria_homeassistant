@@ -51,7 +51,12 @@ type HdgConfigEntry = ConfigEntry[HdgDataUpdateCoordinator]
 _LOGGER = logging.getLogger(DOMAIN)
 _LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.NUMBER, Platform.SELECT]
+PLATFORMS: list[Platform] = [
+    Platform.BUTTON,
+    Platform.SENSOR,
+    Platform.NUMBER,
+    Platform.SELECT,
+]
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: HdgConfigEntry) -> bool:
