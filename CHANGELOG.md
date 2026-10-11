@@ -1,3 +1,161 @@
+## [2.1.0](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0...v2.1.0) (2026-10-11)
+
+### ✨ New Features
+
+* feat(hdg_boiler): add a button that polls every group
+
+  Groups 3, 4, and 5 poll about once a day, so counters and settings
+  stay stale. The button polls all five groups immediately. It uses
+  the coordinator refresh lock and the existing limit of five
+  requests at a time.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🔧 CHANGED
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - button poll_everything polls all five groups at once
+  - a failed connection keeps the previous values
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🌐 TRANSLATIONS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - en Poll everything
+  - de Alles aktualisieren
+
+  Translations: en, de.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📝 DOCS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - the README lists the button
+* feat(hdg_boiler): add the external heat source temperature
+
+  Node 25006 is the external heat source temperature. It belongs to
+  the ext_wq component and stays disabled until that component is
+  enabled.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🔧 CHANGED
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - sensor externe_warmequelle_temperatur reads node 25006
+  - the entity is in group ext_wq and disabled by default
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🌐 TRANSLATIONS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - en Ext. Heat Source Temperature
+  - de Ext. Wärmequelle Temperatur
+
+  Translations: en, de.
+
+### 🐛 Bug Fixes
+
+* fix(ci): unblock semantic-release notes with changelog writer v9
+
+  conventional-changelog-conventionalcommits 10.4.0 loads changelog
+  writer v9, and semantic-release 25 still installs writer 8.
+  generateNotes crashed on that mismatch. The workflow now installs
+  the lockfile with npm ci, and commitPartial is a render function
+  in release.config.js because the old Handlebars string does not
+  run under writer v9.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🐛 FIXED
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - conventional-changelog-writer is pinned to ^9.2.1
+  - .releaserc is replaced by release.config.js
+  - the release workflow runs npm ci instead of npm install
+  - node_modules is gitignored
+* fix(hdg_boiler): accept the wrapped Sommer and Urlaub labels
+
+  The touch label for summer is Sommer-<CRLF>betrieb. The select only
+  matched the spaced form "Sommer- betrieb", so HK2 and HK3 showed
+  unknown while the boiler was in summer. The same wrap exists on the
+  Urlaub label.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🐛 FIXED
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - a wrapped Sommer or Urlaub label resolves to sommer or urlaub
+  - Sommerbetrieb and Sommer-betrieb match the same option
+  - the heating-circuit select is no longer unknown in summer mode
+* fix(hdg_boiler): poll enabled heating circuits and sync their entities on startup
+
+  Later HK1 and HK2 definitions overwrote the generated ones and
+  dropped the component group, so those nodes were never polled.
+  HK2 flow temperature stayed dead while the circuit was enabled.
+  Component groups also synced only when options were saved, so
+  entities the integration had disabled stayed off across a restart.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🐛 FIXED
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - the duplicate HK1 and HK2 definitions are gone
+  - generated circuit entities keep their component group
+  - component groups sync on startup, not only when options are saved
+* fix(hdg_boiler): prefix logs and redact the serial, MAC, and host
+
+  Log filters did not reach child loggers, and the diagnostics
+  download called a method that does not exist. The plant name, the
+  MAC, and the host are the values that must not leave the machine.
+  Temperatures, operating modes, and the hydraulic scheme stay visible.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🐛 FIXED
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - every integration log line starts with [vX.Y.Z] while the option is on
+  - serial (node 20026), MAC (node 20031), and the boiler host are redacted
+  - the diagnostics download calls get_diagnostics()
+  - diagnostics include the version and the polled node values
+  - the API path stays in the diagnostics URL
+  - hydraulic scheme 20039 stays visible
+  - the coordinator name no longer contains the host
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📝 DOCS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - the README describes the version prefix, the startup sync, and what
+    diagnostics redact
+  - the public README no longer points at the private dev workspace
+* fix(hdg_boiler): show the refill text past seven days
+
+  The boiler sends "größer 7 Tage" when the next refill is more than
+  seven days away. The timestamp sensor treated that text as missing,
+  so the refill time stayed unavailable.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🐛 FIXED
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - node 22053 stays available when the text is größer 7 Tage
+  - the timestamp device class is cleared while that text is present
+
+### 📚 Documentation
+
+* docs: add German and English issue forms
+
+  The community is mostly German. Bugs and feature requests need a
+  German form as well as an English one. Blank issues stay closed.
+  Questions go to Discussions.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📝 DOCS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - English and German bug and feature forms
+  - bugs are type:bug, features are type:feature
+  - the forms say the log level is set in the integration options
+  - diagnostics redact the serial, the MAC, and the host
+
 ## [2.0.0](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v1.0.0...v2.0.0) (2026-08-01)
 * feat(core): circuit expansion, component groups, architecture overhaul, and reliability fixes
 
