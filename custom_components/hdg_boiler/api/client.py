@@ -16,10 +16,18 @@ from ..const import (
     ACCEPTED_CONTENT_TYPES,
     API_ENDPOINT_DATA_REFRESH,
     API_ENDPOINT_SET_VALUE,
+    DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS,
 )
 from ..exceptions import HdgApiConnectionError, HdgApiError, HdgApiResponseError
-from ..helpers.logging_utils import _API_LOGGER, _LOGGER, format_for_log
+from ..helpers.logging_utils import (
+    _API_LOGGER,
+    _LOGGER,
+    format_for_log,
+    note_host_secret,
+    note_log_secret,
+)
 from ..helpers.network_utils import prepare_base_url
+from ..helpers.string_utils import strip_hdg_node_suffix
 from .protocols import HdgApiProtocol, ProtocolV1, ProtocolV2
 
 
@@ -76,6 +84,7 @@ class HdgApiClient:
         connect_timeout: float,
     ) -> None:
         """Initialize the API client."""
+        note_host_secret(host_address)
         self._session = session
         self._aiohttp_timeout = aiohttp.ClientTimeout(
             total=api_timeout, connect=connect_timeout
@@ -207,6 +216,11 @@ class HdgApiClient:
             HdgApiResponseError: If the API returns an error status or unexpected response.
 
         """
+        if (
+            strip_hdg_node_suffix(node_id)
+            in DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS
+        ):
+            note_log_secret(value)
         _API_LOGGER.debug(
             "Setting node '%s' to value '%s' (%s)",
             node_id,

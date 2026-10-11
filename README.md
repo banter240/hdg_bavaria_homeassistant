@@ -88,8 +88,8 @@ It is designed to work reliably with the relatively weak built-in web server of 
 - **Extras**
   - Raw `set_node_value` / `get_node_value` services.
   - Excellent German + English translations.
-  - Comprehensive diagnostics export.
-  - Detailed logging categories.
+  - Diagnostics export with the integration version and polled node values.
+  - Logging with a version prefix. Serial, MAC, and host are redacted.
 
 ---
 
@@ -106,10 +106,10 @@ It is designed to work reliably with the relatively weak built-in web server of 
 | Buffer 2        | `enable_puffer_2`  | Off    | Secondary buffer storage |
 | Solar           | `enable_solar`     | Off    | Solar thermal collector & pumps |
 | Network Pumps 1–3 | `enable_netzpumpe_X` | Off  | District heating / net pumps |
-| External Heat Source | `enable_ext_wq` | Off | External heat source (e.g. heat pump) |
+| External Heat Source | `enable_ext_wq` | Off | External heat source, including its temperature |
 | Pellet Storage  | `enable_lager`     | Off    | Detailed pellet storage monitoring (total consumption, since last fill, etc.) |
 
-All component entities start disabled by default. Enable the ones you need in the integration options.
+Entities for optional components start disabled. Enable the component in the integration options.
 
 ---
 
@@ -128,7 +128,7 @@ When set, the integration dynamically creates `puffer_temperatur_mitte_oben` and
 
 ### Proper Component Toggling & Entity Sync
 
-Enabling/disabling a component group (HK3, WW2, Netzpumpe 2, ...) automatically enables or disables the corresponding entities via the entity registry. No manual enabling of dozens of entities required.
+Enabling or disabling a component group (HK2, WW2, Netzpumpe 2, ...) enables or disables the matching entities in the entity registry. The same sync runs when the integration starts, so entities the integration itself had disabled follow the options already saved.
 
 ### Robust Write Handling
 
@@ -207,7 +207,7 @@ The options are organized in collapsible sections:
 - **Puffer** — Enter node IDs for additional middle buffer temperature sensors.
 - **Polling** — Individual intervals for the 5 polling groups.
 - **Connection** — Timeouts and fallback ping.
-- **Logging** — Log level, advanced logging, source timezone.
+- **Logging** — Log level, version prefix, advanced logging, source timezone.
 - **Advanced** — Preemption timeouts, error thresholds, maintenance mode.
 
 Changes take effect after a reload (the integration does **not** wait for all polls to finish when saving options).
@@ -227,7 +227,7 @@ Entities are created from a central definition file. Only nodes belonging to ena
 
 **Component Groups**
 
-All optional components start with their entities disabled. Enable the component in the options and the corresponding entities will be enabled automatically via the registry.
+Optional components start with their entities disabled. Enable the component in the options and the matching entities are enabled through the registry. Startup runs that sync again.
 
 See the Component Support table above.
 
@@ -261,13 +261,17 @@ Read the current raw value from the integration's cache (debugging).
 
 ## Troubleshooting
 
-- Enable debug logging:
-  ```yaml
-  logger:
-    logs:
-      custom_components.hdg_boiler: debug
-  ```
-- Download diagnostics from the integration card.
+- Set **Logging → Log level** to Debug in the integration options.
+  **Show version in logs** is on by default, so lines start with `[vX.Y.Z]`.
+  The integration applies that level on startup to `hdg_boiler` and
+  `custom_components.hdg_boiler`. Search the Home Assistant logs for
+  `hdg_boiler`.
+- Logs and the diagnostics download replace the plant name / serial
+  (Anlagenbezeichnung), the MAC address, and the boiler host with
+  `**REDACTED**`. Temperatures, operating modes, and the hydraulic scheme
+  stay visible.
+- Download diagnostics from the device page. The file contains the
+  integration version and the polled node values. The API path is kept.
 - Use the `get_node_value` service to inspect raw values.
 - Check for "preemption", "fallback", or "maintenance" messages in the logs.
 
@@ -292,7 +296,7 @@ A: Yes. Enable `enable_ww2` in the options.
 
 ## Documentation
 
-For deeper technical details (architecture, polling strategy, entity definitions, etc.) see the files in `dev/workspace/context/`.
+Setup, options, entities, and troubleshooting are in this README.
 
 ---
 
@@ -318,4 +322,4 @@ GNU General Public License v3.0
 
 ---
 
-*This README is intentionally practical. For the full technical picture see `dev/workspace/context/`.*
+*This README is the user documentation for the integration.*

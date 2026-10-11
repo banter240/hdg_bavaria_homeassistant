@@ -9,10 +9,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_registry import RegistryEntryDisabler
 
+from .logging_utils import get_redacted_logger
+
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = get_redacted_logger(__name__)
 
 PLATFORM_SUFFIXES: tuple[str, ...] = ("_sensor", "_number", "_select")
 

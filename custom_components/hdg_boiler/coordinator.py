@@ -82,10 +82,11 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         prepared_base_url = self.api_client.base_url
         self._hostname = urlparse(prepared_base_url).hostname
+        # Home Assistant logs this name from its own logger, outside our filter.
         super().__init__(
             hass,
             _LOGGER,
-            name=f"{DOMAIN}_{self._hostname}",
+            name=f"{DOMAIN}_{entry.entry_id}",
             update_interval=timedelta(seconds=MIN_SCAN_INTERVAL),
         )
 

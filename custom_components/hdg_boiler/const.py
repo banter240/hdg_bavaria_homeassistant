@@ -309,12 +309,12 @@ USER_ACTION_LOGGER_NAME: Final[str] = f"{DOMAIN}.user_action"
 
 
 DIAGNOSTICS_TO_REDACT_CONFIG_KEYS: Final[set[str]] = {CONF_HOST_IP}
+# 20026 Anlagenbezeichnung (serial / plant name), 20031 MAC address.
 DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS: Final[set[str]] = {
     "20026",
     "20031",
-    "20039",
 }
-DIAGNOSTICS_REDACTED_PLACEHOLDER: Final[str] = "REDACTED"
+DIAGNOSTICS_REDACTED_PLACEHOLDER: Final[str] = "**REDACTED**"
 
 
 POLLING_GROUP_DEFINITIONS: Final[list[PollingGroupStaticDefinition]] = [

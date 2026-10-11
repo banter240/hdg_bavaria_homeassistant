@@ -107,7 +107,7 @@ from .const import (
     MIN_SCAN_INTERVAL,
     POLLING_GROUP_DEFINITIONS,
 )
-from .helpers.logging_utils import _LOGGER
+from .helpers.logging_utils import _LOGGER, note_host_secret
 from .helpers.network_utils import async_execute_icmp_ping, prepare_base_url
 
 # ---------------------------------------------------------------------------
@@ -161,6 +161,7 @@ _SECTION_KEYS: dict[str, list[str]] = {
 
 async def _get_hostname_from_host_ip(host_ip: str) -> str | None:
     """Prepare the URL and extract the hostname."""
+    note_host_secret(host_ip)
     prepared_url = prepare_base_url(host_ip)
     if not prepared_url or not (hostname := urlparse(prepared_url).hostname):
         _LOGGER.warning("Invalid host_ip format: '%s'", host_ip)

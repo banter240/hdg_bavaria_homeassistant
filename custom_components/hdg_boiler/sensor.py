@@ -4,7 +4,6 @@ from __future__ import annotations
 
 __all__ = ["async_setup_entry"]
 
-import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
@@ -16,9 +15,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .coordinator import HdgDataUpdateCoordinator
 from .entity import HdgNodeEntity
 from .helpers.entity_utils import async_setup_hdg_platform
+from .helpers.logging_utils import get_redacted_logger
 from .models import SensorDefinition
 
-_LIFECYCLE_LOGGER = logging.getLogger(__name__)
+_LIFECYCLE_LOGGER = get_redacted_logger(__name__)
 
 
 async def async_setup_entry(

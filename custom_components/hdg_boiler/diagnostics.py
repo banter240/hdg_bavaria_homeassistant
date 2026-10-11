@@ -5,7 +5,6 @@ from __future__ import annotations
 __all__ = ["async_get_config_entry_diagnostics"]
 
 import ipaddress
-import logging
 from typing import Any, cast
 from urllib.parse import ParseResult, urlparse, urlunparse
 
@@ -22,10 +21,44 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import HdgDataUpdateCoordinator
-from .helpers.logging_utils import format_for_log
+from .helpers.logging_utils import (
+    INTEGRATION_VERSION,
+    get_redacted_logger,
+    note_host_secret,
+    note_log_secret,
+    redact,
+)
 from .helpers.string_utils import normalize_unique_id_component
 
-_LOGGER = logging.getLogger(DOMAIN)
+_LOGGER = get_redacted_logger(DOMAIN)
+
+
+def _note_diagnostics_secrets(
+    host_ip: str | None, coordinator: HdgDataUpdateCoordinator | None
+) -> None:
+    """Register host, serial, and MAC before any diagnostics text is built."""
+    note_host_secret(host_ip)
+    if coordinator is None:
+        return
+    note_host_secret(getattr(coordinator, "_hostname", None))
+    data = coordinator.data
+    if not isinstance(data, dict):
+        return
+    for node_id in DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS:
+        note_log_secret(data.get(node_id))
+
+
+def _redact_diagnostics_value(value: Any) -> Any:
+    """Run string redaction over a diagnostics structure."""
+    if isinstance(value, str):
+        return redact(value)
+    if isinstance(value, dict):
+        return {key: _redact_diagnostics_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_redact_diagnostics_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_redact_diagnostics_value(item) for item in value)
+    return value
 
 
 async def async_get_config_entry_diagnostics(
@@ -39,6 +72,7 @@ async def async_get_config_entry_diagnostics(
             entry.entry_id,
         )
         return {
+            "integration_version": INTEGRATION_VERSION,
             "error": "Integration data not found. Setup might have failed.",
             "entry_id": entry.entry_id,
         }
@@ -46,13 +80,16 @@ async def async_get_config_entry_diagnostics(
     coordinator = integration_data.get("coordinator")
     api_client = integration_data.get("api_client")
     sensitive_host_ip = entry.data.get(CONF_HOST_IP)
+    _note_diagnostics_secrets(sensitive_host_ip, coordinator)
 
-    return {
+    payload = {
+        "integration_version": INTEGRATION_VERSION,
         "config_entry": _get_redacted_config_entry_info(entry, sensitive_host_ip),
         "coordinator": _get_coordinator_diagnostics(coordinator),
         "api_client": _get_api_client_diagnostics(api_client, sensitive_host_ip),
         "entities": await _get_entity_diagnostics(hass, entry, sensitive_host_ip),
     }
+    return cast(dict[str, Any], _redact_diagnostics_value(payload))
 
 
 def _get_redacted_config_entry_info(
@@ -77,8 +114,9 @@ def _get_coordinator_diagnostics(
     if not coordinator:
         return "Coordinator not found or not initialized."
 
-    # Access internal state via public accessor
-    coordinator_state = coordinator.get_diagnostics_state()
+    coordinator_state = coordinator.get_diagnostics()
+    if coordinator_state.get("hostname"):
+        coordinator_state["hostname"] = DIAGNOSTICS_REDACTED_PLACEHOLDER
 
     coordinator_diag: dict[str, Any] = {
         "last_update_success": coordinator.last_update_success,
@@ -88,11 +126,10 @@ def _get_coordinator_diagnostics(
         **coordinator_state,
     }
     if coordinator.data:
-        redacted_data = async_redact_data(
+        coordinator_diag["data_item_count"] = len(coordinator.data)
+        coordinator_diag["data"] = async_redact_data(
             coordinator.data, DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS
         )
-        coordinator_diag["data_item_count"] = len(redacted_data)
-        coordinator_diag["data_sample_keys"] = list(redacted_data.keys())[:20]
 
     return coordinator_diag
 
@@ -137,11 +174,7 @@ def _get_redacted_unique_id(
 
     norm_sensitive = normalize_unique_id_component(sensitive_raw_value)
     if norm_sensitive in normalize_unique_id_component(unique_id):
-        _LOGGER.debug(
-            "Redacting sensitive component '%s' in unique_id '%s'.",
-            format_for_log(sensitive_raw_value),
-            format_for_log(unique_id),
-        )
+        _LOGGER.debug("Redacted a sensitive component in a unique_id.")
         return unique_id.replace(norm_sensitive, placeholder)
     return unique_id
 
@@ -155,25 +188,19 @@ def _redact_api_client_base_url(api_client: Any, sensitive_host_ip: str | None) 
     try:
         parsed = urlparse(base_url)
         redacted_netloc = _build_redacted_netloc(parsed, sensitive_host_ip)
-        redacted_path = (
-            DIAGNOSTICS_REDACTED_PLACEHOLDER
-            if parsed.path and parsed.path != "/"
-            else parsed.path
-        )
+        # The API path and query are routes, not secrets. The host is.
         return cast(
             str,
             urlunparse(
                 parsed._replace(
                     netloc=redacted_netloc,
-                    path=redacted_path,
-                    query=DIAGNOSTICS_REDACTED_PLACEHOLDER if parsed.query else "",
                     params="",
                     fragment="",
                 )
             ),
         )
     except Exception as e:
-        _LOGGER.warning("Error redacting base_url '%s': %s", base_url, e)
+        _LOGGER.warning("Error redacting API base URL: %s", e)
         return DIAGNOSTICS_REDACTED_PLACEHOLDER
 
 

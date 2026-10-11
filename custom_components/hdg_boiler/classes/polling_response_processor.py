@@ -7,17 +7,21 @@ to manage the state of boiler data nodes.
 
 from __future__ import annotations
 
-
-import logging
 from typing import TYPE_CHECKING, Any, cast
 
 from ..const import (
     CONF_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
     DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
+    DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS,
     HDG_PRIMARY_NODE_SUFFIX,
     PROCESSOR_LOGGER_NAME,
 )
-from ..helpers.logging_utils import _LOGGER, format_for_log
+from ..helpers.logging_utils import (
+    _LOGGER,
+    format_for_log,
+    get_redacted_logger,
+    note_log_secret,
+)
 from ..helpers.parsers import parse_sensor_value
 from ..helpers.string_utils import strip_hdg_node_suffix
 
@@ -25,7 +29,7 @@ if TYPE_CHECKING:
     from ..coordinator import HdgDataUpdateCoordinator
     from ..models import SensorDefinition
 
-_PROCESSOR_LOGGER = logging.getLogger(PROCESSOR_LOGGER_NAME)
+_PROCESSOR_LOGGER = get_redacted_logger(PROCESSOR_LOGGER_NAME)
 
 
 class HdgPollingResponseProcessor:
@@ -140,6 +144,8 @@ class HdgPollingResponseProcessor:
             return
 
         node_id = strip_hdg_node_suffix(api_id)
+        if node_id in DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS:
+            note_log_secret(raw_value)
         definition = self._get_entity_definition(api_id)
         if not definition:
             return
