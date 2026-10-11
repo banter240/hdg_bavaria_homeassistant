@@ -392,6 +392,9 @@
           "puffer_1": "Puffer 1"
         }
       },
+      "externe_warmequelle_temperatur": {
+        "name": "Ext. Wärmequelle Temperatur"
+      },
       "extra_version_info": {
         "name": "Extra Version Info"
       },
