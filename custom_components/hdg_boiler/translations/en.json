@@ -1825,20 +1825,51 @@
         "name": "Solar Pump Minimum Pause/Runtime"
       },
       "solar_zone1_fuhler_zuordnung": {
-        "name": "Solar Zone 1 Sensor Assignment"
+        "name": "Solar Zone 1 Sensor Assignment",
+        "state": {
+          "puffer_1_oben": "Buffer 1 top",
+          "puffer_1_mitte": "Buffer 1 middle",
+          "puffer_1_unten": "Buffer 1 bottom",
+          "puffer_2_oben": "Buffer 2 top",
+          "puffer_2_mitte": "Buffer 2 middle",
+          "puffer_2_unten": "Buffer 2 bottom",
+          "ww_1": "DHW 1",
+          "ww_2": "DHW 2"
+        }
       },
       "solar_zone2_fuhler_zuordnung": {
-        "name": "Solar Zone 2 Sensor Assignment"
+        "name": "Solar Zone 2 Sensor Assignment",
+        "state": {
+          "puffer_1_oben": "Buffer 1 top",
+          "puffer_1_mitte": "Buffer 1 middle",
+          "puffer_1_unten": "Buffer 1 bottom",
+          "puffer_2_oben": "Buffer 2 top",
+          "puffer_2_mitte": "Buffer 2 middle",
+          "puffer_2_unten": "Buffer 2 bottom",
+          "ww_1": "DHW 1",
+          "ww_2": "DHW 2"
+        }
       },
       "solar_zone3_fuhler_zuordnung": {
-        "name": "Solar Zone 3 Sensor Assignment"
+        "name": "Solar Zone 3 Sensor Assignment",
+        "state": {
+          "puffer_1_oben": "Buffer 1 top",
+          "puffer_1_mitte": "Buffer 1 middle",
+          "puffer_1_unten": "Buffer 1 bottom",
+          "puffer_2_oben": "Buffer 2 top",
+          "puffer_2_mitte": "Buffer 2 middle",
+          "puffer_2_unten": "Buffer 2 bottom",
+          "ww_1": "DHW 1",
+          "ww_2": "DHW 2"
+        }
       },
       "solar_umschaltventil_1_aktivieren": {
         "name": "Solar Enable Switch Valve 1",
         "state": {
           "ja": "Yes",
           "nein": "No",
-          "ein": "On"
+          "ein": "On",
+          "aus": "Off"
         }
       },
       "solar_umschaltventil_2_aktivieren": {
@@ -1846,11 +1877,17 @@
         "state": {
           "ja": "Yes",
           "nein": "No",
-          "ein": "On"
+          "ein": "On",
+          "aus": "Off"
         }
       },
       "solar_art": {
-        "name": "Solar System Type"
+        "name": "Solar System Type",
+        "state": {
+          "kein": "None",
+          "brauchwasser": "Domestic Hot Water",
+          "puffer": "Buffer"
+        }
       }
     },
     "number": {

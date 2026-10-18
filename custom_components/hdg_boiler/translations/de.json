@@ -1825,20 +1825,51 @@
         "name": "Solarpumpe Minimale Pause-/Laufzeit"
       },
       "solar_zone1_fuhler_zuordnung": {
-        "name": "Solar Zone 1 Fühler Zuordnung"
+        "name": "Solar Zone 1 Fühler Zuordnung",
+        "state": {
+          "puffer_1_oben": "Puffer 1 oben",
+          "puffer_1_mitte": "Puffer 1 mitte",
+          "puffer_1_unten": "Puffer 1 unten",
+          "puffer_2_oben": "Puffer 2 oben",
+          "puffer_2_mitte": "Puffer 2 mitte",
+          "puffer_2_unten": "Puffer 2 unten",
+          "ww_1": "WW 1",
+          "ww_2": "WW 2"
+        }
       },
       "solar_zone2_fuhler_zuordnung": {
-        "name": "Solar Zone 2 Fühler Zuordnung"
+        "name": "Solar Zone 2 Fühler Zuordnung",
+        "state": {
+          "puffer_1_oben": "Puffer 1 oben",
+          "puffer_1_mitte": "Puffer 1 mitte",
+          "puffer_1_unten": "Puffer 1 unten",
+          "puffer_2_oben": "Puffer 2 oben",
+          "puffer_2_mitte": "Puffer 2 mitte",
+          "puffer_2_unten": "Puffer 2 unten",
+          "ww_1": "WW 1",
+          "ww_2": "WW 2"
+        }
       },
       "solar_zone3_fuhler_zuordnung": {
-        "name": "Solar Zone 3 Fühler Zuordnung"
+        "name": "Solar Zone 3 Fühler Zuordnung",
+        "state": {
+          "puffer_1_oben": "Puffer 1 oben",
+          "puffer_1_mitte": "Puffer 1 mitte",
+          "puffer_1_unten": "Puffer 1 unten",
+          "puffer_2_oben": "Puffer 2 oben",
+          "puffer_2_mitte": "Puffer 2 mitte",
+          "puffer_2_unten": "Puffer 2 unten",
+          "ww_1": "WW 1",
+          "ww_2": "WW 2"
+        }
       },
       "solar_umschaltventil_1_aktivieren": {
         "name": "Solar Umschaltventil 1 Aktivieren",
         "state": {
           "ja": "Ja",
           "nein": "Nein",
-          "ein": "Ein"
+          "ein": "Ein",
+          "aus": "Aus"
         }
       },
       "solar_umschaltventil_2_aktivieren": {
@@ -1846,11 +1877,17 @@
         "state": {
           "ja": "Ja",
           "nein": "Nein",
-          "ein": "Ein"
+          "ein": "Ein",
+          "aus": "Aus"
         }
       },
       "solar_art": {
-        "name": "Solar Art"
+        "name": "Solar Art",
+        "state": {
+          "kein": "Kein",
+          "brauchwasser": "Brauchwasser",
+          "puffer": "Puffer"
+        }
       }
     },
     "number": {
