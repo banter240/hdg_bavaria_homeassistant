@@ -170,4 +170,10 @@ HDG_ENUM_TEXT_TO_KEY_MAPPINGS: Final[dict[str, dict[str, str]]] = {
         "Ein": "ein",
         "Auto": "auto_ein",
     },
+    "solar_system_auswahl": {
+        "Keines": "keines",
+        "1 Zone": "1_zone",
+        "2 Zonen": "2_zonen",
+        "3 Zonen": "3_zonen",
+    },
 }

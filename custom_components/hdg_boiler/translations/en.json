@@ -1793,6 +1793,64 @@
       },
       "solar_ertrag_gesamt": {
         "name": "Solar Total Yield"
+      },
+      "solar_referenztemperatur_ist": {
+        "name": "Solar Reference Temperature Actual"
+      },
+      "solar_system_auswahl": {
+        "name": "Solar System Selection",
+        "state": {
+          "keines": "None",
+          "1_zone": "1 Zone",
+          "2_zonen": "2 Zones",
+          "3_zonen": "3 Zones"
+        }
+      },
+      "solar_kollektoruberhitzungsschutz": {
+        "name": "Solar Collector Overheat Protection"
+      },
+      "solar_offset_kollektorfuhler": {
+        "name": "Solar Collector Sensor Offset"
+      },
+      "solar_temperaturspreizung_soll": {
+        "name": "Solar Target Temperature Spread"
+      },
+      "solar_drehzahl_minimum": {
+        "name": "Solar Pump Minimum Speed"
+      },
+      "solar_drehzahl_maximum": {
+        "name": "Solar Pump Maximum Speed"
+      },
+      "solar_minimale_pause_laufzeit": {
+        "name": "Solar Pump Minimum Pause/Runtime"
+      },
+      "solar_zone1_fuhler_zuordnung": {
+        "name": "Solar Zone 1 Sensor Assignment"
+      },
+      "solar_zone2_fuhler_zuordnung": {
+        "name": "Solar Zone 2 Sensor Assignment"
+      },
+      "solar_zone3_fuhler_zuordnung": {
+        "name": "Solar Zone 3 Sensor Assignment"
+      },
+      "solar_umschaltventil_1_aktivieren": {
+        "name": "Solar Enable Switch Valve 1",
+        "state": {
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
+        }
+      },
+      "solar_umschaltventil_2_aktivieren": {
+        "name": "Solar Enable Switch Valve 2",
+        "state": {
+          "ja": "Yes",
+          "nein": "No",
+          "ein": "On"
+        }
+      },
+      "solar_art": {
+        "name": "Solar System Type"
       }
     },
     "number": {
@@ -2092,6 +2150,15 @@
       },
       "puffer_2_ladung_aus_temperatur": {
         "name": "Buffer 2 Charge Off Temperature"
+      },
+      "solar_pumpe_ein_differenztemperatur": {
+        "name": "Solar Pump On Differential Temperature"
+      },
+      "solar_umschaltung_zone_1_2_referenztemperatur": {
+        "name": "Solar Zone 1->2 Switchover Reference Temperature"
+      },
+      "solar_umschaltung_zone_2_3_referenztemperatur": {
+        "name": "Solar Zone 2->3 Switchover Reference Temperature"
       }
     },
     "select": {
