@@ -1815,7 +1815,7 @@
         "name": "HK1 Pumpe Aus Außentemperatur"
       },
       "hk1_soll_absenk": {
-        "name": "HK1 Soll Absenk"
+        "name": "HK1 Nachtbetrieb Raumtemperatur Soll"
       },
       "hk1_soll_normal": {
         "name": "HK1 Tagbetrieb Raumtemperatur Soll"
@@ -1842,7 +1842,7 @@
         "name": "HK2 Pumpe Aus Außentemperatur"
       },
       "hk2_soll_absenk": {
-        "name": "HK2 Soll Absenk"
+        "name": "HK2 Nachtbetrieb Raumtemperatur Soll"
       },
       "hk2_soll_normal": {
         "name": "HK2 Tagbetrieb Raumtemperatur Soll"
@@ -1869,7 +1869,7 @@
         "name": "HK3 Pumpe Aus Außentemperatur"
       },
       "hk3_soll_absenk": {
-        "name": "HK3 Soll Absenk"
+        "name": "HK3 Nachtbetrieb Raumtemperatur Soll"
       },
       "hk3_soll_normal": {
         "name": "HK3 Tagbetrieb Raumtemperatur Soll"
@@ -1896,7 +1896,7 @@
         "name": "HK4 Pumpe Aus Außentemperatur"
       },
       "hk4_soll_absenk": {
-        "name": "HK4 Soll Absenk"
+        "name": "HK4 Nachtbetrieb Raumtemperatur Soll"
       },
       "hk4_soll_normal": {
         "name": "HK4 Tagbetrieb Raumtemperatur Soll"
@@ -1923,7 +1923,7 @@
         "name": "HK5 Pumpe Aus Außentemperatur"
       },
       "hk5_soll_absenk": {
-        "name": "HK5 Soll Absenk"
+        "name": "HK5 Nachtbetrieb Raumtemperatur Soll"
       },
       "hk5_soll_normal": {
         "name": "HK5 Tagbetrieb Raumtemperatur Soll"
@@ -1950,7 +1950,7 @@
         "name": "HK6 Pumpe Aus Außentemperatur"
       },
       "hk6_soll_absenk": {
-        "name": "HK6 Soll Absenk"
+        "name": "HK6 Nachtbetrieb Raumtemperatur Soll"
       },
       "hk6_soll_normal": {
         "name": "HK6 Tagbetrieb Raumtemperatur Soll"

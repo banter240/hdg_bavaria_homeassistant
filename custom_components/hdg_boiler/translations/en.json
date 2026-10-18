@@ -1815,7 +1815,7 @@
         "name": "HC1 Pump Off Outside Temperature"
       },
       "hk1_soll_absenk": {
-        "name": "HC1 Target Reduced"
+        "name": "HC1 Target room temperature night mode"
       },
       "hk1_soll_normal": {
         "name": "HC1 Daytime Room Temperature Target"
@@ -1842,7 +1842,7 @@
         "name": "HC2 Pump Off Outside Temperature"
       },
       "hk2_soll_absenk": {
-        "name": "HC2 Target Reduced"
+        "name": "HC2 Target room temperature night mode"
       },
       "hk2_soll_normal": {
         "name": "HC2 Daytime Room Temperature Target"
@@ -1869,7 +1869,7 @@
         "name": "HC3 Pump Off Outside Temperature"
       },
       "hk3_soll_absenk": {
-        "name": "HC3 Target Reduced"
+        "name": "HC3 Target room temperature night mode"
       },
       "hk3_soll_normal": {
         "name": "HC3 Daytime Room Temperature Target"
@@ -1896,7 +1896,7 @@
         "name": "HC4 Pump Off Outside Temperature"
       },
       "hk4_soll_absenk": {
-        "name": "HC4 Target Reduced"
+        "name": "HC4 Target room temperature night mode"
       },
       "hk4_soll_normal": {
         "name": "HC4 Daytime Room Temperature Target"
@@ -1923,7 +1923,7 @@
         "name": "HC5 Pump Off Outside Temperature"
       },
       "hk5_soll_absenk": {
-        "name": "HC5 Target Reduced"
+        "name": "HC5 Target room temperature night mode"
       },
       "hk5_soll_normal": {
         "name": "HC5 Daytime Room Temperature Target"
@@ -1950,7 +1950,7 @@
         "name": "HC6 Pump Off Outside Temperature"
       },
       "hk6_soll_absenk": {
-        "name": "HC6 Target Reduced"
+        "name": "HC6 Target room temperature night mode"
       },
       "hk6_soll_normal": {
         "name": "HC6 Daytime Room Temperature Target"
