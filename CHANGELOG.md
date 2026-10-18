@@ -1,3 +1,23 @@
+## [2.1.1-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.1.0...v2.1.1-dev.1) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* fix(hdg_boiler): name the night room target like the boiler
+
+  The boiler calls this setpoint Nachtbetrieb Raumtemperatur Soll.
+  The entities still said Soll Absenk and Target Reduced, beside the
+  outside-temperature cutoff, so the night target was easy to mix up.
+  The entity ids stay the same.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🌐 TRANSLATIONS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - de HK1 to HK6 Nachtbetrieb Raumtemperatur Soll
+  - en HC1 to HC6 Target room temperature night mode
+
+  Translations: en, de.
+
 ## [2.1.0](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.0.0...v2.1.0) (2026-10-11)
 
 ### ✨ New Features
