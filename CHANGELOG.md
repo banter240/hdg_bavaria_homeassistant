@@ -1,3 +1,52 @@
+## [2.2.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.1.1-dev.1...v2.2.0-dev.1) (2026-10-19)
+
+### ✨ New Features
+
+* feat(hdg_boiler): add solar menu nodes and live zone temperatures
+
+  Menu 90 and the live solar nodes were missing. The names follow the
+  aggregated node list. Node 29001 is listed there as data type 40, but
+  the myHDG demo returns a temperature for it, matching the active zone,
+  so it is a temperature sensor named Aktive Zone.
+
+  Slider limits come from the demo edit pages. The new entities are
+  disabled until solar is enabled. Nothing was written to a boiler.
+
+  The entities follow pull request 65 and are built here instead of
+  merging that branch.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✨ ADDED
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - live 29001 and zone temperatures 29004 to 29006
+  - menu 9020 to 9024, 9038, 9040 to 9043, 9080 to 9082, 9086, 9087, 9099
+  - writable numbers use the demo slider limits
+  - enum text for the zone points, valve invert, and solar type
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🌐 TRANSLATIONS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - de and en names match the node list, including Temperatur Zone 1 to 3
+
+  Translations: en, de.
+
+### 📚 Documentation
+
+* docs: add the boiler node list
+
+  Node names, types, enum options, and slider limits need one place
+  to look them up. The integration does not read the file.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📝 DOCS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - docs/node-data/hdg_data.csv
+  - docs/node-data/README.md describes the columns
+  - the main README links the file
+
 ## [2.1.1-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.1.0...v2.1.1-dev.1) (2026-10-18)
 
 ### 🐛 Bug Fixes
