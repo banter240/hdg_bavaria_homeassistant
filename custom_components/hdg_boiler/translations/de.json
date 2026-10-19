@@ -1602,17 +1602,106 @@
       "software_version_touch": {
         "name": "Software Version (Touch)"
       },
+      "solar_aktive_zone": {
+        "name": "Aktive Zone"
+      },
+      "solar_invertierung_ventil_1_aktivieren": {
+        "name": "Invertierung Ventil 1 aktivieren",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein"
+        }
+      },
+      "solar_invertierung_ventil_2_aktivieren": {
+        "name": "Invertierung Ventil 2 aktivieren",
+        "state": {
+          "ja": "Ja",
+          "nein": "Nein"
+        }
+      },
       "solar_kollektorschutz_aktiv": {
-        "name": "Solar Kollektorschutz Aktiv"
+        "name": "Kollektorschutz aktiv"
+      },
+      "solar_solaranlage": {
+        "name": "Solaranlage",
+        "state": {
+          "brauchwasser": "BRAUCHWASSER",
+          "brauchwasser_puffer": "BRAUCHWASSER-PUFFER",
+          "brauchwasser_wt_puffer": "BRAUCHWASSER-WT-PUFFER",
+          "keine": "KEINE",
+          "puffer": "PUFFER"
+        }
+      },
+      "solar_solarpumpe": {
+        "name": "Solarpumpe"
+      },
+      "solar_system_auswahl": {
+        "name": "Solarsystem Auswahl",
+        "state": {
+          "1_zone": "1 Zone",
+          "2_zonen": "2 Zonen",
+          "3_zonen": "3 Zonen"
+        }
       },
       "solar_zone1_temperatur": {
-        "name": "Solar Zone 1 Temperatur"
+        "name": "Temperatur Zone 1"
       },
       "solar_zone2_temperatur": {
-        "name": "Solar Zone 2 Temperatur"
+        "name": "Temperatur Zone 2"
       },
       "solar_zone3_temperatur": {
-        "name": "Solar Zone 3 Temperatur"
+        "name": "Temperatur Zone 3"
+      },
+      "solar_zone_1": {
+        "name": "Zone 1",
+        "state": {
+          "brauchwasser_1_unten": "Brauchwasser 1 unten",
+          "brauchwasser_2_unten": "Brauchwasser 2 unten",
+          "puffer_1_mitte": "Puffer 1 mitte",
+          "puffer_1_mitte_oben": "Puffer 1 mitte-oben",
+          "puffer_1_mitte_unten": "Puffer 1 mitte-unten",
+          "puffer_1_oben": "Puffer 1 oben",
+          "puffer_1_unten": "Puffer 1 unten",
+          "puffer_2_mitte": "Puffer 2 mitte",
+          "puffer_2_mitte_oben": "Puffer 2 mitte-oben",
+          "puffer_2_mitte_unten": "Puffer 2 mitte-unten",
+          "puffer_2_oben": "Puffer 2 oben",
+          "puffer_2_unten": "Puffer 2 unten"
+        }
+      },
+      "solar_zone_2": {
+        "name": "Zone 2",
+        "state": {
+          "brauchwasser_1_unten": "Brauchwasser 1 unten",
+          "brauchwasser_2_unten": "Brauchwasser 2 unten",
+          "puffer_1_mitte": "Puffer 1 mitte",
+          "puffer_1_mitte_oben": "Puffer 1 mitte-oben",
+          "puffer_1_mitte_unten": "Puffer 1 mitte-unten",
+          "puffer_1_oben": "Puffer 1 oben",
+          "puffer_1_unten": "Puffer 1 unten",
+          "puffer_2_mitte": "Puffer 2 mitte",
+          "puffer_2_mitte_oben": "Puffer 2 mitte-oben",
+          "puffer_2_mitte_unten": "Puffer 2 mitte-unten",
+          "puffer_2_oben": "Puffer 2 oben",
+          "puffer_2_unten": "Puffer 2 unten"
+        }
+      },
+      "solar_zone_3": {
+        "name": "Zone 3",
+        "state": {
+          "brauchwasser_1_unten": "Brauchwasser 1 unten",
+          "brauchwasser_2_unten": "Brauchwasser 2 unten",
+          "puffer_1_mitte": "Puffer 1 mitte",
+          "puffer_1_mitte_oben": "Puffer 1 mitte-oben",
+          "puffer_1_mitte_unten": "Puffer 1 mitte-unten",
+          "puffer_1_oben": "Puffer 1 oben",
+          "puffer_1_unten": "Puffer 1 unten",
+          "puffer_2_mitte": "Puffer 2 mitte",
+          "puffer_2_mitte_oben": "Puffer 2 mitte-oben",
+          "puffer_2_mitte_unten": "Puffer 2 mitte-unten",
+          "puffer_2_oben": "Puffer 2 oben",
+          "puffer_2_unten": "Puffer 2 unten"
+        }
       },
       "sprache": {
         "name": "Sprache",
@@ -2092,6 +2181,30 @@
       },
       "puffer_2_ladung_aus_temperatur": {
         "name": "Puffer 2 Ladung Aus Temperatur"
+      },
+      "solar_drehzahl_maximum": {
+        "name": "Drehzahl Maximum"
+      },
+      "solar_drehzahl_minimum": {
+        "name": "Drehzahl Minimum"
+      },
+      "solar_kollektoruberhitzungsschutz": {
+        "name": "Kollektor-überhitzungsschutz"
+      },
+      "solar_minimale_pause_laufzeit": {
+        "name": "Minimale Pause-/Laufzeit"
+      },
+      "solar_pumpe_ein_differenztemperatur": {
+        "name": "Solarpumpe Ein Differenztemperatur"
+      },
+      "solar_temperaturspreizung_soll": {
+        "name": "Temperaturspreizung Soll"
+      },
+      "solar_umschaltung_zone_1_2_referenztemperatur": {
+        "name": "Umschaltung Zone1->2 Referenztemperatur"
+      },
+      "solar_umschaltung_zone_2_3_referenztemperatur": {
+        "name": "Umschaltung Zone2->3 Referenztemperatur"
       }
     },
     "select": {

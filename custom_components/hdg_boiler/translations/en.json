@@ -1602,17 +1602,106 @@
       "software_version_touch": {
         "name": "Software Version (Touch)"
       },
+      "solar_aktive_zone": {
+        "name": "Active zone"
+      },
+      "solar_invertierung_ventil_1_aktivieren": {
+        "name": "Activate valve 1 inverting",
+        "state": {
+          "ja": "Yes",
+          "nein": "No"
+        }
+      },
+      "solar_invertierung_ventil_2_aktivieren": {
+        "name": "Activate valve 2 inverting",
+        "state": {
+          "ja": "Yes",
+          "nein": "No"
+        }
+      },
       "solar_kollektorschutz_aktiv": {
-        "name": "Solar Collector Protection Active"
+        "name": "Collector protection active"
+      },
+      "solar_solaranlage": {
+        "name": "Solar power system",
+        "state": {
+          "brauchwasser": "BRAUCHWASSER",
+          "brauchwasser_puffer": "BRAUCHWASSER-PUFFER",
+          "brauchwasser_wt_puffer": "BRAUCHWASSER-WT-PUFFER",
+          "keine": "KEINE",
+          "puffer": "PUFFER"
+        }
+      },
+      "solar_solarpumpe": {
+        "name": "Solar pump"
+      },
+      "solar_system_auswahl": {
+        "name": "Solar system selection",
+        "state": {
+          "1_zone": "1 zone",
+          "2_zonen": "2 zones",
+          "3_zonen": "3 zones"
+        }
       },
       "solar_zone1_temperatur": {
-        "name": "Solar Zone 1 Temperature"
+        "name": "Temperature zone 1"
       },
       "solar_zone2_temperatur": {
-        "name": "Solar Zone 2 Temperature"
+        "name": "Temperature zone 2"
       },
       "solar_zone3_temperatur": {
-        "name": "Solar Zone 3 Temperature"
+        "name": "Temperature zone 3"
+      },
+      "solar_zone_1": {
+        "name": "Zone 1",
+        "state": {
+          "brauchwasser_1_unten": "Domestic hot water 1 bottom",
+          "brauchwasser_2_unten": "Domestic hot water 2 bottom",
+          "puffer_1_mitte": "Accumulator 1 middle",
+          "puffer_1_mitte_oben": "Accumulator 1 middle upper",
+          "puffer_1_mitte_unten": "Accumulator 1 middle lower",
+          "puffer_1_oben": "Accumulator 1 top",
+          "puffer_1_unten": "Accumulator 1 bottom",
+          "puffer_2_mitte": "Accumulator 2 middle",
+          "puffer_2_mitte_oben": "Accumulator 2 middle upper",
+          "puffer_2_mitte_unten": "Accumulator 2 middle lower",
+          "puffer_2_oben": "Accumulator 2 top",
+          "puffer_2_unten": "Accumulator 2 bottom"
+        }
+      },
+      "solar_zone_2": {
+        "name": "Zone 2",
+        "state": {
+          "brauchwasser_1_unten": "Domestic hot water 1 bottom",
+          "brauchwasser_2_unten": "Domestic hot water 2 bottom",
+          "puffer_1_mitte": "Accumulator 1 middle",
+          "puffer_1_mitte_oben": "Accumulator 1 middle upper",
+          "puffer_1_mitte_unten": "Accumulator 1 middle lower",
+          "puffer_1_oben": "Accumulator 1 top",
+          "puffer_1_unten": "Accumulator 1 bottom",
+          "puffer_2_mitte": "Accumulator 2 middle",
+          "puffer_2_mitte_oben": "Accumulator 2 middle upper",
+          "puffer_2_mitte_unten": "Accumulator 2 middle lower",
+          "puffer_2_oben": "Accumulator 2 top",
+          "puffer_2_unten": "Accumulator 2 bottom"
+        }
+      },
+      "solar_zone_3": {
+        "name": "Zone 3",
+        "state": {
+          "brauchwasser_1_unten": "Domestic hot water 1 bottom",
+          "brauchwasser_2_unten": "Domestic hot water 2 bottom",
+          "puffer_1_mitte": "Accumulator 1 middle",
+          "puffer_1_mitte_oben": "Accumulator 1 middle upper",
+          "puffer_1_mitte_unten": "Accumulator 1 middle lower",
+          "puffer_1_oben": "Accumulator 1 top",
+          "puffer_1_unten": "Accumulator 1 bottom",
+          "puffer_2_mitte": "Accumulator 2 middle",
+          "puffer_2_mitte_oben": "Accumulator 2 middle upper",
+          "puffer_2_mitte_unten": "Accumulator 2 middle lower",
+          "puffer_2_oben": "Accumulator 2 top",
+          "puffer_2_unten": "Accumulator 2 bottom"
+        }
       },
       "sprache": {
         "name": "Language",
@@ -2092,6 +2181,30 @@
       },
       "puffer_2_ladung_aus_temperatur": {
         "name": "Buffer 2 Charge Off Temperature"
+      },
+      "solar_drehzahl_maximum": {
+        "name": "Maximum speed"
+      },
+      "solar_drehzahl_minimum": {
+        "name": "Minimum speed"
+      },
+      "solar_kollektoruberhitzungsschutz": {
+        "name": "Collector overheating protection"
+      },
+      "solar_minimale_pause_laufzeit": {
+        "name": "Min. pause/running time"
+      },
+      "solar_pumpe_ein_differenztemperatur": {
+        "name": "Solar pump on differential temperature"
+      },
+      "solar_temperaturspreizung_soll": {
+        "name": "Target temp. difference"
+      },
+      "solar_umschaltung_zone_1_2_referenztemperatur": {
+        "name": "Changeover zone1->2 reference temperature"
+      },
+      "solar_umschaltung_zone_2_3_referenztemperatur": {
+        "name": "Changeover zone2->3 reference temperature"
       }
     },
     "select": {
