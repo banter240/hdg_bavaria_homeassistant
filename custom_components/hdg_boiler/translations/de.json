@@ -1794,13 +1794,12 @@
       "solar_ertrag_gesamt": {
         "name": "Solar Gesamtertrag"
       },
-      "solar_referenztemperatur_ist": {
-        "name": "Solar Referenztemperatur Ist"
+      "solar_aktive_zone": {
+        "name": "Solar Aktive Zone"
       },
       "solar_system_auswahl": {
         "name": "Solarsystem Auswahl",
         "state": {
-          "keines": "Keines",
           "1_zone": "1 Zone",
           "2_zonen": "2 Zonen",
           "3_zonen": "3 Zonen"
@@ -1809,8 +1808,8 @@
       "solar_kollektoruberhitzungsschutz": {
         "name": "Solar Kollektorüberhitzungsschutz"
       },
-      "solar_offset_kollektorfuhler": {
-        "name": "Solar Offset Kollektorfühler"
+      "solar_solarpumpe": {
+        "name": "Solarpumpe"
       },
       "solar_temperaturspreizung_soll": {
         "name": "Solar Temperaturspreizung Soll"
@@ -1824,69 +1823,79 @@
       "solar_minimale_pause_laufzeit": {
         "name": "Solarpumpe Minimale Pause-/Laufzeit"
       },
-      "solar_zone1_fuhler_zuordnung": {
-        "name": "Solar Zone 1 Fühler Zuordnung",
+      "solar_zone_1": {
+        "name": "Solar Zone 1",
         "state": {
           "puffer_1_oben": "Puffer 1 oben",
+          "puffer_1_mitte_oben": "Puffer 1 mitte-oben",
           "puffer_1_mitte": "Puffer 1 mitte",
+          "puffer_1_mitte_unten": "Puffer 1 mitte-unten",
           "puffer_1_unten": "Puffer 1 unten",
           "puffer_2_oben": "Puffer 2 oben",
+          "puffer_2_mitte_oben": "Puffer 2 mitte-oben",
           "puffer_2_mitte": "Puffer 2 mitte",
+          "puffer_2_mitte_unten": "Puffer 2 mitte-unten",
           "puffer_2_unten": "Puffer 2 unten",
-          "ww_1": "WW 1",
-          "ww_2": "WW 2"
+          "brauchwasser_1_unten": "Brauchwasser 1 unten",
+          "brauchwasser_2_unten": "Brauchwasser 2 unten"
         }
       },
-      "solar_zone2_fuhler_zuordnung": {
-        "name": "Solar Zone 2 Fühler Zuordnung",
+      "solar_zone_2": {
+        "name": "Solar Zone 2",
         "state": {
           "puffer_1_oben": "Puffer 1 oben",
+          "puffer_1_mitte_oben": "Puffer 1 mitte-oben",
           "puffer_1_mitte": "Puffer 1 mitte",
+          "puffer_1_mitte_unten": "Puffer 1 mitte-unten",
           "puffer_1_unten": "Puffer 1 unten",
           "puffer_2_oben": "Puffer 2 oben",
+          "puffer_2_mitte_oben": "Puffer 2 mitte-oben",
           "puffer_2_mitte": "Puffer 2 mitte",
+          "puffer_2_mitte_unten": "Puffer 2 mitte-unten",
           "puffer_2_unten": "Puffer 2 unten",
-          "ww_1": "WW 1",
-          "ww_2": "WW 2"
+          "brauchwasser_1_unten": "Brauchwasser 1 unten",
+          "brauchwasser_2_unten": "Brauchwasser 2 unten"
         }
       },
-      "solar_zone3_fuhler_zuordnung": {
-        "name": "Solar Zone 3 Fühler Zuordnung",
+      "solar_zone_3": {
+        "name": "Solar Zone 3",
         "state": {
           "puffer_1_oben": "Puffer 1 oben",
+          "puffer_1_mitte_oben": "Puffer 1 mitte-oben",
           "puffer_1_mitte": "Puffer 1 mitte",
+          "puffer_1_mitte_unten": "Puffer 1 mitte-unten",
           "puffer_1_unten": "Puffer 1 unten",
           "puffer_2_oben": "Puffer 2 oben",
+          "puffer_2_mitte_oben": "Puffer 2 mitte-oben",
           "puffer_2_mitte": "Puffer 2 mitte",
+          "puffer_2_mitte_unten": "Puffer 2 mitte-unten",
           "puffer_2_unten": "Puffer 2 unten",
-          "ww_1": "WW 1",
-          "ww_2": "WW 2"
+          "brauchwasser_1_unten": "Brauchwasser 1 unten",
+          "brauchwasser_2_unten": "Brauchwasser 2 unten"
         }
       },
-      "solar_umschaltventil_1_aktivieren": {
-        "name": "Solar Umschaltventil 1 Aktivieren",
+      "solar_invertierung_ventil_1_aktivieren": {
+        "name": "Solar Invertierung Ventil 1 aktivieren",
         "state": {
           "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein",
-          "aus": "Aus"
+          "nein": "Nein"
         }
       },
-      "solar_umschaltventil_2_aktivieren": {
-        "name": "Solar Umschaltventil 2 Aktivieren",
+      "solar_invertierung_ventil_2_aktivieren": {
+        "name": "Solar Invertierung Ventil 2 aktivieren",
         "state": {
           "ja": "Ja",
-          "nein": "Nein",
-          "ein": "Ein",
-          "aus": "Aus"
+          "nein": "Nein"
         }
       },
-      "solar_art": {
-        "name": "Solar Art",
+      "solar_solaranlage": {
+        "name": "Solaranlage",
         "state": {
-          "kein": "Kein",
+          "keine": "Keine",
           "brauchwasser": "Brauchwasser",
-          "puffer": "Puffer"
+          "puffer": "Puffer",
+          "brauchwasser_puffer": "Brauchwasser-Puffer",
+          "brauchwasser_wt_puffer": "Brauchwasser-WT-Puffer"
         }
       }
     },

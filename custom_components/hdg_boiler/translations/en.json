@@ -1794,13 +1794,12 @@
       "solar_ertrag_gesamt": {
         "name": "Solar Total Yield"
       },
-      "solar_referenztemperatur_ist": {
-        "name": "Solar Reference Temperature Actual"
+      "solar_aktive_zone": {
+        "name": "Solar Active Zone"
       },
       "solar_system_auswahl": {
         "name": "Solar System Selection",
         "state": {
-          "keines": "None",
           "1_zone": "1 Zone",
           "2_zonen": "2 Zones",
           "3_zonen": "3 Zones"
@@ -1809,8 +1808,8 @@
       "solar_kollektoruberhitzungsschutz": {
         "name": "Solar Collector Overheat Protection"
       },
-      "solar_offset_kollektorfuhler": {
-        "name": "Solar Collector Sensor Offset"
+      "solar_solarpumpe": {
+        "name": "Solar Pump"
       },
       "solar_temperaturspreizung_soll": {
         "name": "Solar Target Temperature Spread"
@@ -1824,69 +1823,79 @@
       "solar_minimale_pause_laufzeit": {
         "name": "Solar Pump Minimum Pause/Runtime"
       },
-      "solar_zone1_fuhler_zuordnung": {
-        "name": "Solar Zone 1 Sensor Assignment",
+      "solar_zone_1": {
+        "name": "Solar Zone 1",
         "state": {
           "puffer_1_oben": "Buffer 1 top",
+          "puffer_1_mitte_oben": "Buffer 1 middle upper",
           "puffer_1_mitte": "Buffer 1 middle",
+          "puffer_1_mitte_unten": "Buffer 1 middle lower",
           "puffer_1_unten": "Buffer 1 bottom",
           "puffer_2_oben": "Buffer 2 top",
+          "puffer_2_mitte_oben": "Buffer 2 middle upper",
           "puffer_2_mitte": "Buffer 2 middle",
+          "puffer_2_mitte_unten": "Buffer 2 middle lower",
           "puffer_2_unten": "Buffer 2 bottom",
-          "ww_1": "DHW 1",
-          "ww_2": "DHW 2"
+          "brauchwasser_1_unten": "DHW 1 bottom",
+          "brauchwasser_2_unten": "DHW 2 bottom"
         }
       },
-      "solar_zone2_fuhler_zuordnung": {
-        "name": "Solar Zone 2 Sensor Assignment",
+      "solar_zone_2": {
+        "name": "Solar Zone 2",
         "state": {
           "puffer_1_oben": "Buffer 1 top",
+          "puffer_1_mitte_oben": "Buffer 1 middle upper",
           "puffer_1_mitte": "Buffer 1 middle",
+          "puffer_1_mitte_unten": "Buffer 1 middle lower",
           "puffer_1_unten": "Buffer 1 bottom",
           "puffer_2_oben": "Buffer 2 top",
+          "puffer_2_mitte_oben": "Buffer 2 middle upper",
           "puffer_2_mitte": "Buffer 2 middle",
+          "puffer_2_mitte_unten": "Buffer 2 middle lower",
           "puffer_2_unten": "Buffer 2 bottom",
-          "ww_1": "DHW 1",
-          "ww_2": "DHW 2"
+          "brauchwasser_1_unten": "DHW 1 bottom",
+          "brauchwasser_2_unten": "DHW 2 bottom"
         }
       },
-      "solar_zone3_fuhler_zuordnung": {
-        "name": "Solar Zone 3 Sensor Assignment",
+      "solar_zone_3": {
+        "name": "Solar Zone 3",
         "state": {
           "puffer_1_oben": "Buffer 1 top",
+          "puffer_1_mitte_oben": "Buffer 1 middle upper",
           "puffer_1_mitte": "Buffer 1 middle",
+          "puffer_1_mitte_unten": "Buffer 1 middle lower",
           "puffer_1_unten": "Buffer 1 bottom",
           "puffer_2_oben": "Buffer 2 top",
+          "puffer_2_mitte_oben": "Buffer 2 middle upper",
           "puffer_2_mitte": "Buffer 2 middle",
+          "puffer_2_mitte_unten": "Buffer 2 middle lower",
           "puffer_2_unten": "Buffer 2 bottom",
-          "ww_1": "DHW 1",
-          "ww_2": "DHW 2"
+          "brauchwasser_1_unten": "DHW 1 bottom",
+          "brauchwasser_2_unten": "DHW 2 bottom"
         }
       },
-      "solar_umschaltventil_1_aktivieren": {
-        "name": "Solar Enable Switch Valve 1",
+      "solar_invertierung_ventil_1_aktivieren": {
+        "name": "Solar Enable Valve 1 Inversion",
         "state": {
           "ja": "Yes",
-          "nein": "No",
-          "ein": "On",
-          "aus": "Off"
+          "nein": "No"
         }
       },
-      "solar_umschaltventil_2_aktivieren": {
-        "name": "Solar Enable Switch Valve 2",
+      "solar_invertierung_ventil_2_aktivieren": {
+        "name": "Solar Enable Valve 2 Inversion",
         "state": {
           "ja": "Yes",
-          "nein": "No",
-          "ein": "On",
-          "aus": "Off"
+          "nein": "No"
         }
       },
-      "solar_art": {
-        "name": "Solar System Type",
+      "solar_solaranlage": {
+        "name": "Solar System",
         "state": {
-          "kein": "None",
+          "keine": "None",
           "brauchwasser": "Domestic Hot Water",
-          "puffer": "Buffer"
+          "puffer": "Buffer",
+          "brauchwasser_puffer": "DHW-Buffer",
+          "brauchwasser_wt_puffer": "DHW-HX-Buffer"
         }
       }
     },

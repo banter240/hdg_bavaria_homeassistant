@@ -2208,10 +2208,10 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         ),
         "solar",
     ),
-    "solar_referenztemperatur_ist": _with_group(
+    "solar_aktive_zone": _with_group(
         create_temp_sensor(
             entity_registry_enabled_default=False,
-            key="solar_referenztemperatur_ist",
+            key="solar_aktive_zone",
             node_id="29001T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
             icon="mdi:coolant-temperature",
@@ -2267,7 +2267,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
             icon="mdi:thermometer-chevron-up",
             setter_type="int",
             setter_min_val=1.0,
-            setter_max_val=30.0,
+            setter_max_val=50.0,
             setter_step=1.0,
             ha_native_unit_of_measurement=UnitOfTemperature.KELVIN,
             hdg_formatter="iKELV",
@@ -2293,8 +2293,8 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:swap-vertical",
             setter_type="int",
-            setter_min_val=20.0,
-            setter_max_val=95.0,
+            setter_min_val=0.0,
+            setter_max_val=100.0,
             setter_step=1.0,
             ha_device_class=SensorDeviceClass.TEMPERATURE,
             ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
@@ -2311,8 +2311,8 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:swap-vertical",
             setter_type="int",
-            setter_min_val=20.0,
-            setter_max_val=95.0,
+            setter_min_val=0.0,
+            setter_max_val=100.0,
             setter_step=1.0,
             ha_device_class=SensorDeviceClass.TEMPERATURE,
             ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
@@ -2321,13 +2321,15 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         ),
         "solar",
     ),
-    "solar_offset_kollektorfuhler": _with_group(
-        create_kelvin_sensor(
+    "solar_solarpumpe": _with_group(
+        create_general_sensor(
             entity_registry_enabled_default=False,
-            key="solar_offset_kollektorfuhler",
+            key="solar_solarpumpe",
             node_id="9038T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
-            icon="mdi:thermometer-offset",
+            hdg_data_type="2",
+            parse_as_type="float",
+            icon="mdi:pump",
         ),
         "solar",
     ),
@@ -2373,60 +2375,60 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         ),
         "solar",
     ),
-    "solar_zone1_fuhler_zuordnung": _with_group(
+    "solar_zone_1": _with_group(
         create_enum_sensor(
             entity_registry_enabled_default=False,
-            key="solar_zone1_fuhler_zuordnung",
+            key="solar_zone_1",
             node_id="9080T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:thermometer-lines",
         ),
         "solar",
     ),
-    "solar_zone2_fuhler_zuordnung": _with_group(
+    "solar_zone_2": _with_group(
         create_enum_sensor(
             entity_registry_enabled_default=False,
-            key="solar_zone2_fuhler_zuordnung",
+            key="solar_zone_2",
             node_id="9081T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:thermometer-lines",
         ),
         "solar",
     ),
-    "solar_zone3_fuhler_zuordnung": _with_group(
+    "solar_zone_3": _with_group(
         create_enum_sensor(
             entity_registry_enabled_default=False,
-            key="solar_zone3_fuhler_zuordnung",
+            key="solar_zone_3",
             node_id="9082T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:thermometer-lines",
         ),
         "solar",
     ),
-    "solar_umschaltventil_1_aktivieren": _with_group(
+    "solar_invertierung_ventil_1_aktivieren": _with_group(
         create_enum_sensor(
             entity_registry_enabled_default=False,
-            key="solar_umschaltventil_1_aktivieren",
+            key="solar_invertierung_ventil_1_aktivieren",
             node_id="9086T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:valve-check",
         ),
         "solar",
     ),
-    "solar_umschaltventil_2_aktivieren": _with_group(
+    "solar_invertierung_ventil_2_aktivieren": _with_group(
         create_enum_sensor(
             entity_registry_enabled_default=False,
-            key="solar_umschaltventil_2_aktivieren",
+            key="solar_invertierung_ventil_2_aktivieren",
             node_id="9087T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:valve-check",
         ),
         "solar",
     ),
-    "solar_art": _with_group(
+    "solar_solaranlage": _with_group(
         create_enum_sensor(
             entity_registry_enabled_default=False,
-            key="solar_art",
+            key="solar_solaranlage",
             node_id="9099T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:solar-power-variant-outline",
