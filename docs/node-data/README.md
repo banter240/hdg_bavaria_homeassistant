@@ -1,56 +1,15 @@
 # hdg_data.csv
 
-1280 rows, one row per node, UTF-8 with BOM. The integration does not read this file.
+Node list I scraped myself. Not an HDG file. 1280 rows, UTF-8 with BOM. The integration does not read it.
 
-This is not an official HDG file. I scraped the display names and slider limits myself from the two public demos and combined them with a node export from 1 June 2026. The columns are as described below. Where an edit page is missing, or the page shows a different node, the row stays at that export. Those rows can be wrong.
+German names and slider limits come from the edit page on <https://myhdg-demo.hdg-bavaria.com/> (`index.php?d=set&i=<id>`, one id per call). That site is German. English names come from the same page on <https://demo-myhdg.hdg-bavaria.com/>.
 
-## Columns
+Placeholder, data type, unit/format, enum type, and both enum-option columns come from a node export of 1 June 2026. 24 rows have no placeholder and no name. 550 rows have a formatter. 449 rows have an enum, written as `Key: Text (RSI: n)` and joined with `; `, otherwise `-`. The edit pages do not include the enum lists for a normal user.
 
-**Node ID**
-Node number.
+`Minimum` and `Maximum` are the slider ends on the German page, unit included (`1 K`, `80 °C`, `10 s`). 576 rows. Empty means no slider. `-2147483648` and `2147483647` are not stored.
 
-**Placeholder (desc1)**
-Placeholder from the export, for example `#TNRMITNUM9021`. 24 rows are empty. Those same 24 rows also have no display name.
+147 ids return `OBJEKT NICHT GEFUNDEN ODER NICHT BEARBEITBAR`. Those names and limits are still the June export. A page is ignored when its menu code or `data-id` belongs to another node. `dataRefresh` returns the live value only.
 
-**German display name**
-Name on the edit page `https://myhdg-demo.hdg-bavaria.com/index.php?d=set&i=<id>`. This host is German.
+The edit page for 29001 is node 24002, `Fühler Puffer unten`, from `-60 °C` to `270 °C`. The names stay `Aktive Zone (Solar)` and `Active zone (Solar)`. Data type is 40. On 19 October 2026 the German demo returned `61 °C` for 29001, the same value as 29004.
 
-**English display name**
-The same page on `https://demo-myhdg.hdg-bavaria.com/`. This host is English.
-
-**Data type (data_type)**
-Type number from the export.
-
-**Unit/format (formatter)**
-Formatter from the export, for example `iTEMP`, `iKELV`, `iPERC`, `iSEK`. 550 rows are filled. The rest are empty.
-
-**Enum type**
-Enum name from the export. 449 rows, otherwise `-`.
-
-**German enum options (key: text, RSI)**
-**English enum options (key: text, RSI)**
-`Key: Text (RSI: n)`, with further options separated by `; `. 449 rows, otherwise `-`. The lists are the export from 1 June 2026. The demo edit pages do not return them at the normal user level.
-
-**Minimum**
-**Maximum**
-Left and right end of the slider on the German edit page, with the unit shown there (`1 K`, `80 °C`, `10 s`). 576 rows. Empty means the page had no slider. The range `-2147483648` to `2147483647` is not in the file.
-
-147 IDs have no edit page. The response is `OBJEKT NICHT GEFUNDEN ODER NICHT BEARBEITBAR`. Display names and limits on those rows are the export.
-
-An edit page counts only when its menu code or `data-id` is the requested node number. `dataRefresh` returns only the current value for many IDs, not the name and not the limits.
-
-## 29001
-
-The edit page for 29001 belongs to node 24002. It shows `Fühler Puffer unten`, and the slider runs from `-60 °C` to `270 °C`. The row therefore keeps the export name `Aktive Zone (Solar)` / `Active zone (Solar)`. The export data type is 40. On 19 October 2026, `dataRefresh` on the German demo returned `61 °C` for 29001, the same value as for 29004.
-
-## 9040
-
-Display name `Temperaturspreizung Soll` / `Target temp. difference`. Formatter `iKELV`. Minimum `2 °C`, maximum `20 °C`.
-
-## Not in this folder
-
-This folder contains only this README and `hdg_data.csv`.
-
-Data type, unit/format, enum type, and enum options are the contents of `data.json` and `enum_option.json`.
-
-`deutsch.json` and `english.json` are the export from 1 June 2026, 4607 strings. The demos do not offer these files. Node names are in German display name and English display name.
+9040 (`Temperaturspreizung Soll` / `Target temp. difference`) has formatter `iKELV`. The slider is `2 °C` to `20 °C`.

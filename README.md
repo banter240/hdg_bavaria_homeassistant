@@ -299,7 +299,7 @@ A: Yes. Enable `enable_ww2` in the options.
 
 Setup, options, entities, and troubleshooting are in this README.
 
-Node names, data types, enum options, and slider limits are in [`docs/node-data/hdg_data.csv`](docs/node-data/hdg_data.csv). The columns are described in [`docs/node-data/README.md`](docs/node-data/README.md). The integration does not read that file. It is not an official HDG document. I scraped the names and limits from the public demos.
+[`docs/node-data/hdg_data.csv`](docs/node-data/hdg_data.csv) is a node list I scraped myself. Not an HDG file. See [`docs/node-data/README.md`](docs/node-data/README.md). The integration does not read the CSV.
 
 ---
 
