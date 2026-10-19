@@ -299,6 +299,8 @@ A: Yes. Enable `enable_ww2` in the options.
 
 Setup, options, entities, and troubleshooting are in this README.
 
+[`docs/node-data/hdg_data.csv`](docs/node-data/hdg_data.csv) is a node list I scraped myself. Not an HDG file. See [`docs/node-data/README.md`](docs/node-data/README.md). The integration does not read the CSV.
+
 ---
 
 <br>
