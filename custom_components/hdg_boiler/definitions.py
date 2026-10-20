@@ -1679,7 +1679,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     "kessel_nachlegezeitpunkt_2": create_general_sensor(
         key="kessel_nachlegezeitpunkt_2",
         node_id="22053T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
         hdg_data_type="2",
         parse_as_type="hdg_datetime_or_text",
         hdg_formatter="iRSINLM",
@@ -1706,7 +1706,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     "kessel_nachlegen_anzeige_text": create_diagnostic_enum_sensor(
         key="kessel_nachlegen_anzeige_text",
         node_id="22062T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
         icon="mdi:basket-alert-outline",
     ),
     "zeit_kesseluberhitzung_10_abbrande_std": create_duration_sensor(
@@ -1842,7 +1842,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     "puffer_energie_aktuell": create_energy_sensor(
         key="puffer_energie_aktuell",
         node_id="24017T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
         icon="mdi:lightning-bolt",
         hdg_formatter="iKWH",
         unit=UnitOfEnergy.KILO_WATT_HOUR,
@@ -1868,7 +1868,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     "puffer_energie_ist": create_energy_sensor(
         key="puffer_energie_ist",
         node_id="24021T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
         icon="mdi:battery-heart-variant",
         hdg_formatter="iKWH",
         unit=UnitOfEnergy.KILO_WATT_HOUR,
@@ -1878,7 +1878,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     "puffer_energie_aufnehmbar": create_energy_sensor(
         key="puffer_energie_aufnehmbar",
         node_id="24022T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
         icon="mdi:battery-plus-variant",
         hdg_formatter="iKWH",
         unit=UnitOfEnergy.KILO_WATT_HOUR,
@@ -1895,13 +1895,13 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     "puffer_vorlauf_extern": create_temp_sensor(
         key="puffer_vorlauf_extern",
         node_id="24098T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
         icon="mdi:thermometer-chevron-up",
     ),
     "puffer_rucklauf_extern": create_temp_sensor(
         key="puffer_rucklauf_extern",
         node_id="24099T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
         icon="mdi:thermometer-chevron-down",
     ),
     "puffer_2_temperatur_oben": create_temp_sensor(
@@ -1975,7 +1975,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         entity_registry_enabled_default=False,
         key="puffer_2_energie_aktuell",
         node_id="24117T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
         icon="mdi:lightning-bolt",
         hdg_formatter="iKWH",
         unit=UnitOfEnergy.KILO_WATT_HOUR,
@@ -2004,7 +2004,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         entity_registry_enabled_default=False,
         key="puffer_2_energie_ist",
         node_id="24121T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
         icon="mdi:battery-heart-variant",
         hdg_formatter="iKWH",
         unit=UnitOfEnergy.KILO_WATT_HOUR,
@@ -2015,7 +2015,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         entity_registry_enabled_default=False,
         key="puffer_2_energie_aufnehmbar",
         node_id="24122T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
         icon="mdi:battery-plus-variant",
         hdg_formatter="iKWH",
         unit=UnitOfEnergy.KILO_WATT_HOUR,
@@ -2034,14 +2034,14 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         entity_registry_enabled_default=False,
         key="puffer_2_vorlauf_extern",
         node_id="24198T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
         icon="mdi:thermometer-chevron-up",
     ),
     "puffer_2_rucklauf_extern": create_temp_sensor(
         entity_registry_enabled_default=False,
         key="puffer_2_rucklauf_extern",
         node_id="24199T",
-        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
+        polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
         icon="mdi:thermometer-chevron-down",
     ),
     "ww1_temperatur_ist": create_temp_sensor(
