@@ -12,6 +12,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_call_later
@@ -110,10 +111,19 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @property
     def scan_intervals(self) -> dict[str, timedelta]:
         """Return the effective scan intervals for each polling group."""
-        return {
-            gk: timedelta(seconds=p["default_scan_interval"])
-            for gk, p in self.hdg_entity_registry.get_polling_group_payloads().items()
-        }
+        intervals: dict[str, timedelta] = {}
+        for gk, p in self.hdg_entity_registry.get_polling_group_payloads().items():
+            raw_interval = self.entry.options.get(f"{CONF_SCAN_INTERVAL}_{gk}")
+            try:
+                interval_s = (
+                    max(float(raw_interval), float(MIN_SCAN_INTERVAL))
+                    if raw_interval is not None
+                    else float(p["default_scan_interval"])
+                )
+            except (TypeError, ValueError):
+                interval_s = float(p["default_scan_interval"])
+            intervals[gk] = timedelta(seconds=interval_s)
+        return intervals
 
     def get_diagnostics(self) -> dict[str, Any]:
         """Return diagnostic information for the coordinator."""
