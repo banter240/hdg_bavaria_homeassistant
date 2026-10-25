@@ -200,6 +200,20 @@ def _prepare_parser_and_value(
         return None, None
 
     cleaned_value = html.unescape(str(raw_value)).strip()
+
+    # Workaround for HDG Touch Control WebControl firmware bug (V2.06):
+    # When the boiler enters state RSI 18 (RESTWAERME / Restwärmenutzung), the HDG
+    # WebControl internal webserver fails to resolve the enum text and emits "*ErrEnum []*".
+    if "*errenum" in cleaned_value.lower() and (
+        entity_definition.get("hdg_node_id") in ("22010", "22010T")
+        or entity_definition.get("translation_key") == "kessel_status"
+    ):
+        _LOGGER.debug(
+            "%sMapped '*ErrEnum []*' to 'Restwärmenutzung' (HDG WebControl V2.06 firmware bug).",
+            log_prefix,
+        )
+        cleaned_value = "Restwärmenutzung"
+
     parse_as_type = entity_definition.get("parse_as_type")
 
     if not parse_as_type or parse_as_type not in _PARSER_MAP:
