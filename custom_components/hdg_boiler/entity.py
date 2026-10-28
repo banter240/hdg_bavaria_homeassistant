@@ -21,6 +21,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     COMPONENT_GROUP_OPTIONS,
+    component_group_enabled,
     CONF_DEVICE_ALIAS,
     CONF_HOST_IP,
     CONF_SOURCE_TIMEZONE,
@@ -172,16 +173,13 @@ class HdgNodeEntity(HdgBaseEntity):
         if hasattr(description, "icon"):
             self._attr_icon = description.icon
 
-        # Determine registry enabled default.
-        # Component-group entities defer to the group's config option so the
-        # user can activate entire hardware groups (HK2, Solar, …) at once.
         component_group = self._entity_definition.get("component_group")
-        if component_group and (
-            group_opts := COMPONENT_GROUP_OPTIONS.get(component_group)
+        if (
+            isinstance(component_group, str)
+            and component_group in COMPONENT_GROUP_OPTIONS
         ):
-            conf_key, default_enabled = group_opts
-            self._attr_entity_registry_enabled_default = coordinator.entry.options.get(
-                conf_key, default_enabled
+            self._attr_entity_registry_enabled_default = component_group_enabled(
+                coordinator.entry.options, component_group
             )
         else:
             enabled_default = self._entity_definition.get(

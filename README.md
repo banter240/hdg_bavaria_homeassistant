@@ -71,6 +71,7 @@ It is designed to work reliably with the relatively weak built-in web server of 
   - Preemption: user sets take priority over background polling.
 
 - **Component Groups**
+  - Heating circuit 1 (`enable_hk1`) stays on unless you turn it off.
   - Optional hardware (HK2–HK6, WW2, Solar, Puffer 2, Netzpumpen 1–3, External heat source, Lager) is disabled by default for a clean UI.
   - Enable exactly what you have via the rich options flow.
 
@@ -99,7 +100,7 @@ It is designed to work reliably with the relatively weak built-in web server of 
 
 | Component       | Toggle Key         | Default | Description |
 |-----------------|--------------------|---------|-------------|
-| Heating Circuit 1 | (always)          | On     | Primary heating circuit |
+| Heating Circuit 1 | `enable_hk1`      | On     | Primary heating circuit. Stays on when the option is missing. |
 | Heating Circuits 2–6 | `enable_hkX`     | Off    | Additional heating circuits |
 | Hot Water 1     | `enable_ww1`       | Off    | First domestic hot water circuit |
 | Hot Water 2     | `enable_ww2`       | Off    | Second domestic hot water circuit |
@@ -109,7 +110,7 @@ It is designed to work reliably with the relatively weak built-in web server of 
 | External Heat Source | `enable_ext_wq` | Off | External heat source, including its temperature |
 | Pellet Storage  | `enable_lager`     | Off    | Detailed pellet storage monitoring (total consumption, since last fill, etc.) |
 
-Entities for optional components start disabled. Enable the component in the integration options.
+Heating circuit 1 stays enabled when `enable_hk1` is missing. Every other component starts disabled. Turn a component on in the integration options.
 
 ---
 
