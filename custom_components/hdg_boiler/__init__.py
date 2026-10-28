@@ -20,7 +20,7 @@ from homeassistant.helpers.entity_registry import RegistryEntryDisabler
 
 from .api import HdgApiClient
 from .const import (
-    COMPONENT_GROUP_OPTIONS,
+    component_group_enabled,
     CONF_API_TIMEOUT,
     CONF_CONNECT_TIMEOUT,
     CONF_ERROR_THRESHOLD,
@@ -184,12 +184,10 @@ async def _async_sync_component_groups(
     if not group_by_key:
         return
 
-    suffix_to_enabled: dict[str, bool] = {}
-    for suffix, group in group_by_key.items():
-        conf_key, default_enabled = COMPONENT_GROUP_OPTIONS[group]
-        is_enabled = entry.options.get(conf_key, default_enabled)
-        suffix_to_enabled[suffix] = is_enabled
-
+    suffix_to_enabled: dict[str, bool] = {
+        suffix: component_group_enabled(entry.options, group)
+        for suffix, group in group_by_key.items()
+    }
     await async_sync_entities_by_key(
         hass,
         entry,

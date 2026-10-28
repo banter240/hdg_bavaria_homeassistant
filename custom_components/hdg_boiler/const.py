@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, Final
 
 from homeassistant.const import CONF_SCAN_INTERVAL, UnitOfMass
@@ -28,6 +29,7 @@ __all__: Final[list[str]] = [
     "CONF_ERROR_THRESHOLD",
     "CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS",
     "CONF_FALLBACK_PING_INTERVAL",
+    "CONF_ENABLE_HK1",
     "CONF_ENABLE_HK2",
     "CONF_ENABLE_HK3",
     "CONF_ENABLE_HK4",
@@ -49,6 +51,7 @@ __all__: Final[list[str]] = [
     "PUFFER_MITTE_NODE_MAP",
     "DEFAULT_ENABLE_WW1",
     "DEFAULT_ENABLE_WW2",
+    "DEFAULT_ENABLE_HK1",
     "DEFAULT_ENABLE_HK2",
     "DEFAULT_ENABLE_HK3",
     "DEFAULT_ENABLE_HK4",
@@ -107,6 +110,7 @@ __all__: Final[list[str]] = [
     "MAX_SCAN_INTERVAL",
     "scan_interval_option_key",
     "resolve_scan_interval_seconds",
+    "component_group_enabled",
     "MAX_CONCURRENT_POLL_REQUESTS",
     "OPTIMISTIC_GRACE_PERIOD_S",
     "COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK",
@@ -164,6 +168,7 @@ CONF_FALLBACK_PING_INTERVAL: Final[str] = "fallback_ping_interval"
 
 CONF_ENABLE_WW1: Final[str] = "enable_ww1"
 CONF_ENABLE_WW2: Final[str] = "enable_ww2"
+CONF_ENABLE_HK1: Final[str] = "enable_hk1"
 CONF_ENABLE_HK2: Final[str] = "enable_hk2"
 CONF_ENABLE_HK3: Final[str] = "enable_hk3"
 CONF_ENABLE_HK4: Final[str] = "enable_hk4"
@@ -179,6 +184,7 @@ CONF_ENABLE_NETZPUMPE_3: Final[str] = "enable_netzpumpe_3"
 
 DEFAULT_ENABLE_WW1: Final[bool] = False
 DEFAULT_ENABLE_WW2: Final[bool] = False
+DEFAULT_ENABLE_HK1: Final[bool] = True
 DEFAULT_ENABLE_HK2: Final[bool] = False
 DEFAULT_ENABLE_HK3: Final[bool] = False
 DEFAULT_ENABLE_HK4: Final[bool] = False
@@ -206,6 +212,7 @@ PUFFER_MITTE_NODE_MAP: Final[dict[str, str]] = {
 COMPONENT_GROUP_OPTIONS: Final[dict[str, tuple[str, bool]]] = {
     "ww1": (CONF_ENABLE_WW1, DEFAULT_ENABLE_WW1),
     "ww2": (CONF_ENABLE_WW2, DEFAULT_ENABLE_WW2),
+    "hk1": (CONF_ENABLE_HK1, DEFAULT_ENABLE_HK1),
     "hk2": (CONF_ENABLE_HK2, DEFAULT_ENABLE_HK2),
     "hk3": (CONF_ENABLE_HK3, DEFAULT_ENABLE_HK3),
     "hk4": (CONF_ENABLE_HK4, DEFAULT_ENABLE_HK4),
@@ -224,6 +231,13 @@ COMPONENT_GROUP_OPTIONS: Final[dict[str, tuple[str, bool]]] = {
 def scan_interval_option_key(group_key: str) -> str:
     """Return the options key for one polling group's scan interval."""
     return f"{CONF_SCAN_INTERVAL}_{group_key}"
+
+
+def component_group_enabled(options: Mapping[str, Any], group: str) -> bool:
+    """Use the group default when the option is missing or not a bool."""
+    conf_key, default_enabled = COMPONENT_GROUP_OPTIONS[group]
+    raw = options.get(conf_key, default_enabled)
+    return raw if isinstance(raw, bool) else default_enabled
 
 
 CONFIG_FLOW_API_TIMEOUT: Final[int] = 15

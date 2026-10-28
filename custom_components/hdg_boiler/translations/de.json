@@ -20,6 +20,7 @@
           "components": {
             "name": "Optionale Komponenten",
             "data": {
+              "enable_hk1": "Heizkreis 1 (HK1)",
               "enable_hk2": "Heizkreis 2 (HK2)",
               "enable_hk3": "Heizkreis 3 (HK3)",
               "enable_hk4": "Heizkreis 4 (HK4)",
@@ -36,6 +37,7 @@
               "enable_netzpumpe_3": "Netzpumpe 3"
             },
             "data_description": {
+              "enable_hk1": "Aktiviert die Entitäten für Heizkreis 1 (HK1). Nur ausschalten, wenn der Kessel diesen Heizkreis nicht steuert und nicht überwacht.",
               "enable_hk2": "Aktiviert die Entitäten für einen zweiten Heizkreis (HK2). Nur aktivieren, wenn der Kessel einen zweiten Heizkreis steuert.",
               "enable_hk3": "Aktiviert die Entitäten für einen dritten Heizkreis (HK3). Nur aktivieren, wenn der Kessel einen dritten Heizkreis steuert.",
               "enable_hk4": "Aktiviert die Entitäten für Heizkreis 4 (HK4). Nur aktivieren, wenn der Kessel diesen Heizkreis steuert.",
@@ -146,6 +148,7 @@
           "components": {
             "name": "Optionale Komponenten",
             "data": {
+              "enable_hk1": "Heizkreis 1 (HK1)",
               "enable_hk2": "Heizkreis 2 (HK2)",
               "enable_hk3": "Heizkreis 3 (HK3)",
               "enable_hk4": "Heizkreis 4 (HK4)",
@@ -162,6 +165,7 @@
               "enable_netzpumpe_3": "Netzpumpe 3"
             },
             "data_description": {
+              "enable_hk1": "Aktiviert die Entitäten für Heizkreis 1 (HK1). Nur ausschalten, wenn der Kessel diesen Heizkreis nicht steuert und nicht überwacht.",
               "enable_hk2": "Aktiviert die Entitäten für einen zweiten Heizkreis (HK2). Nur aktivieren, wenn der Kessel einen zweiten Heizkreis steuert.",
               "enable_hk3": "Aktiviert die Entitäten für einen dritten Heizkreis (HK3). Nur aktivieren, wenn der Kessel einen dritten Heizkreis steuert.",
               "enable_hk4": "Aktiviert die Entitäten für Heizkreis 4 (HK4). Nur aktivieren, wenn der Kessel diesen Heizkreis steuert.",

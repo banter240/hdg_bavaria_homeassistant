@@ -29,6 +29,7 @@ from .const import (
     CONF_CONNECT_TIMEOUT,
     CONF_DEVICE_ALIAS,
     CONF_ENABLE_EXT_WQ,
+    CONF_ENABLE_HK1,
     CONF_ENABLE_HK2,
     CONF_ENABLE_HK3,
     CONF_ENABLE_HK4,
@@ -60,6 +61,7 @@ from .const import (
     DEFAULT_API_TIMEOUT,
     DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_ENABLE_EXT_WQ,
+    DEFAULT_ENABLE_HK1,
     DEFAULT_ENABLE_HK2,
     DEFAULT_ENABLE_HK3,
     DEFAULT_ENABLE_HK4,
@@ -135,6 +137,7 @@ _SECTION_KEYS: dict[str, list[str]] = {
     "components": [
         CONF_ENABLE_WW1,
         CONF_ENABLE_WW2,
+        CONF_ENABLE_HK1,
         CONF_ENABLE_HK2,
         CONF_ENABLE_HK3,
         CONF_ENABLE_HK4,
@@ -389,6 +392,9 @@ class HdgBoilerCommonFlow:
             ): BooleanSelector(),
             vol.Optional(
                 CONF_ENABLE_WW2, default=get(CONF_ENABLE_WW2, DEFAULT_ENABLE_WW2)
+            ): BooleanSelector(),
+            vol.Optional(
+                CONF_ENABLE_HK1, default=get(CONF_ENABLE_HK1, DEFAULT_ENABLE_HK1)
             ): BooleanSelector(),
             vol.Optional(
                 CONF_ENABLE_HK2, default=get(CONF_ENABLE_HK2, DEFAULT_ENABLE_HK2)

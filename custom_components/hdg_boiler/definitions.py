@@ -26,9 +26,11 @@ from homeassistant.const import (
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import (
+    COMPONENT_GROUP_OPTIONS,
     POLLING_GROUP_DEFINITIONS,
     PUFFER_MITTE_NODE_MAP,
     UNIT_MASS_TONNES,
+    component_group_enabled,
 )
 from .helpers.string_utils import normalize_hdg_node_id
 from .models import SensorDefinition
@@ -525,7 +527,8 @@ def get_hk_definitions(
     """Generate all 25 entities for a single heating circuit."""
     p = f"hk{idx}_"
     sys_key = f"heizkreis_{idx}_system"
-    enabled = idx == 1  # Only HK1 enabled by default
+    group = f"hk{idx}"
+    _, enabled = COMPONENT_GROUP_OPTIONS[group]
 
     defs = {
         f"{p}betriebsart": create_select_entity(
@@ -779,9 +782,8 @@ def get_hk_definitions(
             ),
         }
 
-    if idx != 1:
-        for defn in defs.values():
-            defn["component_group"] = f"hk{idx}"
+    for defn in defs.values():
+        _with_group(defn, group)
 
     return defs
 
@@ -853,9 +855,27 @@ def get_netzpumpe_param_definitions(
 def get_sensor_definitions(
     options: dict[str, Any] | None = None,
 ) -> dict[str, SensorDefinition]:
-    """Return sensor definitions, adding puffer middle sensors only if node IDs are configured."""
-    defs = dict(SENSOR_DEFINITIONS)
+    """Return sensor definitions for one config entry.
+
+    Component-group entities are copied first, so SENSOR_DEFINITIONS keeps
+    its defaults.
+    """
     opts = options or {}
+    defs: dict[str, SensorDefinition] = {}
+    for key, definition in SENSOR_DEFINITIONS.items():
+        group = definition.get("component_group")
+        if isinstance(group, str) and group in COMPONENT_GROUP_OPTIONS:
+            defs[key] = cast(
+                SensorDefinition,
+                {
+                    **definition,
+                    "entity_registry_enabled_default": component_group_enabled(
+                        opts, group
+                    ),
+                },
+            )
+        else:
+            defs[key] = definition
     for key, conf in PUFFER_MITTE_NODE_MAP.items():
         raw = opts.get(conf)
         if raw and str(raw).strip():

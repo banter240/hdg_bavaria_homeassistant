@@ -20,6 +20,7 @@
           "components": {
             "name": "Optional Components",
             "data": {
+              "enable_hk1": "Heating Circuit 1 (HK1)",
               "enable_hk2": "Heating Circuit 2 (HK2)",
               "enable_hk3": "Heating Circuit 3 (HK3)",
               "enable_hk4": "Heating Circuit 4 (HK4)",
@@ -36,6 +37,7 @@
               "enable_netzpumpe_3": "Network Pump 3"
             },
             "data_description": {
+              "enable_hk1": "Enable entities for the first heating circuit (HK1). Turn this off only if the boiler does not control or monitor this circuit.",
               "enable_hk2": "Enable entities for a second heating circuit (HK2). Only activate if your boiler controls a second circuit.",
               "enable_hk3": "Enable entities for a third heating circuit (HK3). Only activate if your boiler controls a third circuit.",
               "enable_hk4": "Enable entities for heating circuit 4 (HK4). Only activate if your boiler controls this circuit.",
@@ -146,6 +148,7 @@
           "components": {
             "name": "Optional Components",
             "data": {
+              "enable_hk1": "Heating Circuit 1 (HK1)",
               "enable_hk2": "Heating Circuit 2 (HK2)",
               "enable_hk3": "Heating Circuit 3 (HK3)",
               "enable_hk4": "Heating Circuit 4 (HK4)",
@@ -162,6 +165,7 @@
               "enable_netzpumpe_3": "Network Pump 3"
             },
             "data_description": {
+              "enable_hk1": "Enable entities for the first heating circuit (HK1). Turn this off only if the boiler does not control or monitor this circuit.",
               "enable_hk2": "Enable entities for a second heating circuit (HK2). Only activate if your boiler controls a second circuit.",
               "enable_hk3": "Enable entities for a third heating circuit (HK3). Only activate if your boiler controls a third circuit.",
               "enable_hk4": "Enable entities for heating circuit 4 (HK4). Only activate if your boiler controls this circuit.",
