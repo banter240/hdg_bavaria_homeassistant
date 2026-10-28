@@ -23,7 +23,11 @@ from ..const import (
     HDG_DATETIME_SPECIAL_TEXT,
     HEURISTICS_LOGGER_NAME,
 )
-from .enum_mappings import HDG_ENUM_TEXT_TO_KEY_MAPPINGS, resolve_hdg_enum_key
+from .enum_mappings import (
+    HDG_ENUM_TEXT_TO_KEY_MAPPINGS,
+    kessel_status_errenum_label,
+    resolve_hdg_enum_key,
+)
 from .logging_utils import make_log_prefix
 
 _LOGGER = logging.getLogger(DOMAIN)
@@ -200,6 +204,19 @@ def _prepare_parser_and_value(
         return None, None
 
     cleaned_value = html.unescape(str(raw_value)).strip()
+    if (
+        label := kessel_status_errenum_label(
+            cleaned_value,
+            entity_definition.get("hdg_node_id"),
+            entity_definition.get("translation_key"),
+        )
+    ) is not None:
+        _LOGGER.debug(
+            "%sMapped '*ErrEnum []*' to '%s' (HDG WebControl V2.06 firmware bug).",
+            log_prefix,
+            label,
+        )
+        cleaned_value = label
     parse_as_type = entity_definition.get("parse_as_type")
 
     if not parse_as_type or parse_as_type not in _PARSER_MAP:
