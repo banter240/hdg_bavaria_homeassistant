@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import Any, Final
 
-from homeassistant.const import UnitOfMass
+from homeassistant.const import CONF_SCAN_INTERVAL, UnitOfMass
 
 from .models import PollingGroupStaticDefinition
 
@@ -105,6 +105,8 @@ __all__: Final[list[str]] = [
     "DEFAULT_SET_VALUE_DEBOUNCE_DELAY_S",
     "MIN_SCAN_INTERVAL",
     "MAX_SCAN_INTERVAL",
+    "scan_interval_option_key",
+    "resolve_scan_interval_seconds",
     "MAX_CONCURRENT_POLL_REQUESTS",
     "OPTIMISTIC_GRACE_PERIOD_S",
     "COORDINATOR_MAX_CONSECUTIVE_FAILURES_BEFORE_FALLBACK",
@@ -218,6 +220,12 @@ COMPONENT_GROUP_OPTIONS: Final[dict[str, tuple[str, bool]]] = {
     "netzpumpe_3": (CONF_ENABLE_NETZPUMPE_3, DEFAULT_ENABLE_NETZPUMPE_3),
 }
 
+
+def scan_interval_option_key(group_key: str) -> str:
+    """Return the options key for one polling group's scan interval."""
+    return f"{CONF_SCAN_INTERVAL}_{group_key}"
+
+
 CONFIG_FLOW_API_TIMEOUT: Final[int] = 15
 DEFAULT_API_TIMEOUT: Final[int] = 15
 MIN_API_TIMEOUT: Final[int] = 5
@@ -278,6 +286,16 @@ DEFAULT_SET_VALUE_DEBOUNCE_DELAY_S: Final[float] = 2.0
 
 MIN_SCAN_INTERVAL: Final[int] = 15
 MAX_SCAN_INTERVAL: Final[int] = 86430
+
+
+def resolve_scan_interval_seconds(raw: Any, default_seconds: int | float) -> float:
+    """Return a scan interval in seconds, clamped to the options-flow bounds."""
+    try:
+        interval_s = float(raw) if raw is not None else float(default_seconds)
+    except (TypeError, ValueError):
+        interval_s = float(default_seconds)
+    return min(max(interval_s, float(MIN_SCAN_INTERVAL)), float(MAX_SCAN_INTERVAL))
+
 
 MAX_CONCURRENT_POLL_REQUESTS: Final[int] = 5
 

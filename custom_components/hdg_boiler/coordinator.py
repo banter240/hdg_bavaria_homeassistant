@@ -27,6 +27,8 @@ from .const import (
     DOMAIN,
     MAX_CONCURRENT_POLL_REQUESTS,
     MIN_SCAN_INTERVAL,
+    resolve_scan_interval_seconds,
+    scan_interval_option_key,
     POLLING_RETRY_BACKOFF_FACTOR,
     POLLING_RETRY_INITIAL_DELAY_S,
     POLLING_RETRY_MAX_DELAY_S,
@@ -109,11 +111,16 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @property
     def scan_intervals(self) -> dict[str, timedelta]:
-        """Return the effective scan intervals for each polling group."""
-        return {
-            gk: timedelta(seconds=p["default_scan_interval"])
-            for gk, p in self.hdg_entity_registry.get_polling_group_payloads().items()
-        }
+        """Return the effective scan interval for each polling group."""
+        intervals: dict[str, timedelta] = {}
+        payloads = self.hdg_entity_registry.get_polling_group_payloads()
+        for group_key, payload in payloads.items():
+            interval_s = resolve_scan_interval_seconds(
+                self.entry.options.get(scan_interval_option_key(group_key)),
+                payload["default_scan_interval"],
+            )
+            intervals[group_key] = timedelta(seconds=interval_s)
+        return intervals
 
     def get_diagnostics(self) -> dict[str, Any]:
         """Return diagnostic information for the coordinator."""

@@ -9,7 +9,6 @@ from urllib.parse import urlparse
 
 import voluptuous as vol
 from homeassistant import config_entries, core, data_entry_flow
-from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
@@ -106,6 +105,7 @@ from .const import (
     MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
     MIN_SCAN_INTERVAL,
     POLLING_GROUP_DEFINITIONS,
+    scan_interval_option_key,
 )
 from .helpers.logging_utils import _LOGGER, note_host_secret
 from .helpers.network_utils import async_execute_icmp_ping, prepare_base_url
@@ -114,7 +114,7 @@ from .helpers.network_utils import async_execute_icmp_ping, prepare_base_url
 # Section key registry — single source of truth for flatten logic
 # ---------------------------------------------------------------------------
 
-_POLLING_KEYS = [f"{CONF_SCAN_INTERVAL}_{g['key']}" for g in POLLING_GROUP_DEFINITIONS]
+_POLLING_KEYS = [scan_interval_option_key(g["key"]) for g in POLLING_GROUP_DEFINITIONS]
 
 _SECTION_KEYS: dict[str, list[str]] = {
     "polling": _POLLING_KEYS,
@@ -289,7 +289,7 @@ class HdgBoilerCommonFlow:
         # Section: Polling intervals
         polling_fields: dict[Any, Any] = {}
         for group in POLLING_GROUP_DEFINITIONS:
-            key = f"{CONF_SCAN_INTERVAL}_{group['key']}"
+            key = scan_interval_option_key(group["key"])
             polling_fields[
                 vol.Optional(key, default=get(key, group["default_interval"]))
             ] = num(MIN_SCAN_INTERVAL, MAX_SCAN_INTERVAL, unit="s")

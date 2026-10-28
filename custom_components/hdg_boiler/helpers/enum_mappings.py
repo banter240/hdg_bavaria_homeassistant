@@ -11,7 +11,13 @@ from __future__ import annotations
 import re
 from typing import Final
 
-__all__ = ["HDG_ENUM_TEXT_TO_KEY_MAPPINGS", "resolve_hdg_enum_key"]
+from .string_utils import strip_hdg_node_suffix
+
+__all__ = [
+    "HDG_ENUM_TEXT_TO_KEY_MAPPINGS",
+    "resolve_hdg_enum_key",
+    "kessel_status_errenum_label",
+]
 
 # Touch labels wrap long words as "Sommer-\r\nbetrieb". Polls also arrive as
 # "Sommer- betrieb", "Sommer-betrieb", or with a <br> tag.
@@ -32,6 +38,27 @@ def _fold_hdg_enum_text(value: str) -> str:
 def _compact_hdg_enum_text(value: str) -> str:
     """Drop a line-break hyphen: 'Sommer- betrieb' and 'Sommerbetrieb' match."""
     return _HYPHEN_BREAK_RE.sub("", _fold_hdg_enum_text(value))
+
+
+# V2.06 sends "*ErrEnum []*" for Restwärmenutzung on node 22010.
+# Not an enum-map entry: kessel_status has no map, so unknown labels warn.
+_KESSEL_STATUS_NODE_ID = "22010"
+_ERRENUM_MARKER = "*errenum"
+_KESSEL_STATUS_RESTWAERME_LABEL = "Restwärmenutzung"
+
+
+def kessel_status_errenum_label(
+    cleaned_value: str,
+    node_id: object,
+    translation_key: object,
+) -> str | None:
+    """Return the Restwärmenutzung label for the V2.06 token, else None."""
+    if _ERRENUM_MARKER not in cleaned_value.casefold():
+        return None
+    base = strip_hdg_node_suffix(node_id) if isinstance(node_id, str) else ""
+    if base != _KESSEL_STATUS_NODE_ID and translation_key != "kessel_status":
+        return None
+    return _KESSEL_STATUS_RESTWAERME_LABEL
 
 
 def resolve_hdg_enum_key(raw_value: str, enum_map: dict[str, str]) -> str | None:
