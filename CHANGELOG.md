@@ -1,3 +1,44 @@
+## [2.2.0-dev.2](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-dev.1...v2.2.0-dev.2) (2026-10-30)
+
+### ✨ New Features
+
+* feat(hdg_boiler): make heating circuit 1 optional
+
+  enable_hk1 defaults to on, so a missing option keeps the circuit.
+  Turning it off also drops the nodes from the poll set.
+
+  Follows issue 68.
+* feat(hdg_boiler): ship the local brand icons
+
+  Home Assistant 2026.3 reads icons from brand/. Older versions ignore
+  the folder. These are the existing hdg_boiler icons.
+
+  Follows pull request 67. Added here instead of merging that branch onto main.
+
+### 🐛 Bug Fixes
+
+* fix(hdg_boiler): honor scan intervals and refresh live sensors
+
+  Saved scan_interval_group_* options never reached the coordinator.
+  Refill notices and live buffer energy were on the 24 hour group.
+  WebControl V2.06 sends *ErrEnum []* for Restwärmenutzung on node 22010.
+  Primärluft Korrektur durch O2 stays on group 5.
+
+  Follows pull request 66. Built here instead of merging that branch.
+
+### 📚 Documentation
+
+* docs: shorten the node list notes
+
+  The note says where the columns come from.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📝 DOCS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - docs/node-data/README.md
+  - the Documentation link in the main README
+
 ## [2.2.0-dev.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.1.1-dev.1...v2.2.0-dev.1) (2026-10-19)
 
 ### ✨ New Features
