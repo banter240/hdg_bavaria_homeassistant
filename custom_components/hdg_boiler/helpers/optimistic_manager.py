@@ -11,6 +11,8 @@ __all__ = ["HdgOptimisticManager"]
 
 import time
 
+from ..const import OPTIMISTIC_GRACE_PERIOD_S
+
 
 class HdgOptimisticManager:
     """Track optimistic state for SET_NODE operations.
@@ -48,8 +50,6 @@ class HdgOptimisticManager:
                           Defaults to OPTIMISTIC_GRACE_PERIOD_S from const.
 
         """
-        from ..const import OPTIMISTIC_GRACE_PERIOD_S
-
         self._store[node_id] = (
             value,
             time.monotonic(),

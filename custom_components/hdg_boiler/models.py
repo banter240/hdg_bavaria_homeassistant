@@ -24,7 +24,6 @@ __all__ = [
     "SensorDefinition",
     "NodeGroupPayload",
     "PollingGroupStaticDefinition",
-    "EnumOption",
     "CommandType",
     "HdgCommand",
     "PollingState",
@@ -120,10 +119,3 @@ class PollingGroupStaticDefinition(TypedDict):
 
     key: str
     default_interval: int
-
-
-class EnumOption(TypedDict):
-    """Represent a single option within an enumeration, with translations."""
-
-    de: str
-    en: str

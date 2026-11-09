@@ -18,7 +18,6 @@ _LOGGER = logging.getLogger(DOMAIN)
 
 __all__ = [
     "strip_hdg_node_suffix",
-    "normalize_alias_for_comparison",
     "normalize_unique_id_component",
     "normalize_hdg_node_id",
 ]
@@ -54,21 +53,6 @@ def strip_hdg_node_suffix(node_id_from_def: str) -> str:
         node_id_from_def,
     )
     return node_id_from_def
-
-
-def normalize_alias_for_comparison(alias: str) -> str:
-    """Normalize an alias for case-insensitive comparison.
-
-    Strips whitespace and converts to lowercase.
-
-    Args:
-        alias: The alias string to normalize.
-
-    Returns:
-        The normalized alias string, or an empty string if input is invalid.
-
-    """
-    return alias.strip().lower() if isinstance(alias, str) else ""
 
 
 def normalize_unique_id_component(component: str) -> str:

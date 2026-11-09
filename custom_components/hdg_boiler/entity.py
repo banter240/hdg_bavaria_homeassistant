@@ -31,6 +31,8 @@ from .const import (
     ENTITY_DETAIL_LOGGER_NAME,
     HDG_UNAVAILABLE_STRINGS,
     LIFECYCLE_LOGGER_NAME,
+    MANUFACTURER,
+    MODEL,
 )
 from .coordinator import HdgDataUpdateCoordinator
 from .helpers.logging_utils import format_for_log
@@ -105,8 +107,8 @@ class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
         return DeviceInfo(
             identifiers={(DOMAIN, device_identifier)},
             name=device_name,
-            manufacturer="HDG Bavaria GmbH",
-            model="Boiler Control",
+            manufacturer=MANUFACTURER,
+            model=MODEL,
             configuration_url=config_url,
         )
 
@@ -329,12 +331,3 @@ class HdgNodeEntity(HdgBaseEntity):
             value=value,
             entity_name_for_log=self.name or str(self.entity_id),
         )
-
-    def _get_enum_key_from_value(self, raw_value: Any) -> str | None:
-        """Get the enum key for a given raw value."""
-        options = self._entity_definition.get("options")
-        if isinstance(options, dict):
-            for key, value in options.items():
-                if value == raw_value:
-                    return key
-        return None

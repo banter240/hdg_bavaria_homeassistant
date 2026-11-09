@@ -126,10 +126,6 @@ class HdgEntityRegistry:
         """Remove a single trailing 'T' if present, otherwise leave unchanged."""
         return node_id[:-1] if node_id.endswith("T") else node_id
 
-    def get_polling_group_order(self) -> list[str]:
-        """Return the ordered list of polling group keys."""
-        return self._polling_group_order
-
     def get_polling_group_payloads(self) -> dict[str, NodeGroupPayload]:
         """Return the dynamically generated HDG node payloads."""
         return self._hdg_node_payloads
@@ -137,10 +133,6 @@ class HdgEntityRegistry:
     def get_entity_definition_by_node_id(self, node_id: str) -> SensorDefinition | None:
         """Return an entity definition by its HDG node ID."""
         return self._entities_by_node_id.get(node_id)
-
-    def get_writable_entity_definitions(self) -> list[SensorDefinition]:
-        """Return a list of all writable entity definitions."""
-        return self._writable_entities
 
     def get_entities_for_platform(self, platform: str) -> dict[str, SensorDefinition]:
         """Return a dictionary of entity definitions for a given platform."""

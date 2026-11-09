@@ -50,8 +50,6 @@ from .helpers.logging_utils import (
 from .models import CommandType, HdgCommand, PollingState
 from .registry import HdgEntityRegistry
 
-_PLATFORM_SUFFIXES = ["_sensor", "_binary_sensor", "_number", "_select", "_switch"]
-
 
 def _monotonic_to_utc_iso(timestamp: float) -> str:
     """Convert a monotonic timestamp to a UTC ISO format string."""
@@ -309,14 +307,6 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if current_time >= info["next_retry_time"]
         }
         return due_groups | retry_groups
-
-    def _get_log_level_for_failure(self) -> int:
-        """Determine the appropriate log level based on consecutive failures."""
-        return (
-            logging.WARNING
-            if self._polling_state.consecutive_failures >= self._log_level_threshold
-            else logging.INFO
-        )
 
     def _handle_successful_poll(self) -> None:
         """Handle the state update after a successful poll."""
