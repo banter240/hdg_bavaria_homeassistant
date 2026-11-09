@@ -68,7 +68,6 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         api_access_manager: HdgApiAccessManager,
         entry: ConfigEntry,
         log_level_threshold_for_connection_errors: int,
-        error_threshold: int,
         hdg_entity_registry: HdgEntityRegistry,
     ) -> None:
         """Initialize the coordinator."""
@@ -78,7 +77,6 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.api_access_manager = api_access_manager
 
         self._log_level_threshold = log_level_threshold_for_connection_errors
-        self._error_threshold = error_threshold
 
         prepared_base_url = self.api_client.base_url
         self._hostname = urlparse(prepared_base_url).hostname
@@ -390,13 +388,12 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._update_polling_status(any_success, list(groups_to_fetch))
             self.optimistic.cleanup()
 
-        except HdgApiConnectionError as err:
+        except HdgApiConnectionError:
             if poll_all:
                 self._last_poll_all_success = False
             self._on_connection_failure()
-            result = self._handle_update_failure("connection", context={"error": err})
-            if result is not None:
-                return result
+            # Return cached data so entities keep their last values while offline.
+            return self.data
 
         return self.data
 
@@ -408,12 +405,6 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _set_boiler_online_status(self, online: bool) -> None:
         """Update the internal online state of the boiler."""
         pass
-
-    def _handle_update_failure(
-        self, failure_type: str, context: dict[str, Any] | None = None
-    ) -> dict[str, Any] | None:
-        """Return cached data on failure to avoid clearing entities."""
-        return self.data
 
     def update_node(self, node_id: str, value: Any) -> None:
         """Write a single node value into the coordinator data store.
@@ -526,7 +517,6 @@ async def async_create_and_refresh_coordinator(
     api_access_manager: HdgApiAccessManager,
     entry: ConfigEntry,
     log_level_threshold_for_connection_errors: int,
-    error_threshold: int,
     hdg_entity_registry: HdgEntityRegistry,
 ) -> HdgDataUpdateCoordinator:
     """Create, initialize, and perform the first data refresh for the coordinator."""
@@ -536,7 +526,6 @@ async def async_create_and_refresh_coordinator(
         api_access_manager,
         entry,
         log_level_threshold_for_connection_errors,
-        error_threshold,
         hdg_entity_registry,
     )
     await coordinator.async_config_entry_first_refresh()
