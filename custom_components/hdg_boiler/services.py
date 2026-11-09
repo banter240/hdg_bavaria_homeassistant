@@ -4,15 +4,14 @@ from __future__ import annotations
 
 __all__ = ["async_handle_set_node_value", "async_handle_get_node_value"]
 
-import logging
 from typing import Any, cast
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
-from .const import DOMAIN
 from .coordinator import HdgDataUpdateCoordinator
 from .exceptions import HdgApiError
+from .helpers.logging_utils import _LOGGER
 from .helpers.parsers import format_value_for_api
 from .helpers.validation_utils import (
     coerce_value_to_numeric_type,
@@ -22,9 +21,6 @@ from .helpers.validation_utils import (
 )
 from .models import SensorDefinition
 from .registry import HdgEntityRegistry
-
-
-_LOGGER = logging.getLogger(DOMAIN)
 
 
 def _get_settable_definition(

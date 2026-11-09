@@ -8,16 +8,13 @@ from __future__ import annotations
 
 
 import asyncio
-import logging
 import platform
 import re
 from urllib.parse import urlparse, urlunparse
 
 import async_timeout
 
-from ..const import DOMAIN
-
-_LOGGER = logging.getLogger(DOMAIN)
+from .logging_utils import _LOGGER
 
 __all__ = ["prepare_base_url", "async_execute_icmp_ping"]
 

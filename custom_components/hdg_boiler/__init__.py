@@ -9,8 +9,6 @@ __all__ = [
     "HdgConfigEntry",
 ]
 
-import logging
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -29,25 +27,21 @@ from .const import (
     DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     DOMAIN,
-    LIFECYCLE_LOGGER_NAME,
     PUFFER_MITTE_NODE_MAP,
     puffer_node_id_is_set,
 )
-from .helpers.entity_registry_utils import async_sync_entities_by_key
 from .coordinator import HdgDataUpdateCoordinator, async_create_and_refresh_coordinator
 from .definitions import (
     POLLING_GROUP_DEFINITIONS,
     get_sensor_definitions,
 )
 from .helpers.api_access_manager import HdgApiAccessManager
+from .helpers.entity_registry_utils import async_sync_entities_by_key
 from .helpers.integration_data import get_integration_data
-from .helpers.logging_utils import configure_loggers
+from .helpers.logging_utils import _LIFECYCLE_LOGGER, _LOGGER, configure_loggers
 from .registry import HdgEntityRegistry
 
 type HdgConfigEntry = ConfigEntry[HdgDataUpdateCoordinator]
-
-_LOGGER = logging.getLogger(DOMAIN)
-_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
 
 PLATFORMS: list[Platform] = [
     Platform.BUTTON,

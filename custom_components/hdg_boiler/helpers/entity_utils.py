@@ -8,8 +8,8 @@ different platforms (sensor, number, select, etc.).
 from __future__ import annotations
 
 
-import logging
 from typing import TYPE_CHECKING, Any, cast
+
 
 from homeassistant.components.number import NumberEntityDescription, NumberMode
 from homeassistant.components.select import SelectEntityDescription
@@ -19,15 +19,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from ..const import DOMAIN, LIFECYCLE_LOGGER_NAME
 from ..models import SensorDefinition
 from .integration_data import get_integration_data
+from .logging_utils import _LIFECYCLE_LOGGER
 
 if TYPE_CHECKING:
     from ..entity import HdgNodeEntity
-
-_LOGGER = logging.getLogger(DOMAIN)
-_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
 
 __all__ = ["async_setup_hdg_platform", "create_entity_description"]
 

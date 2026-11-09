@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 
-import logging
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from homeassistant.core import ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 
-from ..const import ATTR_NODE_ID, ATTR_VALUE, DOMAIN
-
-_LOGGER = logging.getLogger(DOMAIN)
+from ..const import ATTR_NODE_ID, ATTR_VALUE
 
 __all__ = [
     "validate_set_node_service_call",

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 
 import html
-import logging
 import re
 from collections.abc import Callable
 from datetime import datetime
@@ -19,19 +18,14 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from ..const import (
     DEFAULT_SOURCE_TIMEZONE,
-    DOMAIN,
     HDG_DATETIME_SPECIAL_TEXT,
-    HEURISTICS_LOGGER_NAME,
 )
 from .enum_mappings import (
     HDG_ENUM_TEXT_TO_KEY_MAPPINGS,
     kessel_status_errenum_label,
     resolve_hdg_enum_key,
 )
-from .logging_utils import make_log_prefix
-
-_LOGGER = logging.getLogger(DOMAIN)
-_HEURISTICS_LOGGER = logging.getLogger(HEURISTICS_LOGGER_NAME)
+from .logging_utils import _HEURISTICS_LOGGER, _LOGGER, make_log_prefix
 
 __all__ = ["parse_sensor_value", "format_value_for_api"]
 

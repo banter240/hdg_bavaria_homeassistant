@@ -8,13 +8,11 @@ normalizing strings for comparison or use in unique identifiers.
 from __future__ import annotations
 
 
-import logging
 import re
 from urllib.parse import quote
 
-from ..const import DOMAIN, KNOWN_HDG_API_SETTER_SUFFIXES
-
-_LOGGER = logging.getLogger(DOMAIN)
+from ..const import KNOWN_HDG_API_SETTER_SUFFIXES
+from .logging_utils import _LOGGER
 
 __all__ = [
     "strip_hdg_node_suffix",

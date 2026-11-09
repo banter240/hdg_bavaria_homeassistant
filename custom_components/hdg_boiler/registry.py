@@ -4,7 +4,6 @@ from __future__ import annotations
 
 __all__ = ["HdgEntityRegistry"]
 
-import logging
 from collections.abc import Iterable
 from itertools import groupby
 from typing import Final, TYPE_CHECKING
@@ -12,13 +11,10 @@ from typing import Final, TYPE_CHECKING
 if TYPE_CHECKING:
     from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN, LIFECYCLE_LOGGER_NAME
 from .helpers.entity_registry_utils import strip_platform_suffix
+from .helpers.logging_utils import _LIFECYCLE_LOGGER, _LOGGER
 from .helpers.string_utils import strip_hdg_node_suffix
 from .models import NodeGroupPayload, PollingGroupStaticDefinition, SensorDefinition
-
-_LOGGER = logging.getLogger(DOMAIN)
-_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
 
 
 class HdgEntityRegistry:

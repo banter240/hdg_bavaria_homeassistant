@@ -12,7 +12,6 @@ from __future__ import annotations
 __all__ = ["HdgApiAccessManager", "ApiPriority"]
 
 import asyncio
-import logging
 from asyncio import Future, Task
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -24,16 +23,12 @@ from homeassistant.core import HomeAssistant
 
 from ..api import HdgApiClient
 from ..models import CommandType, HdgCommand
-from .executor import HdgCommandExecutor
 from ..const import (
-    API_LOGGER_NAME,
-    LIFECYCLE_LOGGER_NAME,
     SET_VALUE_RETRY_ATTEMPTS,
     SET_VALUE_RETRY_DELAY_S,
 )
-
-_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
-_API_LOGGER = logging.getLogger(API_LOGGER_NAME)
+from .executor import HdgCommandExecutor
+from .logging_utils import _API_LOGGER, _LIFECYCLE_LOGGER
 
 
 class ApiPriority(Enum):

@@ -4,23 +4,18 @@ from __future__ import annotations
 
 __all__ = ["async_setup_entry"]
 
-import logging
-
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, USER_ACTION_LOGGER_NAME
 from .coordinator import HdgDataUpdateCoordinator
 from .entity import HdgNodeEntity
 from .helpers.entity_utils import async_setup_hdg_platform
 from .helpers.enum_mappings import HDG_ENUM_TEXT_TO_KEY_MAPPINGS, resolve_hdg_enum_key
+from .helpers.logging_utils import _LOGGER, _USER_ACTION_LOGGER
 from .models import SensorDefinition
-
-_LOGGER = logging.getLogger(DOMAIN)
-_USER_ACTION_LOGGER = logging.getLogger(USER_ACTION_LOGGER_NAME)
 
 
 async def async_setup_entry(
@@ -54,9 +49,9 @@ class HdgBoilerSelect(HdgNodeEntity, SelectEntity):
         """Return the current option, preferring optimistic state while a SET is in-flight."""
         if not self.available:
             return None
-        uppercase = self._entity_definition.get("uppercase_value")
+        flags = self._entity_definition.get("uppercase_value")
         if (opt := self.coordinator.get_optimistic_value(self._node_id)) is not None:
-            return str(opt).lower() if uppercase else str(opt)
+            return self._format_display_value(str(opt), flags)
         val = self._get_value()
         if val is None:
             return None
@@ -69,7 +64,12 @@ class HdgBoilerSelect(HdgNodeEntity, SelectEntity):
                 )
             ) is not None:
                 processed = key
-        return processed.lower() if uppercase else processed
+        return self._format_display_value(processed, flags)
+
+    @staticmethod
+    def _format_display_value(value: str, uppercase_flag: bool | None) -> str:
+        """Show lowercase labels when the API exchanges uppercase ones."""
+        return value.lower() if uppercase_flag else value
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""

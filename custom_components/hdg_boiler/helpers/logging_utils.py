@@ -23,6 +23,7 @@ from ..const import (
     DEFAULT_LOG_LEVEL,
     DEFAULT_LOG_VERSION_PREFIX,
     DIAGNOSTICS_REDACTED_PLACEHOLDER,
+    DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS,
     DOMAIN,
     ENTITY_DETAIL_LOGGER_NAME,
     HEURISTICS_LOGGER_NAME,
@@ -75,8 +76,11 @@ _SECRET_SKIP = frozenset(
         "---",
     }
 )
-# Anlagenbezeichnung (20026) and MAC (20031), in either JSON field order.
-_SENSITIVE_NODE_IDS = frozenset({"20026", "20026t", "20031", "20031t"})
+# 20026 Anlagenbezeichnung (serial / plant name), 20031 MAC address.
+_SENSITIVE_BASE_NODE_IDS = DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS
+_SENSITIVE_NODE_IDS = _SENSITIVE_BASE_NODE_IDS | {
+    f"{node.lower()}t" for node in _SENSITIVE_BASE_NODE_IDS
+}
 _SENSITIVE_NODE_TEXT_RE = re.compile(
     r'"(?P<k1>id|text)"\s*:\s*"(?P<v1>(?:\\.|[^"\\])*)"'
     r"[^}]{0,300}?"

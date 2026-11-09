@@ -11,7 +11,6 @@ from __future__ import annotations
 
 __all__ = ["HdgBaseEntity", "HdgNodeEntity"]
 
-import logging
 from typing import Any, cast
 
 from homeassistant.core import callback
@@ -28,21 +27,19 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_SOURCE_TIMEZONE,
     DOMAIN,
-    ENTITY_DETAIL_LOGGER_NAME,
     HDG_UNAVAILABLE_STRINGS,
-    LIFECYCLE_LOGGER_NAME,
     MANUFACTURER,
     MODEL,
 )
 from .coordinator import HdgDataUpdateCoordinator
-from .helpers.logging_utils import format_for_log
+from .helpers.logging_utils import (
+    _ENTITY_DETAIL_LOGGER,
+    _LIFECYCLE_LOGGER,
+    format_for_log,
+)
 from .helpers.parsers import parse_sensor_value
 from .helpers.string_utils import normalize_unique_id_component, strip_hdg_node_suffix
 from .models import SensorDefinition
-
-_LOGGER = logging.getLogger(DOMAIN)
-_ENTITY_DETAIL_LOGGER = logging.getLogger(ENTITY_DETAIL_LOGGER_NAME)
-_LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
 
 
 class HdgBaseEntity(CoordinatorEntity[HdgDataUpdateCoordinator]):
