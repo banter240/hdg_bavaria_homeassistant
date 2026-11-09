@@ -32,6 +32,7 @@ from .const import (
     PUFFER_MITTE_NODE_MAP,
     UNIT_MASS_TONNES,
     component_group_enabled,
+    puffer_node_id_is_set,
 )
 from .helpers.string_utils import normalize_hdg_node_id
 from .models import SensorDefinition
@@ -879,8 +880,8 @@ def get_sensor_definitions(
             defs[key] = definition
     for key, conf in PUFFER_MITTE_NODE_MAP.items():
         raw = opts.get(conf)
-        if raw and str(raw).strip():
-            if nid := normalize_hdg_node_id(raw):
+        if puffer_node_id_is_set(raw):
+            if nid := normalize_hdg_node_id(cast(str, raw)):
                 defs[key] = create_temp_sensor(
                     key=key,
                     node_id=nid,

@@ -21,6 +21,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from ..const import DOMAIN, LIFECYCLE_LOGGER_NAME
 from ..models import SensorDefinition
+from .integration_data import get_integration_data
 
 if TYPE_CHECKING:
     from ..entity import HdgNodeEntity
@@ -94,7 +95,7 @@ async def async_setup_hdg_platform(
     from ..coordinator import HdgDataUpdateCoordinator  # local to avoid circular
     from ..registry import HdgEntityRegistry
 
-    integration_data = hass.data[DOMAIN][entry.entry_id]
+    integration_data = get_integration_data(hass, entry.entry_id)
     coordinator: HdgDataUpdateCoordinator = integration_data["coordinator"]
     hdg_entity_registry: HdgEntityRegistry = integration_data["hdg_entity_registry"]
 

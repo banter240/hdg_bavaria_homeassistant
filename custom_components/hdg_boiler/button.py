@@ -12,9 +12,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, USER_ACTION_LOGGER_NAME
+from .const import USER_ACTION_LOGGER_NAME
 from .coordinator import HdgDataUpdateCoordinator
 from .entity import HdgBaseEntity
+from .helpers.integration_data import get_integration_data
 
 _USER_ACTION_LOGGER = logging.getLogger(USER_ACTION_LOGGER_NAME)
 
@@ -25,7 +26,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the poll-everything button."""
-    coordinator: HdgDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
+    coordinator: HdgDataUpdateCoordinator = get_integration_data(hass, entry.entry_id)[
         "coordinator"
     ]
     async_add_entities([HdgPollEverythingButton(coordinator)])

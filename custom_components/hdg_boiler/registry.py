@@ -13,13 +13,12 @@ if TYPE_CHECKING:
     from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN, LIFECYCLE_LOGGER_NAME
+from .helpers.entity_registry_utils import strip_platform_suffix
 from .helpers.string_utils import strip_hdg_node_suffix
 from .models import NodeGroupPayload, PollingGroupStaticDefinition, SensorDefinition
 
 _LOGGER = logging.getLogger(DOMAIN)
 _LIFECYCLE_LOGGER = logging.getLogger(LIFECYCLE_LOGGER_NAME)
-
-_PLATFORM_SUFFIXES: Final = ["_sensor", "_number", "_select"]
 
 
 class HdgEntityRegistry:
@@ -142,6 +141,14 @@ class HdgEntityRegistry:
             if definition.get("ha_platform") == platform
         }
 
+    def get_component_groups(self) -> dict[str, str]:
+        """Return entity_key -> component_group for all grouped definitions."""
+        return {
+            key: group
+            for key, definition in self._sensor_definitions.items()
+            if (group := definition.get("component_group"))
+        }
+
     def get_settable_number_definition_by_base_node_id(
         self, base_node_id: str
     ) -> SensorDefinition | None:
@@ -178,17 +185,11 @@ class HdgEntityRegistry:
     def resolve_node_id_from_entity_entry(self, entry: er.RegistryEntry) -> str | None:
         """Return canonical node_id for a registry entry, or None."""
         # unique_id: "hdg_boiler::{device}::{key}_{platform}"
-        parts = entry.unique_id.split("::")
-        if len(parts) != 3:
+        key = strip_platform_suffix(entry.unique_id)
+        if key is None:
             return None
 
-        suffix = parts[2]
-        for plat in _PLATFORM_SUFFIXES:
-            if suffix.endswith(plat):
-                suffix = suffix[: -len(plat)]
-                break
-
-        node_id = self.get_node_id_by_key(suffix)
+        node_id = self.get_node_id_by_key(key)
         return strip_hdg_node_suffix(node_id) if node_id else None
 
     def get_default_active_node_ids(self) -> set[str]:

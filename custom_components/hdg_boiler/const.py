@@ -108,6 +108,7 @@ __all__: Final[list[str]] = [
     "scan_interval_option_key",
     "resolve_scan_interval_seconds",
     "component_group_enabled",
+    "puffer_node_id_is_set",
     "MAX_CONCURRENT_POLL_REQUESTS",
     "OPTIMISTIC_GRACE_PERIOD_S",
     "POLLING_RETRY_INITIAL_DELAY_S",
@@ -203,6 +204,12 @@ PUFFER_MITTE_NODE_MAP: Final[dict[str, str]] = {
     "puffer_temperatur_mitte_oben": CONF_PUFFER_MITTE_OBEN_NODE_ID,
     "puffer_temperatur_mitte_unten": CONF_PUFFER_MITTE_UNTEN_NODE_ID,
 }
+
+
+def puffer_node_id_is_set(raw: Any) -> bool:
+    """Whether a puffer Mitte node-id option carries a usable value."""
+    return bool(raw) and bool(str(raw).strip())
+
 
 COMPONENT_GROUP_OPTIONS: Final[dict[str, tuple[str, bool]]] = {
     "ww1": (CONF_ENABLE_WW1, DEFAULT_ENABLE_WW1),

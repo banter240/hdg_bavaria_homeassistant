@@ -107,6 +107,7 @@ from .const import (
     MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
     MIN_SCAN_INTERVAL,
     POLLING_GROUP_DEFINITIONS,
+    puffer_node_id_is_set,
     scan_interval_option_key,
 )
 from .helpers.logging_utils import _LOGGER, note_host_secret
@@ -235,17 +236,12 @@ class HdgBoilerCommonFlow:
         if user_input is not None:
             processed = self._flatten_section_data(user_input)
 
-            if (
-                not processed.get(CONF_PUFFER_MITTE_OBEN_NODE_ID)
-                or not str(processed.get(CONF_PUFFER_MITTE_OBEN_NODE_ID, "")).strip()
+            for conf in (
+                CONF_PUFFER_MITTE_OBEN_NODE_ID,
+                CONF_PUFFER_MITTE_UNTEN_NODE_ID,
             ):
-                processed[CONF_PUFFER_MITTE_OBEN_NODE_ID] = None
-
-            if (
-                not processed.get(CONF_PUFFER_MITTE_UNTEN_NODE_ID)
-                or not str(processed.get(CONF_PUFFER_MITTE_UNTEN_NODE_ID, "")).strip()
-            ):
-                processed[CONF_PUFFER_MITTE_UNTEN_NODE_ID] = None
+                if not puffer_node_id_is_set(processed.get(conf)):
+                    processed[conf] = None
 
             return await self._async_finish_flow(processed)
 
@@ -641,17 +637,12 @@ class HdgBoilerOptionsFlowHandler(HdgBoilerCommonFlow, config_entries.OptionsFlo
         self._data |= options
 
         new_options = dict(self.config_entry.options) | self._data
-        if (
-            not new_options.get(CONF_PUFFER_MITTE_OBEN_NODE_ID)
-            or not str(new_options.get(CONF_PUFFER_MITTE_OBEN_NODE_ID, "")).strip()
+        for conf in (
+            CONF_PUFFER_MITTE_OBEN_NODE_ID,
+            CONF_PUFFER_MITTE_UNTEN_NODE_ID,
         ):
-            new_options[CONF_PUFFER_MITTE_OBEN_NODE_ID] = None
-
-        if (
-            not new_options.get(CONF_PUFFER_MITTE_UNTEN_NODE_ID)
-            or not str(new_options.get(CONF_PUFFER_MITTE_UNTEN_NODE_ID, "")).strip()
-        ):
-            new_options[CONF_PUFFER_MITTE_UNTEN_NODE_ID] = None
+            if not puffer_node_id_is_set(new_options.get(conf)):
+                new_options[conf] = None
 
         self.hass.config_entries.async_update_entry(
             self.config_entry, options=new_options
