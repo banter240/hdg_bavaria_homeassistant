@@ -10,6 +10,7 @@ corresponding Home Assistant entity configurations.
 from __future__ import annotations
 
 
+from collections.abc import Mapping
 from typing import Any, Final, cast
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -853,7 +854,7 @@ def get_netzpumpe_param_definitions(
 
 
 def get_sensor_definitions(
-    options: dict[str, Any] | None = None,
+    options: Mapping[str, Any] | None = None,
 ) -> dict[str, SensorDefinition]:
     """Return sensor definitions for one config entry.
 
