@@ -176,20 +176,21 @@ class HdgNodeEntity(HdgBaseEntity):
         if hasattr(description, "icon"):
             self._attr_icon = description.icon
 
-        component_group = self._entity_definition.get("component_group")
-        if (
-            isinstance(component_group, str)
-            and component_group in COMPONENT_GROUP_OPTIONS
-        ):
-            self._attr_entity_registry_enabled_default = component_group_enabled(
-                coordinator.entry.options, component_group
-            )
-        else:
-            enabled_default = self._entity_definition.get(
-                "entity_registry_enabled_default"
-            )
-            if enabled_default is not None:
-                self._attr_entity_registry_enabled_default = enabled_default
+        # get_sensor_definitions injects component_group_enabled(options,
+        # group) into every grouped definition, so the definition value is
+        # the resolution point; the options read is only a fallback.
+        enabled_default = self._entity_definition.get("entity_registry_enabled_default")
+        if enabled_default is None:
+            component_group = self._entity_definition.get("component_group")
+            if (
+                isinstance(component_group, str)
+                and component_group in COMPONENT_GROUP_OPTIONS
+            ):
+                enabled_default = component_group_enabled(
+                    coordinator.entry.options, component_group
+                )
+        if enabled_default is not None:
+            self._attr_entity_registry_enabled_default = enabled_default
 
     async def async_added_to_hass(self) -> None:
         """Handle entity being added to Home Assistant."""

@@ -530,11 +530,9 @@ def get_hk_definitions(
     p = f"hk{idx}_"
     sys_key = f"heizkreis_{idx}_system"
     group = f"hk{idx}"
-    _, enabled = COMPONENT_GROUP_OPTIONS[group]
 
     defs = {
         f"{p}betriebsart": create_select_entity(
-            entity_registry_enabled_default=enabled,
             key=f"{p}betriebsart",
             node_id=f"{base_node_cfg + 8}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
@@ -543,21 +541,18 @@ def get_hk_definitions(
             uppercase_value=True,
         ),
         sys_key: create_enum_sensor(
-            entity_registry_enabled_default=enabled,
             key=sys_key,
             node_id=f"{base_node_cfg + 20}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:radiator-disabled",
         ),
         f"{p}bezeichnung": create_diagnostic_text_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}bezeichnung",
             node_id=f"{base_node_cfg + 21}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:label-outline",
         ),
         f"{p}soll_normal": create_number_entity(
-            entity_registry_enabled_default=enabled,
             key=f"{p}soll_normal",
             node_id=f"{base_node_cfg + 22}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
@@ -572,7 +567,6 @@ def get_hk_definitions(
             ha_state_class=SensorStateClass.MEASUREMENT,
         ),
         f"{p}soll_absenk": create_number_entity(
-            entity_registry_enabled_default=enabled,
             key=f"{p}soll_absenk",
             node_id=f"{base_node_cfg + 23}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
@@ -587,7 +581,6 @@ def get_hk_definitions(
             ha_state_class=SensorStateClass.MEASUREMENT,
         ),
         f"{p}parallelverschiebung": create_number_entity(
-            entity_registry_enabled_default=enabled,
             key=f"{p}parallelverschiebung",
             node_id=f"{base_node_cfg + 24}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
@@ -601,7 +594,6 @@ def get_hk_definitions(
             ha_state_class=SensorStateClass.MEASUREMENT,
         ),
         f"{p}raumeinflussfaktor": create_general_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}raumeinflussfaktor",
             node_id=f"{base_node_cfg + 25}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
@@ -611,7 +603,6 @@ def get_hk_definitions(
             icon="mdi:home-import-outline",
         ),
         f"{p}steilheit": create_number_entity(
-            entity_registry_enabled_default=enabled,
             key=f"{p}steilheit",
             node_id=f"{base_node_cfg + 26}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
@@ -624,21 +615,18 @@ def get_hk_definitions(
             ha_state_class=SensorStateClass.MEASUREMENT,
         ),
         f"{p}vorlauftemperatur_minimum": create_temp_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}vorlauftemperatur_minimum",
             node_id=f"{base_node_cfg + 27}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:thermometer-minus",
         ),
         f"{p}vorlauftemperatur_maximum": create_temp_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}vorlauftemperatur_maximum",
             node_id=f"{base_node_cfg + 28}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:thermometer-plus",
         ),
         f"{p}raumeinheit_status": create_enum_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}raumeinheit_status",
             node_id=f"{base_node_cfg + 29}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
@@ -646,21 +634,18 @@ def get_hk_definitions(
             entity_category=EntityCategory.DIAGNOSTIC,
         ),
         f"{p}offset_raumfuhler": create_kelvin_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}offset_raumfuhler",
             node_id=f"{base_node_cfg + 30}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:thermometer-offset",
         ),
         f"{p}warmequelle": create_enum_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}warmequelle",
             node_id=f"{base_node_cfg + 39}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:radiator-outline",
         ),
         f"{p}mischerlaufzeit_maximum": create_duration_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}mischerlaufzeit_maximum",
             node_id=f"{base_node_cfg + 41}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
@@ -669,14 +654,12 @@ def get_hk_definitions(
             unit=UnitOfTime.SECONDS,
         ),
         f"{p}pumpe_ein_freigabetemperatur": create_temp_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}pumpe_ein_freigabetemperatur",
             node_id=f"{base_node_cfg + 46}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:pump-outline",
         ),
         f"{p}pumpe_aus_aussentemperatur": create_number_entity(
-            entity_registry_enabled_default=enabled,
             key=f"{p}pumpe_aus_aussentemperatur",
             node_id=f"{base_node_cfg + 47}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
@@ -691,14 +674,12 @@ def get_hk_definitions(
             ha_state_class=SensorStateClass.MEASUREMENT,
         ),
         f"{p}frostschutz_temp": create_temp_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}frostschutz_temp",
             node_id=f"{base_node_cfg + 48}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:snowflake-thermometer",
         ),
         f"{p}eco_absenken_aus_aussentemperatur": create_number_entity(
-            entity_registry_enabled_default=enabled,
             key=f"{p}eco_absenken_aus_aussentemperatur",
             node_id=f"{base_node_cfg + 49}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
@@ -713,35 +694,30 @@ def get_hk_definitions(
             ha_state_class=SensorStateClass.MEASUREMENT,
         ),
         f"{p}restwarme_aufnehmen": create_enum_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}restwarme_aufnehmen",
             node_id=f"{base_node_cfg + 67}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_4"],
             icon="mdi:heat-wave",
         ),
         f"{p}vorlauftemperatur_ist": create_temp_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}vorlauftemperatur_ist",
             node_id=f"{base_node_stat + 0}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
             icon="mdi:radiator",
         ),
         f"{p}vorlauftemperatur_soll": create_temp_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}vorlauftemperatur_soll",
             node_id=f"{base_node_stat + 99}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_1"],
             icon="mdi:radiator",
         ),
         f"{p}aktuelle_betriebsart": create_diagnostic_enum_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}aktuelle_betriebsart",
             node_id=f"{base_node_stat + 11}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
             icon="mdi:home-thermometer-outline",
         ),
         f"{p}mischer_status_text": create_enum_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}mischer_status_text",
             node_id=f"{base_node_stat + 7}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
@@ -749,7 +725,6 @@ def get_hk_definitions(
             entity_category=EntityCategory.DIAGNOSTIC,
         ),
         f"{p}pumpe_status_text": create_enum_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}pumpe_status_text",
             node_id=f"{base_node_stat + 8}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_2"],
@@ -757,7 +732,6 @@ def get_hk_definitions(
             entity_category=EntityCategory.DIAGNOSTIC,
         ),
         f"{p}temp_quelle_status_wert": create_general_sensor(
-            entity_registry_enabled_default=enabled,
             key=f"{p}temp_quelle_status_wert",
             node_id=f"{base_node_stat + 4}T",
             polling_group=POLLING_GROUP_KEYS["POLLING_GROUP_5"],
@@ -2553,8 +2527,6 @@ _PREFIX_GROUP_MAP: Final[list[tuple[str, str]]] = [
     ("ww1_", "ww1"),
     ("ww2_", "ww2"),
     ("lager_", "lager"),
-    ("externe_warmequelle_", "ext_wq"),
-    ("solar_", "solar"),
 ]
 
 for _k, _defn in SENSOR_DEFINITIONS.items():
@@ -2562,3 +2534,9 @@ for _k, _defn in SENSOR_DEFINITIONS.items():
         if _k.startswith(_prefix):
             _defn["component_group"] = _group
             break
+
+# Import-time guard: a component_group must be a known option key, else the
+# options-driven enabled-default resolution silently misses it.
+for _k, _defn in SENSOR_DEFINITIONS.items():
+    if (group := _defn.get("component_group")) and group not in COMPONENT_GROUP_OPTIONS:
+        raise ValueError(f"Definition {_k!r} has unknown component_group {group!r}")
