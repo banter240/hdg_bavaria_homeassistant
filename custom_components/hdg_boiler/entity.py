@@ -155,6 +155,10 @@ class HdgNodeEntity(HdgBaseEntity):
         self._entity_definition = entity_definition
         self._node_id = strip_hdg_node_suffix(self._entity_definition["hdg_node_id"])
 
+        # EntityDescription has no ha_platform attribute, so this always
+        # resolves to "sensor", also for number/select entities. Intentional:
+        # every existing registry unique_id ends in "_sensor"; changing the
+        # suffix would orphan them and needs a breaking-change release.
         base_id = description.translation_key or description.key
         platform = getattr(description, "ha_platform", "sensor")
         unique_id_suffix = f"{base_id}_{platform}"

@@ -157,6 +157,9 @@ class HdgPollingResponseProcessor:
             entity_id_for_log=definition.get("translation_key"),
         )
 
+        # Kept here on purpose (issue #48): parse_sensor_value runs again
+        # in HdgNodeEntity._get_value, so a /100 in the parser would apply
+        # twice. The entity-side guard returns the stored number un-reparsed.
         hdg_formatter = definition.get("hdg_formatter")
         if hdg_formatter == "iT" and isinstance(parsed_value, (int, float)):
             parsed_value = parsed_value / 100.0
