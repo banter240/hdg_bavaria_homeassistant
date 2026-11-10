@@ -35,5 +35,8 @@ jobs:
       - name: "Run yamllint"
         run: python3 -m yamllint .
 
+      - name: "Check translation consistency"
+        run: python3 scripts/check_translation_consistency.py
+
       - name: "Run MyPy Type Checker"
         run: python3 -m mypy .
