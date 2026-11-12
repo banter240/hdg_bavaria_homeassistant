@@ -33,7 +33,8 @@
               "enable_lager": "Lager-/Brennstoffüberwachung",
               "enable_netzpumpe_1": "Netzpumpe 1",
               "enable_netzpumpe_2": "Netzpumpe 2",
-              "enable_netzpumpe_3": "Netzpumpe 3"
+              "enable_netzpumpe_3": "Netzpumpe 3",
+              "enable_waermepumpe": "Wärmepumpe (HDG A-Serie)"
             },
             "data_description": {
               "enable_hk2": "Aktiviert die Entitäten für einen zweiten Heizkreis (HK2). Nur aktivieren, wenn der Kessel einen zweiten Heizkreis steuert.",
@@ -49,7 +50,8 @@
               "enable_lager": "Aktiviert die detaillierte Brennstoffüberwachung (Gesamtverbrauch, letztes Befülldatum). Der aktuelle Füllstand ist immer als Kernsensor verfügbar.",
               "enable_netzpumpe_1": "Aktiviert die Entitäten für Netzpumpe 1 (NP1). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
               "enable_netzpumpe_2": "Aktiviert die Entitäten für Netzpumpe 2 (NP2). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
-              "enable_netzpumpe_3": "Aktiviert die Entitäten für Netzpumpe 3 (NP3). Nur aktivieren, wenn diese Pumpe physisch installiert ist."
+              "enable_netzpumpe_3": "Aktiviert die Entitäten für Netzpumpe 3 (NP3). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
+              "enable_waermepumpe": "Aktiviert die Entitäten einer HDG-Wärmepumpe: Kältekreis, Hydraulikmodul, Heizstab, Betriebsstatistik und die Pufferladungs-Schwellen. Nur aktivieren, wenn die Web-Control eine HDG-Wärmepumpe steuert."
             }
           },
           "puffer": {
@@ -159,7 +161,8 @@
               "enable_lager": "Lager-/Brennstoffüberwachung",
               "enable_netzpumpe_1": "Netzpumpe 1",
               "enable_netzpumpe_2": "Netzpumpe 2",
-              "enable_netzpumpe_3": "Netzpumpe 3"
+              "enable_netzpumpe_3": "Netzpumpe 3",
+              "enable_waermepumpe": "Wärmepumpe (HDG A-Serie)"
             },
             "data_description": {
               "enable_hk2": "Aktiviert die Entitäten für einen zweiten Heizkreis (HK2). Nur aktivieren, wenn der Kessel einen zweiten Heizkreis steuert.",
@@ -175,7 +178,8 @@
               "enable_lager": "Aktiviert die detaillierte Brennstoffüberwachung (Gesamtverbrauch, letztes Befülldatum). Der aktuelle Füllstand ist immer als Kernsensor verfügbar.",
               "enable_netzpumpe_1": "Aktiviert die Entitäten für Netzpumpe 1 (NP1). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
               "enable_netzpumpe_2": "Aktiviert die Entitäten für Netzpumpe 2 (NP2). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
-              "enable_netzpumpe_3": "Aktiviert die Entitäten für Netzpumpe 3 (NP3). Nur aktivieren, wenn diese Pumpe physisch installiert ist."
+              "enable_netzpumpe_3": "Aktiviert die Entitäten für Netzpumpe 3 (NP3). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
+              "enable_waermepumpe": "Aktiviert die Entitäten einer HDG-Wärmepumpe: Kältekreis, Hydraulikmodul, Heizstab, Betriebsstatistik und die Pufferladungs-Schwellen. Nur aktivieren, wenn die Web-Control eine HDG-Wärmepumpe steuert."
             }
           },
           "puffer": {
@@ -1793,6 +1797,213 @@
       },
       "solar_ertrag_gesamt": {
         "name": "Solar Gesamtertrag"
+      },
+      "wp_betriebsphase": {
+        "name": "WP Betriebsphase"
+      },
+      "wp_betriebsstatus": {
+        "name": "WP Betriebsstatus"
+      },
+      "wp_anforderungsart": {
+        "name": "WP Anforderungsart"
+      },
+      "wp_ventilatorleistung": {
+        "name": "WP Ventilatorleistung"
+      },
+      "wp_mittlere_aussentemperatur": {
+        "name": "WP mittlere Außentemperatur"
+      },
+      "wp_ventilator_eintritt_temperatur": {
+        "name": "WP Ventilator Eintritt"
+      },
+      "wp_verdampfer_temperatur": {
+        "name": "WP Verdampfer"
+      },
+      "wp_sauggas_temperatur": {
+        "name": "WP Sauggas"
+      },
+      "wp_heissgas_temperatur": {
+        "name": "WP Heißgas"
+      },
+      "wp_kondensator_temperatur": {
+        "name": "WP Kondensator"
+      },
+      "wp_unterkuehlung_temperatur": {
+        "name": "WP Unterkühlung"
+      },
+      "wp_expansionsventil": {
+        "name": "WP Expansionsventil"
+      },
+      "hydraulik_pwm_systempumpe": {
+        "name": "Hydraulik PWM Systempumpe"
+      },
+      "hydraulik_systemvorlauf": {
+        "name": "Hydraulik Systemvorlauf"
+      },
+      "hydraulik_systemvorlauf_2": {
+        "name": "Hydraulik Systemvorlauf 2"
+      },
+      "hydraulik_systemvorlauf_2_soll": {
+        "name": "Hydraulik Systemvorlauf 2 Soll"
+      },
+      "hydraulik_systemruecklauf": {
+        "name": "Hydraulik Systemrücklauf"
+      },
+      "hydraulik_volumenstrom": {
+        "name": "Hydraulik Volumenstrom"
+      },
+      "hydraulik_druck_primaer": {
+        "name": "Hydraulik Druck primär"
+      },
+      "hydraulik_systemdruck": {
+        "name": "Hydraulik Systemdruck"
+      },
+      "hydraulik_heizstab_status": {
+        "name": "Heizstab Status"
+      },
+      "hydraulik_anforderung_heizung": {
+        "name": "Anforderung Heizung"
+      },
+      "hydraulik_anforderung_brauchwasser": {
+        "name": "Anforderung Brauchwasser"
+      },
+      "hydraulik_anforderung_kuehlung": {
+        "name": "Anforderung Kühlung"
+      },
+      "hydraulik_angeforderte_quelle": {
+        "name": "Angeforderte Quelltemperatur"
+      },
+      "hydraulik_vorlaufumschaltung": {
+        "name": "Vorlaufumschaltung"
+      },
+      "hydraulik_ruecklaufumschaltung": {
+        "name": "Rücklaufumschaltung"
+      },
+      "hydraulik_umschaltung_kuehlung": {
+        "name": "Umschaltung Kühlung"
+      },
+      "hydraulik_smart_grid_1": {
+        "name": "Smart Grid 1"
+      },
+      "hydraulik_smart_grid_2": {
+        "name": "Smart Grid 2"
+      },
+      "hydraulik_anforderung_kuehlung_extern": {
+        "name": "Anforderung Kühlung extern"
+      },
+      "puffer_ladung_ein_aktiv": {
+        "name": "Pufferladung ein (aktiv)"
+      },
+      "puffer_ladung_aus_aktiv": {
+        "name": "Pufferladung aus (aktiv)"
+      },
+      "puffer_heizzone_ein_fuehler": {
+        "name": "Heizzone Ein Fühler"
+      },
+      "puffer_heizzone_aus_fuehler": {
+        "name": "Heizzone Aus Fühler"
+      },
+      "puffer_heizzone_anforderung_dynamisch": {
+        "name": "Heizzone Anforderung dynamisch"
+      },
+      "puffer_minimalladung_ein_fuehler": {
+        "name": "Minimalladung Ein Fühler"
+      },
+      "puffer_minimalladung_aus_fuehler": {
+        "name": "Minimalladung Aus Fühler"
+      },
+      "puffer_zwangsladung_ein_fuehler": {
+        "name": "Zwangsladung Ein Fühler"
+      },
+      "puffer_zwangsladung_aus_fuehler": {
+        "name": "Zwangsladung Aus Fühler"
+      },
+      "heizstab_betriebsart": {
+        "name": "Heizstab Betriebsart"
+      },
+      "heizstab_freigabe_bei_fehler": {
+        "name": "Heizstab Freigabe bei Fehler"
+      },
+      "heizstab_aussentemperatur_freigabe": {
+        "name": "Heizstab Freigabe Außentemperatur"
+      },
+      "heizstab_hoechste_stufe": {
+        "name": "Heizstab höchste Stufe"
+      },
+      "heizstab_stufe_1_betriebsstunden": {
+        "name": "Heizstab Stufe 1 Betriebsstunden"
+      },
+      "heizstab_stufe_2_betriebsstunden": {
+        "name": "Heizstab Stufe 2 Betriebsstunden"
+      },
+      "heizstab_stufe_3_betriebsstunden": {
+        "name": "Heizstab Stufe 3 Betriebsstunden"
+      },
+      "wp_stat_start_reset": {
+        "name": "Statistik Start (seit Reset)"
+      },
+      "wp_stat_start_inbetriebnahme": {
+        "name": "Statistik Start (Inbetriebnahme)"
+      },
+      "wp_stat_jaz_reset": {
+        "name": "JAZ seit Reset"
+      },
+      "wp_stat_jaz_inbetriebnahme": {
+        "name": "JAZ seit Inbetriebnahme"
+      },
+      "wp_stat_energieaufnahme_reset": {
+        "name": "Energieaufnahme seit Reset"
+      },
+      "wp_stat_energieaufnahme_inbetriebnahme": {
+        "name": "Energieaufnahme seit Inbetriebnahme"
+      },
+      "wp_stat_energieabgabe_reset": {
+        "name": "Energieabgabe seit Reset"
+      },
+      "wp_stat_energieabgabe_inbetriebnahme": {
+        "name": "Energieabgabe seit Inbetriebnahme"
+      },
+      "wp_stat_betriebsstunden_reset": {
+        "name": "Betriebsstunden seit Reset"
+      },
+      "wp_stat_betriebsstunden_inbetriebnahme": {
+        "name": "Betriebsstunden seit Inbetriebnahme"
+      },
+      "wp_stat_schaltzyklen_reset": {
+        "name": "Schaltzyklen seit Reset"
+      },
+      "wp_stat_schaltzyklen_inbetriebnahme": {
+        "name": "Schaltzyklen seit Inbetriebnahme"
+      },
+      "wp_stat_heizen_jaz_reset": {
+        "name": "Heizen JAZ seit Reset"
+      },
+      "wp_stat_heizen_jaz_inbetriebnahme": {
+        "name": "Heizen JAZ seit Inbetriebnahme"
+      },
+      "wp_stat_heizen_energieaufnahme_reset": {
+        "name": "Heizen Energieaufnahme seit Reset"
+      },
+      "wp_stat_heizen_energieaufnahme_inbetriebnahme": {
+        "name": "Heizen Energieaufnahme seit Inbetriebnahme"
+      },
+      "wp_stat_heizen_energieabgabe_reset": {
+        "name": "Heizen Energieabgabe seit Reset"
+      },
+      "wp_stat_heizen_energieabgabe_inbetriebnahme": {
+        "name": "Heizen Energieabgabe seit Inbetriebnahme"
+      },
+      "wp_stat_heizen_betriebsstunden_reset": {
+        "name": "Heizen Betriebsstunden seit Reset"
+      },
+      "wp_stat_heizen_betriebsstunden_inbetriebnahme": {
+        "name": "Heizen Betriebsstunden seit Inbetriebnahme"
+      },
+      "wp_stat_heizen_schaltzyklen_reset": {
+        "name": "Heizen Schaltzyklen seit Reset"
+      },
+      "wp_stat_heizen_schaltzyklen_inbetriebnahme": {
+        "name": "Heizen Schaltzyklen seit Inbetriebnahme"
       }
     },
     "number": {
@@ -2092,6 +2303,24 @@
       },
       "puffer_2_ladung_aus_temperatur": {
         "name": "Puffer 2 Ladung Aus Temperatur"
+      },
+      "puffer_heizzone_ein_temperatur": {
+        "name": "Pufferladung Heizzone Ein"
+      },
+      "puffer_heizzone_aus_temperatur": {
+        "name": "Pufferladung Heizzone Aus"
+      },
+      "puffer_minimalladung_ein_temperatur": {
+        "name": "Pufferladung Minimal Ein"
+      },
+      "puffer_minimalladung_aus_temperatur": {
+        "name": "Pufferladung Minimal Aus"
+      },
+      "puffer_zwangsladung_ein_temperatur": {
+        "name": "Pufferladung Zwang Ein"
+      },
+      "puffer_zwangsladung_aus_temperatur": {
+        "name": "Pufferladung Zwang Aus"
       }
     },
     "select": {

@@ -33,7 +33,8 @@
               "enable_lager": "Fuel Storage Monitoring",
               "enable_netzpumpe_1": "Network Pump 1",
               "enable_netzpumpe_2": "Network Pump 2",
-              "enable_netzpumpe_3": "Network Pump 3"
+              "enable_netzpumpe_3": "Network Pump 3",
+              "enable_waermepumpe": "Heat Pump (HDG A-series)"
             },
             "data_description": {
               "enable_hk2": "Enable entities for a second heating circuit (HK2). Only activate if your boiler controls a second circuit.",
@@ -49,7 +50,8 @@
               "enable_lager": "Enable detailed fuel storage tracking (total consumption, last fill date). The current fuel level is always available as a core sensor.",
               "enable_netzpumpe_1": "Enable entities for network pump 1 (NP1). Only activate if this pump is physically installed.",
               "enable_netzpumpe_2": "Enable entities for network pump 2 (NP2). Only activate if this pump is physically installed.",
-              "enable_netzpumpe_3": "Enable entities for network pump 3 (NP3). Only activate if this pump is physically installed."
+              "enable_netzpumpe_3": "Enable entities for network pump 3 (NP3). Only activate if this pump is physically installed.",
+              "enable_waermepumpe": "Enable entities for an HDG heat pump: refrigerant circuit, hydraulic module, heating rod, operating statistics and buffer charging thresholds. Only activate if the Web-Control manages an HDG heat pump."
             }
           },
           "puffer": {
@@ -159,7 +161,8 @@
               "enable_lager": "Fuel Storage Monitoring",
               "enable_netzpumpe_1": "Network Pump 1",
               "enable_netzpumpe_2": "Network Pump 2",
-              "enable_netzpumpe_3": "Network Pump 3"
+              "enable_netzpumpe_3": "Network Pump 3",
+              "enable_waermepumpe": "Heat Pump (HDG A-series)"
             },
             "data_description": {
               "enable_hk2": "Enable entities for a second heating circuit (HK2). Only activate if your boiler controls a second circuit.",
@@ -175,7 +178,8 @@
               "enable_lager": "Enable detailed fuel storage tracking (total consumption, last fill date). The current fuel level is always available as a core sensor.",
               "enable_netzpumpe_1": "Enable entities for network pump 1 (NP1). Only activate if this pump is physically installed.",
               "enable_netzpumpe_2": "Enable entities for network pump 2 (NP2). Only activate if this pump is physically installed.",
-              "enable_netzpumpe_3": "Enable entities for network pump 3 (NP3). Only activate if this pump is physically installed."
+              "enable_netzpumpe_3": "Enable entities for network pump 3 (NP3). Only activate if this pump is physically installed.",
+              "enable_waermepumpe": "Enable entities for an HDG heat pump: refrigerant circuit, hydraulic module, heating rod, operating statistics and buffer charging thresholds. Only activate if the Web-Control manages an HDG heat pump."
             }
           },
           "puffer": {
@@ -1793,6 +1797,213 @@
       },
       "solar_ertrag_gesamt": {
         "name": "Solar Total Yield"
+      },
+      "wp_betriebsphase": {
+        "name": "HP operating phase"
+      },
+      "wp_betriebsstatus": {
+        "name": "HP operating status"
+      },
+      "wp_anforderungsart": {
+        "name": "HP demand type"
+      },
+      "wp_ventilatorleistung": {
+        "name": "HP fan output"
+      },
+      "wp_mittlere_aussentemperatur": {
+        "name": "HP average outdoor temperature"
+      },
+      "wp_ventilator_eintritt_temperatur": {
+        "name": "HP fan inlet temperature"
+      },
+      "wp_verdampfer_temperatur": {
+        "name": "HP evaporator temperature"
+      },
+      "wp_sauggas_temperatur": {
+        "name": "HP suction gas temperature"
+      },
+      "wp_heissgas_temperatur": {
+        "name": "HP hot gas temperature"
+      },
+      "wp_kondensator_temperatur": {
+        "name": "HP condenser temperature"
+      },
+      "wp_unterkuehlung_temperatur": {
+        "name": "HP subcooling temperature"
+      },
+      "wp_expansionsventil": {
+        "name": "HP expansion valve"
+      },
+      "hydraulik_pwm_systempumpe": {
+        "name": "Hydraulics system pump PWM"
+      },
+      "hydraulik_systemvorlauf": {
+        "name": "Hydraulics system flow temperature"
+      },
+      "hydraulik_systemvorlauf_2": {
+        "name": "Hydraulics system flow 2 temperature"
+      },
+      "hydraulik_systemvorlauf_2_soll": {
+        "name": "Hydraulics system flow 2 setpoint"
+      },
+      "hydraulik_systemruecklauf": {
+        "name": "Hydraulics system return temperature"
+      },
+      "hydraulik_volumenstrom": {
+        "name": "Hydraulics flow rate"
+      },
+      "hydraulik_druck_primaer": {
+        "name": "Hydraulics primary pressure"
+      },
+      "hydraulik_systemdruck": {
+        "name": "Hydraulics system pressure"
+      },
+      "hydraulik_heizstab_status": {
+        "name": "Heating rod status"
+      },
+      "hydraulik_anforderung_heizung": {
+        "name": "Heating demand temperature"
+      },
+      "hydraulik_anforderung_brauchwasser": {
+        "name": "Hot water demand temperature"
+      },
+      "hydraulik_anforderung_kuehlung": {
+        "name": "Cooling demand temperature"
+      },
+      "hydraulik_angeforderte_quelle": {
+        "name": "Requested source temperature"
+      },
+      "hydraulik_vorlaufumschaltung": {
+        "name": "Flow switching valve"
+      },
+      "hydraulik_ruecklaufumschaltung": {
+        "name": "Return switching valve"
+      },
+      "hydraulik_umschaltung_kuehlung": {
+        "name": "Cooling switching valve"
+      },
+      "hydraulik_smart_grid_1": {
+        "name": "Smart Grid input 1"
+      },
+      "hydraulik_smart_grid_2": {
+        "name": "Smart Grid input 2"
+      },
+      "hydraulik_anforderung_kuehlung_extern": {
+        "name": "External cooling demand"
+      },
+      "puffer_ladung_ein_aktiv": {
+        "name": "Buffer charging on (active)"
+      },
+      "puffer_ladung_aus_aktiv": {
+        "name": "Buffer charging off (active)"
+      },
+      "puffer_heizzone_ein_fuehler": {
+        "name": "Heating zone on sensor"
+      },
+      "puffer_heizzone_aus_fuehler": {
+        "name": "Heating zone off sensor"
+      },
+      "puffer_heizzone_anforderung_dynamisch": {
+        "name": "Heating zone dynamic demand"
+      },
+      "puffer_minimalladung_ein_fuehler": {
+        "name": "Minimum charging on sensor"
+      },
+      "puffer_minimalladung_aus_fuehler": {
+        "name": "Minimum charging off sensor"
+      },
+      "puffer_zwangsladung_ein_fuehler": {
+        "name": "Forced charging on sensor"
+      },
+      "puffer_zwangsladung_aus_fuehler": {
+        "name": "Forced charging off sensor"
+      },
+      "heizstab_betriebsart": {
+        "name": "Heating rod operating mode"
+      },
+      "heizstab_freigabe_bei_fehler": {
+        "name": "Heating rod release on fault"
+      },
+      "heizstab_aussentemperatur_freigabe": {
+        "name": "Heating rod outdoor release temperature"
+      },
+      "heizstab_hoechste_stufe": {
+        "name": "Heating rod highest stage"
+      },
+      "heizstab_stufe_1_betriebsstunden": {
+        "name": "Heating rod stage 1 operating hours"
+      },
+      "heizstab_stufe_2_betriebsstunden": {
+        "name": "Heating rod stage 2 operating hours"
+      },
+      "heizstab_stufe_3_betriebsstunden": {
+        "name": "Heating rod stage 3 operating hours"
+      },
+      "wp_stat_start_reset": {
+        "name": "Statistics start (since reset)"
+      },
+      "wp_stat_start_inbetriebnahme": {
+        "name": "Statistics start (commissioning)"
+      },
+      "wp_stat_jaz_reset": {
+        "name": "SPF since reset"
+      },
+      "wp_stat_jaz_inbetriebnahme": {
+        "name": "SPF since commissioning"
+      },
+      "wp_stat_energieaufnahme_reset": {
+        "name": "Energy input since reset"
+      },
+      "wp_stat_energieaufnahme_inbetriebnahme": {
+        "name": "Energy input since commissioning"
+      },
+      "wp_stat_energieabgabe_reset": {
+        "name": "Heat output since reset"
+      },
+      "wp_stat_energieabgabe_inbetriebnahme": {
+        "name": "Heat output since commissioning"
+      },
+      "wp_stat_betriebsstunden_reset": {
+        "name": "Operating hours since reset"
+      },
+      "wp_stat_betriebsstunden_inbetriebnahme": {
+        "name": "Operating hours since commissioning"
+      },
+      "wp_stat_schaltzyklen_reset": {
+        "name": "Switching cycles since reset"
+      },
+      "wp_stat_schaltzyklen_inbetriebnahme": {
+        "name": "Switching cycles since commissioning"
+      },
+      "wp_stat_heizen_jaz_reset": {
+        "name": "Heating SPF since reset"
+      },
+      "wp_stat_heizen_jaz_inbetriebnahme": {
+        "name": "Heating SPF since commissioning"
+      },
+      "wp_stat_heizen_energieaufnahme_reset": {
+        "name": "Heating energy input since reset"
+      },
+      "wp_stat_heizen_energieaufnahme_inbetriebnahme": {
+        "name": "Heating energy input since commissioning"
+      },
+      "wp_stat_heizen_energieabgabe_reset": {
+        "name": "Heating heat output since reset"
+      },
+      "wp_stat_heizen_energieabgabe_inbetriebnahme": {
+        "name": "Heating heat output since commissioning"
+      },
+      "wp_stat_heizen_betriebsstunden_reset": {
+        "name": "Heating operating hours since reset"
+      },
+      "wp_stat_heizen_betriebsstunden_inbetriebnahme": {
+        "name": "Heating operating hours since commissioning"
+      },
+      "wp_stat_heizen_schaltzyklen_reset": {
+        "name": "Heating switching cycles since reset"
+      },
+      "wp_stat_heizen_schaltzyklen_inbetriebnahme": {
+        "name": "Heating switching cycles since commissioning"
       }
     },
     "number": {
@@ -2092,6 +2303,24 @@
       },
       "puffer_2_ladung_aus_temperatur": {
         "name": "Buffer 2 Charge Off Temperature"
+      },
+      "puffer_heizzone_ein_temperatur": {
+        "name": "Buffer charging heating zone on"
+      },
+      "puffer_heizzone_aus_temperatur": {
+        "name": "Buffer charging heating zone off"
+      },
+      "puffer_minimalladung_ein_temperatur": {
+        "name": "Buffer minimum charging on"
+      },
+      "puffer_minimalladung_aus_temperatur": {
+        "name": "Buffer minimum charging off"
+      },
+      "puffer_zwangsladung_ein_temperatur": {
+        "name": "Buffer forced charging on"
+      },
+      "puffer_zwangsladung_aus_temperatur": {
+        "name": "Buffer forced charging off"
       }
     },
     "select": {
