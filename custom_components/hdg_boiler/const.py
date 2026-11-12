@@ -42,6 +42,7 @@ __all__: Final[list[str]] = [
     "CONF_ENABLE_NETZPUMPE_1",
     "CONF_ENABLE_NETZPUMPE_2",
     "CONF_ENABLE_NETZPUMPE_3",
+    "CONF_ENABLE_WAERMEPUMPE",
     "CONF_PUFFER_MITTE_OBEN_NODE_ID",
     "CONF_PUFFER_MITTE_UNTEN_NODE_ID",
     "DEFAULT_PUFFER_MITTE_OBEN_NODE_ID",
@@ -60,6 +61,7 @@ __all__: Final[list[str]] = [
     "DEFAULT_ENABLE_LAGER",
     "DEFAULT_ENABLE_NETZPUMPE_2",
     "DEFAULT_ENABLE_NETZPUMPE_3",
+    "DEFAULT_ENABLE_WAERMEPUMPE",
     "COMPONENT_GROUP_OPTIONS",
     "CONFIG_FLOW_API_TIMEOUT",
     "DEFAULT_API_TIMEOUT",
@@ -174,6 +176,7 @@ CONF_ENABLE_LAGER: Final[str] = "enable_lager"
 CONF_ENABLE_NETZPUMPE_1: Final[str] = "enable_netzpumpe_1"
 CONF_ENABLE_NETZPUMPE_2: Final[str] = "enable_netzpumpe_2"
 CONF_ENABLE_NETZPUMPE_3: Final[str] = "enable_netzpumpe_3"
+CONF_ENABLE_WAERMEPUMPE: Final[str] = "enable_waermepumpe"
 
 DEFAULT_ENABLE_WW1: Final[bool] = False
 DEFAULT_ENABLE_WW2: Final[bool] = False
@@ -189,6 +192,7 @@ DEFAULT_ENABLE_LAGER: Final[bool] = False
 DEFAULT_ENABLE_NETZPUMPE_1: Final[bool] = False
 DEFAULT_ENABLE_NETZPUMPE_2: Final[bool] = False
 DEFAULT_ENABLE_NETZPUMPE_3: Final[bool] = False
+DEFAULT_ENABLE_WAERMEPUMPE: Final[bool] = False
 
 CONF_PUFFER_MITTE_OBEN_NODE_ID: Final[str] = "puffer_mitte_oben_node_id"
 CONF_PUFFER_MITTE_UNTEN_NODE_ID: Final[str] = "puffer_mitte_unten_node_id"
@@ -216,6 +220,7 @@ COMPONENT_GROUP_OPTIONS: Final[dict[str, tuple[str, bool]]] = {
     "netzpumpe_1": (CONF_ENABLE_NETZPUMPE_1, DEFAULT_ENABLE_NETZPUMPE_1),
     "netzpumpe_2": (CONF_ENABLE_NETZPUMPE_2, DEFAULT_ENABLE_NETZPUMPE_2),
     "netzpumpe_3": (CONF_ENABLE_NETZPUMPE_3, DEFAULT_ENABLE_NETZPUMPE_3),
+    "waermepumpe": (CONF_ENABLE_WAERMEPUMPE, DEFAULT_ENABLE_WAERMEPUMPE),
 }
 
 CONFIG_FLOW_API_TIMEOUT: Final[int] = 15

@@ -41,6 +41,7 @@ from .const import (
     CONF_ENABLE_NETZPUMPE_3,
     CONF_ENABLE_PUFFER_2,
     CONF_ENABLE_SOLAR,
+    CONF_ENABLE_WAERMEPUMPE,
     CONF_ENABLE_WW1,
     CONF_ENABLE_WW2,
     CONF_ERROR_THRESHOLD,
@@ -72,6 +73,7 @@ from .const import (
     DEFAULT_ENABLE_NETZPUMPE_3,
     DEFAULT_ENABLE_PUFFER_2,
     DEFAULT_ENABLE_SOLAR,
+    DEFAULT_ENABLE_WAERMEPUMPE,
     DEFAULT_ENABLE_WW1,
     DEFAULT_ENABLE_WW2,
     DEFAULT_PUFFER_MITTE_OBEN_NODE_ID,
@@ -147,6 +149,7 @@ _SECTION_KEYS: dict[str, list[str]] = {
         CONF_ENABLE_NETZPUMPE_1,
         CONF_ENABLE_NETZPUMPE_2,
         CONF_ENABLE_NETZPUMPE_3,
+        CONF_ENABLE_WAERMEPUMPE,
     ],
     "puffer": [
         CONF_PUFFER_MITTE_OBEN_NODE_ID,
@@ -430,6 +433,10 @@ class HdgBoilerCommonFlow:
             vol.Optional(
                 CONF_ENABLE_NETZPUMPE_3,
                 default=get(CONF_ENABLE_NETZPUMPE_3, DEFAULT_ENABLE_NETZPUMPE_3),
+            ): BooleanSelector(),
+            vol.Optional(
+                CONF_ENABLE_WAERMEPUMPE,
+                default=get(CONF_ENABLE_WAERMEPUMPE, DEFAULT_ENABLE_WAERMEPUMPE),
             ): BooleanSelector(),
         }
 
