@@ -5,6 +5,7 @@ from __future__ import annotations
 __all__ = ["HdgDataUpdateCoordinator", "async_create_and_refresh_coordinator"]
 
 import asyncio
+import contextlib
 import logging
 import time
 from datetime import timedelta
@@ -28,6 +29,7 @@ from .const import (
     MAX_CONCURRENT_POLL_REQUESTS,
     MIN_SCAN_INTERVAL,
     resolve_scan_interval_seconds,
+    REGISTER_BACKFILL_DEBOUNCE_S,
     scan_interval_option_key,
     POLLING_RETRY_BACKOFF_FACTOR,
     POLLING_RETRY_INITIAL_DELAY_S,
@@ -98,6 +100,13 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Pending debounce timers and their last value: {node_id: (cancel_fn, value, name)}
         self._pending_set_timers: dict[str, tuple[CALLBACK_TYPE, str, str]] = {}
+
+        # Debounced backfill poll for nodes that register after the first
+        # refresh (fresh setup with disabled-by-default entities enabled in
+        # the UI, or an entity enabled at runtime) — without it they would
+        # wait out the group's scan interval, which can be hours.
+        self._backfill_cancel: CALLBACK_TYPE | None = None
+        self._backfill_pending_groups: set[str] = set()
 
         # DataUpdateCoordinator initialises self.data to None; we need a dict
         # from the very first poll so update_node() can write into it safely.
@@ -416,7 +425,40 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def register_node(self, node_id: str) -> None:
         """Mark a node as active so it is included in polling payloads."""
+        if node_id in self._active_node_ids:
+            return
         self._active_node_ids.add(node_id)
+        if node_id in self.data:
+            return
+        group = self.hdg_entity_registry.get_polling_group_for_node(node_id)
+        if group is None:
+            return
+        self._backfill_pending_groups.add(group)
+        if self._backfill_cancel is None:
+            self._backfill_cancel = async_call_later(
+                self.hass, REGISTER_BACKFILL_DEBOUNCE_S, self._fire_backfill
+            )
+
+    @callback
+    def _fire_backfill(self, _now: Any = None) -> None:
+        """Debounce elapsed — fetch the groups holding dataless active nodes."""
+        self._backfill_cancel = None
+        groups = sorted(self._backfill_pending_groups)
+        self._backfill_pending_groups.clear()
+        if not groups:
+            return
+        task = self.hass.async_create_task(
+            self._async_backfill_poll(groups), name="hdg_backfill_poll"
+        )
+        task.add_done_callback(lambda _: None)
+
+    async def _async_backfill_poll(self, groups: list[str]) -> None:
+        """Poll only the affected groups at medium priority, then push data."""
+        # The regular scheduler keeps retrying failed groups; push whatever
+        # arrived so far.
+        with contextlib.suppress(HdgApiError):
+            await self._concurrently_fetch_groups(groups, ApiPriority.MEDIUM)
+        self.async_set_updated_data(self.data)
 
     def unregister_node(self, node_id: str) -> None:
         """Remove a node from active polling (entity disabled or removed)."""

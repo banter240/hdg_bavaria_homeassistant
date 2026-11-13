@@ -32,6 +32,7 @@ class HdgEntityRegistry:
         self._hdg_node_payloads: dict[str, NodeGroupPayload] = {}
         self._entities_by_node_id: dict[str, SensorDefinition] = {}
         self._writable_entities: list[SensorDefinition] = []
+        self._node_to_group: dict[str, str] = {}
         self._added_entity_counts: dict[str, int] = {
             "sensor": 0,
             "number": 0,
@@ -110,9 +111,14 @@ class HdgEntityRegistry:
         """Create indexes for efficient entity lookup."""
         self._entities_by_node_id.clear()
         self._writable_entities.clear()
+        self._node_to_group.clear()
         for definition in self._sensor_definitions.values():
             if hdg_node_id := definition.get("hdg_node_id"):
                 self._entities_by_node_id[hdg_node_id] = definition
+                if (group := definition.get("polling_group")) and (
+                    base := strip_hdg_node_suffix(hdg_node_id)
+                ) not in self._node_to_group:
+                    self._node_to_group[base] = group
             if definition.get("writable"):
                 self._writable_entities.append(definition)
 
@@ -164,6 +170,10 @@ class HdgEntityRegistry:
         """Return the HDG node ID for a given entity key."""
         definition = self._sensor_definitions.get(key)
         return definition["hdg_node_id"] if definition is not None else None
+
+    def get_polling_group_for_node(self, base_node_id: str) -> str | None:
+        """Return the polling group key that contains this base node ID."""
+        return self._node_to_group.get(base_node_id)
 
     def increment_added_entity_count(self, platform: str, count: int) -> None:
         """Increment the count of successfully added entities for a given platform."""
