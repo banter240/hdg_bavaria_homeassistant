@@ -1,3 +1,96 @@
+## [2.2.0-alpha.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.1.1...v2.2.0-alpha.1) (2026-11-13)
+
+### ✨ New Features
+
+* feat(hdg_boiler): add solar menu nodes and live zone temperatures
+
+  Menu 90 and the live solar nodes were missing. The names follow the
+  aggregated node list. Node 29001 is listed there as data type 40, but
+  the myHDG demo returns a temperature for it, matching the active zone,
+  so it is a temperature sensor named Aktive Zone.
+
+  Slider limits come from the demo edit pages. The new entities are
+  disabled until solar is enabled. Nothing was written to a boiler.
+
+  The entities follow pull request 65 and are built here instead of
+  merging that branch.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✨ ADDED
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - live 29001 and zone temperatures 29004 to 29006
+  - menu 9020 to 9024, 9038, 9040 to 9043, 9080 to 9082, 9086, 9087, 9099
+  - writable numbers use the demo slider limits
+  - enum text for the zone points, valve invert, and solar type
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🌐 TRANSLATIONS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - de and en names match the node list, including Temperatur Zone 1 to 3
+
+  Translations: en, de.
+* feat(hdg_boiler): add the component groups and partner-guarded thresholds
+
+  Three optional component groups form the plant-type layout: the heat
+  pump group (78 entities covering operating state, refrigerant circuit,
+  hydraulic module, buffer charge thresholds, heating element, and
+  energy/hour counters), the feuerung group for combustion-only entities
+  a heat-pump installation cannot serve, and the deduplicated group
+  wiring shared by both. The six buffer charge threshold number entities
+  carry a cross-field guard enforcing the WebControl rule that 'Aus'
+  must sit at least 2 K above 'Ein', applied on both the entity UI and
+  the set_node_value service. The plant-type dropdown in the config flow
+  now ships its option labels through a proper selector translation key
+  and a top-level selector block, fixing raw kessel/waermepumpe/hybrid
+  keys shown in both languages.
+* feat(hdg_boiler): make heating circuit 1 optional
+
+  enable_hk1 defaults to on, so a missing option keeps the circuit.
+  Turning it off also drops the nodes from the poll set.
+
+  Follows issue 68.
+* feat(hdg_boiler): ship the local brand icons
+
+  Home Assistant 2026.3 reads icons from brand/. Older versions ignore
+  the folder. These are the existing hdg_boiler icons.
+
+  Follows pull request 67. Added here instead of merging that branch onto main.
+
+### 🐛 Bug Fixes
+
+* fix(hdg_boiler): honor scan intervals and refresh live sensors
+
+  Saved scan_interval_group_* options never reached the coordinator.
+  Refill notices and live buffer energy were on the 24 hour group.
+  WebControl V2.06 sends *ErrEnum []* for Restwärmenutzung on node 22010.
+  Primärluft Korrektur durch O2 stays on group 5.
+
+  Follows pull request 66. Built here instead of merging that branch.
+* fix(hdg_boiler): poll groups of nodes registered after the first refresh
+
+  Entities enabled after setup (fresh installs with disabled-by-default
+  entities, runtime UI enables) used to wait out their group's scan
+  interval before receiving data, which can be hours for group 4/5. The
+  coordinator now debounces registrations of dataless nodes and backfills
+  only the affected groups at medium priority once the burst settles.
+
+### 📚 Documentation
+
+* docs: add the boiler node list
+
+  Node names, types, enum options, and slider limits need one place
+  to look them up. The integration does not read the file.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📝 DOCS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - docs/node-data/hdg_data.csv
+  - docs/node-data/README.md describes the columns
+  - the main README links the file
+
 ## [2.1.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.1.0...v2.1.1) (2026-10-18)
 
 ### 🐛 Bug Fixes
