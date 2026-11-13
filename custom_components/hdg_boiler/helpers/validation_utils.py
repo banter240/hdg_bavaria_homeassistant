@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 
+from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from homeassistant.core import ServiceCall
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from ..const import ATTR_NODE_ID, ATTR_VALUE
 
@@ -16,6 +17,7 @@ __all__ = [
     "validate_get_node_service_call",
     "coerce_value_to_numeric_type",
     "validate_value_range_and_step",
+    "validate_setter_partner_constraint",
 ]
 
 
@@ -151,3 +153,54 @@ def coerce_value_to_numeric_type(
         raise ServiceValidationError(
             f"Value '{value_to_set}' is not a valid '{node_type}' for '{entity_name_for_log}'."
         ) from exc
+
+
+def validate_setter_partner_constraint(
+    value: Any,
+    entity_definition: Mapping[str, Any],
+    coordinator_data: Mapping[str, Any] | None,
+    entity_name_for_log: str,
+) -> None:
+    """Enforce the gap constraint between hardware-coupled threshold setters.
+
+    Applies only to definitions carrying a ``setter_partner_node_id`` (e.g.
+    Puffer Ein/Aus temperature pairs). The partner value is read from
+    coordinator data; when it is missing or unparsable the check is skipped;
+    the partner node may simply not be polled, and blocking writes on absent
+    data would break setups with the partner entity disabled.
+    """
+    partner_node_id = entity_definition.get("setter_partner_node_id")
+    relation = entity_definition.get("setter_partner_relation")
+    gap = entity_definition.get("setter_partner_gap")
+    if partner_node_id is None or relation is None or gap is None:
+        return
+
+    try:
+        value_num = float(str(value).replace(",", "."))
+    except ValueError as exc:
+        raise HomeAssistantError(
+            f"Cannot validate '{entity_name_for_log}': value '{value}' is not numeric."
+        ) from exc
+
+    if coordinator_data is None:
+        return
+    raw_partner = coordinator_data.get(partner_node_id)
+    if raw_partner is None:
+        return
+    try:
+        partner_value = float(str(raw_partner).replace(",", "."))
+    except ValueError:
+        return
+
+    # relation describes where this value sits relative to the partner:
+    # 'below' -> at least `gap` under the partner, 'above' -> at least `gap` over.
+    if relation == "below" and value_num > partner_value - float(gap):
+        raise HomeAssistantError(
+            f"'{entity_name_for_log}' must stay at least {gap} below the coupled "
+            f"threshold (node {partner_node_id}, currently {partner_value:g})."
+        )
+    if relation == "above" and value_num < partner_value + float(gap):
+        raise HomeAssistantError(
+            f"'{entity_name_for_log}' must stay at least {gap} above the coupled "
+            f"threshold (node {partner_node_id}, currently {partner_value:g})."
+        )

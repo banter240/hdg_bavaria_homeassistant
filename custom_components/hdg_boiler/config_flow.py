@@ -24,25 +24,16 @@ from homeassistant.helpers.selector import (
 
 from .api import HdgApiClient, HdgApiConnectionError, HdgApiError
 from .const import (
+    ANLAGE_HYBRID,
+    ANLAGE_KESSEL,
+    ANLAGE_WP,
+    ANLAGENTYP_PRESETS,
+    COMPONENT_GROUP_OPTIONS,
     CONF_ADVANCED_LOGGING,
+    CONF_ANLAGENTYP,
     CONF_API_TIMEOUT,
     CONF_CONNECT_TIMEOUT,
     CONF_DEVICE_ALIAS,
-    CONF_ENABLE_EXT_WQ,
-    CONF_ENABLE_HK1,
-    CONF_ENABLE_HK2,
-    CONF_ENABLE_HK3,
-    CONF_ENABLE_HK4,
-    CONF_ENABLE_HK5,
-    CONF_ENABLE_HK6,
-    CONF_ENABLE_LAGER,
-    CONF_ENABLE_NETZPUMPE_1,
-    CONF_ENABLE_NETZPUMPE_2,
-    CONF_ENABLE_NETZPUMPE_3,
-    CONF_ENABLE_PUFFER_2,
-    CONF_ENABLE_SOLAR,
-    CONF_ENABLE_WW1,
-    CONF_ENABLE_WW2,
     CONF_ERROR_THRESHOLD,
     CONF_PUFFER_MITTE_OBEN_NODE_ID,
     CONF_PUFFER_MITTE_UNTEN_NODE_ID,
@@ -60,21 +51,6 @@ from .const import (
     DEFAULT_ADVANCED_LOGGING,
     DEFAULT_API_TIMEOUT,
     DEFAULT_CONNECT_TIMEOUT,
-    DEFAULT_ENABLE_EXT_WQ,
-    DEFAULT_ENABLE_HK1,
-    DEFAULT_ENABLE_HK2,
-    DEFAULT_ENABLE_HK3,
-    DEFAULT_ENABLE_HK4,
-    DEFAULT_ENABLE_HK5,
-    DEFAULT_ENABLE_HK6,
-    DEFAULT_ENABLE_LAGER,
-    DEFAULT_ENABLE_NETZPUMPE_1,
-    DEFAULT_ENABLE_NETZPUMPE_2,
-    DEFAULT_ENABLE_NETZPUMPE_3,
-    DEFAULT_ENABLE_PUFFER_2,
-    DEFAULT_ENABLE_SOLAR,
-    DEFAULT_ENABLE_WW1,
-    DEFAULT_ENABLE_WW2,
     DEFAULT_PUFFER_MITTE_OBEN_NODE_ID,
     DEFAULT_PUFFER_MITTE_UNTEN_NODE_ID,
     DEFAULT_ERROR_THRESHOLD,
@@ -135,23 +111,7 @@ _SECTION_KEYS: dict[str, list[str]] = {
         CONF_ERROR_THRESHOLD,
         CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
     ],
-    "components": [
-        CONF_ENABLE_WW1,
-        CONF_ENABLE_WW2,
-        CONF_ENABLE_HK1,
-        CONF_ENABLE_HK2,
-        CONF_ENABLE_HK3,
-        CONF_ENABLE_HK4,
-        CONF_ENABLE_HK5,
-        CONF_ENABLE_HK6,
-        CONF_ENABLE_SOLAR,
-        CONF_ENABLE_PUFFER_2,
-        CONF_ENABLE_EXT_WQ,
-        CONF_ENABLE_LAGER,
-        CONF_ENABLE_NETZPUMPE_1,
-        CONF_ENABLE_NETZPUMPE_2,
-        CONF_ENABLE_NETZPUMPE_3,
-    ],
+    "components": [conf for conf, _default in COMPONENT_GROUP_OPTIONS.values()],
     "puffer": [
         CONF_PUFFER_MITTE_OBEN_NODE_ID,
         CONF_PUFFER_MITTE_UNTEN_NODE_ID,
@@ -383,56 +343,8 @@ class HdgBoilerCommonFlow:
         # Section: Component groups (optional hardware / boiler packages).
         # One toggle per installable package — never combine independent options.
         components_fields: dict[Any, Any] = {
-            vol.Optional(
-                CONF_ENABLE_WW1, default=get(CONF_ENABLE_WW1, DEFAULT_ENABLE_WW1)
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_WW2, default=get(CONF_ENABLE_WW2, DEFAULT_ENABLE_WW2)
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_HK1, default=get(CONF_ENABLE_HK1, DEFAULT_ENABLE_HK1)
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_HK2, default=get(CONF_ENABLE_HK2, DEFAULT_ENABLE_HK2)
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_HK3, default=get(CONF_ENABLE_HK3, DEFAULT_ENABLE_HK3)
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_HK4, default=get(CONF_ENABLE_HK4, DEFAULT_ENABLE_HK4)
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_HK5, default=get(CONF_ENABLE_HK5, DEFAULT_ENABLE_HK5)
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_HK6, default=get(CONF_ENABLE_HK6, DEFAULT_ENABLE_HK6)
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_SOLAR, default=get(CONF_ENABLE_SOLAR, DEFAULT_ENABLE_SOLAR)
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_PUFFER_2,
-                default=get(CONF_ENABLE_PUFFER_2, DEFAULT_ENABLE_PUFFER_2),
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_EXT_WQ,
-                default=get(CONF_ENABLE_EXT_WQ, DEFAULT_ENABLE_EXT_WQ),
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_LAGER, default=get(CONF_ENABLE_LAGER, DEFAULT_ENABLE_LAGER)
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_NETZPUMPE_1,
-                default=get(CONF_ENABLE_NETZPUMPE_1, DEFAULT_ENABLE_NETZPUMPE_1),
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_NETZPUMPE_2,
-                default=get(CONF_ENABLE_NETZPUMPE_2, DEFAULT_ENABLE_NETZPUMPE_2),
-            ): BooleanSelector(),
-            vol.Optional(
-                CONF_ENABLE_NETZPUMPE_3,
-                default=get(CONF_ENABLE_NETZPUMPE_3, DEFAULT_ENABLE_NETZPUMPE_3),
-            ): BooleanSelector(),
+            vol.Optional(conf, default=get(conf, default_enabled)): BooleanSelector()
+            for conf, default_enabled in COMPONENT_GROUP_OPTIONS.values()
         }
 
         puffer_fields: dict[Any, Any] = {
@@ -556,6 +468,7 @@ class HdgBoilerConfigFlow(HdgBoilerCommonFlow, config_entries.ConfigFlow):
     def __init__(self) -> None:
         """Initialize the config flow."""
         self._host_data: dict[str, Any] = {}
+        self._preset: dict[str, Any] = {}
 
     @staticmethod
     @callback
@@ -576,7 +489,7 @@ class HdgBoilerConfigFlow(HdgBoilerCommonFlow, config_entries.ConfigFlow):
                 await self.async_set_unique_id(host_ip.lower())
                 self._abort_if_unique_id_configured()
                 self._host_data = user_input
-                return await self.async_step_init()
+                return await self.async_step_anlagentyp()
             errors["base"] = "cannot_connect"
 
         data_schema = vol.Schema(
@@ -588,6 +501,31 @@ class HdgBoilerConfigFlow(HdgBoilerCommonFlow, config_entries.ConfigFlow):
         return self.async_show_form(
             step_id="user", data_schema=data_schema, errors=errors
         )
+
+    async def async_step_anlagentyp(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Preset the component toggles from the plant type."""
+        if user_input is not None:
+            self._preset = dict(ANLAGENTYP_PRESETS[user_input[CONF_ANLAGENTYP]])
+            return await self.async_step_init()
+
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_ANLAGENTYP, default=ANLAGE_KESSEL): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[ANLAGE_KESSEL, ANLAGE_WP, ANLAGE_HYBRID],
+                        mode=SelectSelectorMode.LIST,
+                        translation_key=CONF_ANLAGENTYP,
+                    )
+                )
+            }
+        )
+        return self.async_show_form(step_id="anlagentyp", data_schema=data_schema)
+
+    def _get_current_options(self) -> dict[str, Any]:
+        """Seed the component form with the chosen plant-type preset."""
+        return dict(self._preset)
 
     async def _async_finish_flow(
         self, options: dict[str, Any]

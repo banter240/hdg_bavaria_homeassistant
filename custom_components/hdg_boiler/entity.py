@@ -39,6 +39,7 @@ from .helpers.logging_utils import (
 )
 from .helpers.parsers import parse_sensor_value
 from .helpers.string_utils import normalize_unique_id_component, strip_hdg_node_suffix
+from .helpers.validation_utils import validate_setter_partner_constraint
 from .models import SensorDefinition
 
 
@@ -324,6 +325,12 @@ class HdgNodeEntity(HdgBaseEntity):
         if (set_fn := self._entity_definition.get("set_fn")) is not None:
             await set_fn(self.coordinator, value)
             return
+        validate_setter_partner_constraint(
+            value,
+            self._entity_definition,
+            self.coordinator.data,
+            self.name or str(self.entity_id),
+        )
         await self.coordinator.async_set_node_value(
             node_id=self._node_id,
             value=value,

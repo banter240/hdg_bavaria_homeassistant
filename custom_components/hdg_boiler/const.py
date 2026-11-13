@@ -44,6 +44,13 @@ __all__: Final[list[str]] = [
     "CONF_ENABLE_NETZPUMPE_1",
     "CONF_ENABLE_NETZPUMPE_2",
     "CONF_ENABLE_NETZPUMPE_3",
+    "CONF_ENABLE_WAERMEPUMPE",
+    "CONF_ENABLE_FEUERUNG",
+    "CONF_ANLAGENTYP",
+    "ANLAGE_KESSEL",
+    "ANLAGE_WP",
+    "ANLAGE_HYBRID",
+    "ANLAGENTYP_PRESETS",
     "CONF_PUFFER_MITTE_OBEN_NODE_ID",
     "CONF_PUFFER_MITTE_UNTEN_NODE_ID",
     "DEFAULT_PUFFER_MITTE_OBEN_NODE_ID",
@@ -63,6 +70,10 @@ __all__: Final[list[str]] = [
     "DEFAULT_ENABLE_LAGER",
     "DEFAULT_ENABLE_NETZPUMPE_2",
     "DEFAULT_ENABLE_NETZPUMPE_3",
+    "DEFAULT_ENABLE_WAERMEPUMPE",
+    "DEFAULT_ENABLE_FEUERUNG",
+    "FEUERUNG_ENTITY_KEYS",
+    "ANLAGENTYP_PRESETS",
     "COMPONENT_GROUP_OPTIONS",
     "CONFIG_FLOW_API_TIMEOUT",
     "DEFAULT_API_TIMEOUT",
@@ -177,6 +188,19 @@ CONF_ENABLE_LAGER: Final[str] = "enable_lager"
 CONF_ENABLE_NETZPUMPE_1: Final[str] = "enable_netzpumpe_1"
 CONF_ENABLE_NETZPUMPE_2: Final[str] = "enable_netzpumpe_2"
 CONF_ENABLE_NETZPUMPE_3: Final[str] = "enable_netzpumpe_3"
+CONF_ENABLE_WAERMEPUMPE: Final[str] = "enable_waermepumpe"
+CONF_ENABLE_FEUERUNG: Final[str] = "enable_feuerung"
+
+CONF_ANLAGENTYP: Final[str] = "anlagentyp"
+ANLAGE_KESSEL: Final[str] = "kessel"
+ANLAGE_WP: Final[str] = "waermepumpe"
+ANLAGE_HYBRID: Final[str] = "hybrid"
+
+ANLAGENTYP_PRESETS: Final[dict[str, dict[str, bool]]] = {
+    ANLAGE_KESSEL: {CONF_ENABLE_FEUERUNG: True, CONF_ENABLE_WAERMEPUMPE: False},
+    ANLAGE_WP: {CONF_ENABLE_FEUERUNG: False, CONF_ENABLE_WAERMEPUMPE: True},
+    ANLAGE_HYBRID: {CONF_ENABLE_FEUERUNG: True, CONF_ENABLE_WAERMEPUMPE: True},
+}
 
 DEFAULT_ENABLE_WW1: Final[bool] = False
 DEFAULT_ENABLE_WW2: Final[bool] = False
@@ -193,6 +217,8 @@ DEFAULT_ENABLE_LAGER: Final[bool] = False
 DEFAULT_ENABLE_NETZPUMPE_1: Final[bool] = False
 DEFAULT_ENABLE_NETZPUMPE_2: Final[bool] = False
 DEFAULT_ENABLE_NETZPUMPE_3: Final[bool] = False
+DEFAULT_ENABLE_WAERMEPUMPE: Final[bool] = False
+DEFAULT_ENABLE_FEUERUNG: Final[bool] = True
 
 CONF_PUFFER_MITTE_OBEN_NODE_ID: Final[str] = "puffer_mitte_oben_node_id"
 CONF_PUFFER_MITTE_UNTEN_NODE_ID: Final[str] = "puffer_mitte_unten_node_id"
@@ -227,7 +253,97 @@ COMPONENT_GROUP_OPTIONS: Final[dict[str, tuple[str, bool]]] = {
     "netzpumpe_1": (CONF_ENABLE_NETZPUMPE_1, DEFAULT_ENABLE_NETZPUMPE_1),
     "netzpumpe_2": (CONF_ENABLE_NETZPUMPE_2, DEFAULT_ENABLE_NETZPUMPE_2),
     "netzpumpe_3": (CONF_ENABLE_NETZPUMPE_3, DEFAULT_ENABLE_NETZPUMPE_3),
+    "waermepumpe": (CONF_ENABLE_WAERMEPUMPE, DEFAULT_ENABLE_WAERMEPUMPE),
+    "feuerung": (CONF_ENABLE_FEUERUNG, DEFAULT_ENABLE_FEUERUNG),
 }
+
+# Combustion-only entities: everything a pellet/log boiler reports that a
+# heat-pump installation cannot serve (feeding, ignition, O2 trim, exhaust
+# and fuel stats). Frostschutz entities stay global — a heat pump needs
+# them too.
+FEUERUNG_ENTITY_KEYS: Final[tuple[str, ...]] = (
+    "abgasleitwert_ist",
+    "abgasleitwert_soll",
+    "anheizen_zeitdauer",
+    "anzahl_rostkippungen",
+    "anzunden_primarluft",
+    "anzunden_sekundarluft",
+    "anzunden_zeitdauer",
+    "ausbrennen_bezugsgrosse",
+    "ausbrennen_primarluft",
+    "ausbrennen_sekundarluft",
+    "auto_zundung_einschaltverzogerung",
+    "auto_zundung_webcontrol_erlauben",
+    "automatische_zundung_aktivieren",
+    "betriebsstunden_ascheschnecke",
+    "betriebsstunden_rostmotor",
+    "betriebsstunden_stokerschnecke",
+    "brennraumtemperatur",
+    "brennraumtemperatur_soll",
+    "brennstoff",
+    "festwertvorgabe_primarluft",
+    "festwertvorgabe_sekundarluft",
+    "freigabe_abgastemperatur",
+    "freigabe_kesseltemperatur",
+    "holzart",
+    "holzfeuchte",
+    "kessel_abgastemperatur_ist",
+    "kessel_ausbrandgrund",
+    "kessel_betriebsphase_text",
+    "kessel_betriebsstunden",
+    "kessel_energieverbrauch_tag_gesamt",
+    "kessel_externe_anforderung",
+    "kessel_haupt_betriebsart",
+    "kessel_nachlegebedarf",
+    "kessel_nachlegemenge",
+    "kessel_nachlegen_anzeige_text",
+    "kessel_nachlegezeitpunkt_2",
+    "kessel_o2_sollwert",
+    "kessel_restlaufzeit_wartung",
+    "kessel_restsauerstoff_ist",
+    "kessel_restsauerstoff_korr",
+    "kessel_rucklaufmischer",
+    "kessel_rucklauftemperatur_ist",
+    "kessel_saugzuggeblase_ist",
+    "kessel_status",
+    "kessel_stillstandszeit",
+    "kessel_typ_info_leer",
+    "kessel_unterdruck_ist",
+    "kessel_warmemenge_gesamt",
+    "kessel_wirkungsgrad",
+    "kesselleistung_ist",
+    "kesselrucklauf_solltemperatur",
+    "kesseltemperatur_ist",
+    "kesseltemperatur_sollwert_param",
+    "kesseltyp_kennung",
+    "kesselvorlauf_solltemperatur",
+    "lagerinhalt_aktuell",
+    "laufzeit_entaschung",
+    "laufzeit_hauptgeblase",
+    "laufzeit_wt_reinigung",
+    "laufzeit_zundgeblase",
+    "materialmenge_aktuell",
+    "minimale_nachlegemenge",
+    "nachlege_benachrichtigung",
+    "nachlegeschritt",
+    "nachlegeschritt_text",
+    "offset_kesseltemperatur_soll_maximum",
+    "pid3_o2_sekundarluft_maximum",
+    "pid3_o2_sekundarluft_minimum",
+    "primarluft_korrektur_o2",
+    "primarluftklappe_ist",
+    "primarluftklappe_soll",
+    "puffer_1_nachlegemenge_optimieren",
+    "restlaufzeit_schornsteinfeger",
+    "rucklaufmischer_laufzeit_gesamt",
+    "sekundarluftklappe_ist",
+    "sekundarluftklappe_soll",
+    "stillstandszeit_soll",
+    "zeit_kesseluberhitzung_10_abbrande_prozent",
+    "zeit_kesseluberhitzung_10_abbrande_std",
+    "zeit_kesseluberhitzung_gesamt_prozent",
+    "zeit_kesseluberhitzung_gesamt_std",
+)
 
 
 def scan_interval_option_key(group_key: str) -> str:

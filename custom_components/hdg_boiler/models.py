@@ -91,6 +91,11 @@ class SensorDefinition(_SensorDefinitionRequired, total=False):
     setter_min_val: float | None
     setter_max_val: float | None
     setter_step: float | None
+    # Cross-field guard for hardware-coupled setters (e.g. Puffer Ein/Aus
+    # thresholds): the partner node must keep a minimum gap to this value.
+    setter_partner_node_id: str | None
+    setter_partner_relation: str | None
+    setter_partner_gap: float | None
     options: list[str] | None
     normalize_internal_whitespace: bool | None
     uppercase_value: bool | None

@@ -17,6 +17,7 @@ from .helpers.validation_utils import (
     coerce_value_to_numeric_type,
     validate_get_node_service_call,
     validate_set_node_service_call,
+    validate_setter_partner_constraint,
     validate_value_range_and_step,
 )
 from .models import SensorDefinition
@@ -82,6 +83,12 @@ async def async_handle_set_node_value(
     try:
         node_id, value_to_set, entity_name = _validate_and_prepare_node_value(
             call, hdg_entity_registry
+        )
+        validate_setter_partner_constraint(
+            value_to_set,
+            _get_settable_definition(node_id, hdg_entity_registry),
+            coordinator.data,
+            entity_name,
         )
         success, final_value = await coordinator.async_set_node_value(
             node_id=node_id,

@@ -10,7 +10,7 @@ corresponding Home Assistant entity configurations.
 from __future__ import annotations
 
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any, Final, cast
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -23,11 +23,13 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
     UnitOfVolume,
+    UnitOfVolumeFlowRate,
 )
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import (
     COMPONENT_GROUP_OPTIONS,
+    FEUERUNG_ENTITY_KEYS,
     POLLING_GROUP_DEFINITIONS,
     PUFFER_MITTE_NODE_MAP,
     UNIT_MASS_TONNES,
@@ -42,6 +44,15 @@ def _with_group(definition: SensorDefinition, group: str) -> SensorDefinition:
     """Tag a definition with a component_group in-place and return it."""
     definition["component_group"] = group
     return definition
+
+
+def _tag_component_group(
+    defs: dict[str, SensorDefinition], group: str
+) -> dict[str, SensorDefinition]:
+    """Tag every definition of a generated family with its component_group."""
+    for defn in defs.values():
+        _with_group(defn, group)
+    return defs
 
 
 POLLING_GROUP_1_KEY: Final = POLLING_GROUP_DEFINITIONS[0]["key"]
@@ -282,6 +293,28 @@ def create_duration_sensor(
         ha_native_unit_of_measurement=unit,
         ha_state_class=ha_state_class,
         icon=icon,
+        entity_category=entity_category,
+        entity_registry_enabled_default=entity_registry_enabled_default,
+    )
+
+
+def create_operating_hours_sensor(
+    key: str,
+    node_id: str,
+    polling_group: str,
+    icon: str,
+    entity_category: EntityCategory | None = EntityCategory.DIAGNOSTIC,
+    entity_registry_enabled_default: bool = True,
+) -> SensorDefinition:
+    """Create a monotonically increasing operating-hours counter."""
+    return create_duration_sensor(
+        key=key,
+        node_id=node_id,
+        polling_group=polling_group,
+        icon=icon,
+        hdg_formatter="iSTD",
+        unit=UnitOfTime.HOURS,
+        ha_state_class=SensorStateClass.TOTAL_INCREASING,
         entity_category=entity_category,
         entity_registry_enabled_default=entity_registry_enabled_default,
     )
@@ -759,10 +792,7 @@ def get_hk_definitions(
             ),
         }
 
-    for defn in defs.values():
-        _with_group(defn, group)
-
-    return defs
+    return _tag_component_group(defs, group)
 
 
 def get_netzpumpe_definitions(idx: int, base_node: int) -> dict[str, SensorDefinition]:
@@ -794,10 +824,7 @@ def get_netzpumpe_definitions(idx: int, base_node: int) -> dict[str, SensorDefin
         ),
     }
 
-    for defn in defs.values():
-        defn["component_group"] = f"netzpumpe_{idx}"
-
-    return defs
+    return _tag_component_group(defs, f"netzpumpe_{idx}")
 
 
 def get_netzpumpe_param_definitions(
@@ -823,10 +850,392 @@ def get_netzpumpe_param_definitions(
         ),
     }
 
-    for defn in defs.values():
-        defn["component_group"] = f"netzpumpe_{idx}"
+    return _tag_component_group(defs, f"netzpumpe_{idx}")
 
-    return defs
+
+_WP_STAT_KINDS: Final[
+    dict[str, tuple[Callable[..., SensorDefinition], str, dict[str, Any]]]
+] = {
+    "start": (
+        create_general_sensor,
+        "mdi:calendar-start",
+        {
+            "hdg_data_type": "2",
+            "parse_as_type": "hdg_datetime_or_text",
+            "ha_device_class": SensorDeviceClass.TIMESTAMP,
+        },
+    ),
+    "jaz": (
+        create_general_sensor,
+        "mdi:speedometer",
+        {
+            "hdg_data_type": "2",
+            "parse_as_type": "float",
+            "ha_state_class": SensorStateClass.MEASUREMENT,
+        },
+    ),
+    "schaltzyklen": (
+        create_general_sensor,
+        "mdi:counter",
+        {
+            "hdg_data_type": "2",
+            "parse_as_type": "float",
+            "ha_state_class": SensorStateClass.TOTAL_INCREASING,
+        },
+    ),
+    "betriebsstunden": (
+        create_duration_sensor,
+        "mdi:timer-outline",
+        {
+            "hdg_formatter": "iSTD",
+            "unit": UnitOfTime.HOURS,
+            "ha_state_class": SensorStateClass.TOTAL_INCREASING,
+        },
+    ),
+    "energieaufnahme": (
+        create_energy_sensor,
+        "mdi:lightning-bolt",
+        {
+            "hdg_formatter": "iMWH",
+            "unit": UnitOfEnergy.MEGA_WATT_HOUR,
+            "ha_state_class": SensorStateClass.TOTAL_INCREASING,
+        },
+    ),
+    "energieabgabe": (
+        create_energy_sensor,
+        "mdi:heat-wave",
+        {
+            "hdg_formatter": "iMWH",
+            "unit": UnitOfEnergy.MEGA_WATT_HOUR,
+            "ha_state_class": SensorStateClass.TOTAL_INCREASING,
+        },
+    ),
+}
+
+
+def _create_wp_stat_entity(key: str, node_id: str, kind: str) -> SensorDefinition:
+    """Create one diagnostic group-5 heat-pump statistic."""
+    factory, icon, extra = _WP_STAT_KINDS[kind]
+    return factory(
+        key=key,
+        node_id=node_id,
+        polling_group=POLLING_GROUP_5_KEY,
+        icon=icon,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        **extra,
+    )
+
+
+def _expand_wp_table(
+    defs: dict[str, SensorDefinition],
+    table: Mapping[str, tuple[str, str, str]],
+    factory: Callable[..., SensorDefinition],
+    **extra: Any,
+) -> None:
+    """Expand a {key: (node, group, icon)} table through one factory."""
+    for key, (node_id, group, icon) in table.items():
+        defs[key] = factory(
+            key=key,
+            node_id=node_id,
+            polling_group=group,
+            icon=icon,
+            entity_registry_enabled_default=False,
+            **extra,
+        )
+
+
+def get_waermepumpe_definitions() -> dict[str, SensorDefinition]:
+    """Generate entities for HDG heat pumps (e.g. HDG A-series).
+
+    Node IDs were verified on an HDG A18 via Web-Control. All entities
+    start disabled and belong to the optional "waermepumpe" component
+    group.
+    """
+    defs: dict[str, SensorDefinition] = {}
+
+    _temps: Final[dict[str, tuple[str, str, str]]] = {
+        "wp_mittlere_aussentemperatur": (
+            "30010T",
+            POLLING_GROUP_2_KEY,
+            "mdi:thermometer",
+        ),
+        "wp_ventilator_eintritt_temperatur": (
+            "30016T",
+            POLLING_GROUP_1_KEY,
+            "mdi:thermometer",
+        ),
+        "wp_verdampfer_temperatur": (
+            "30017T",
+            POLLING_GROUP_1_KEY,
+            "mdi:snowflake-thermometer",
+        ),
+        "wp_sauggas_temperatur": ("30018T", POLLING_GROUP_1_KEY, "mdi:thermometer-low"),
+        "wp_heissgas_temperatur": (
+            "30019T",
+            POLLING_GROUP_1_KEY,
+            "mdi:thermometer-high",
+        ),
+        "wp_kondensator_temperatur": ("30020T", POLLING_GROUP_1_KEY, "mdi:thermometer"),
+        "wp_unterkuehlung_temperatur": (
+            "30021T",
+            POLLING_GROUP_1_KEY,
+            "mdi:thermometer-minus",
+        ),
+        "hydraulik_systemvorlauf": (
+            "31008T",
+            POLLING_GROUP_1_KEY,
+            "mdi:thermometer-chevron-up",
+        ),
+        "hydraulik_systemvorlauf_2": (
+            "31009T",
+            POLLING_GROUP_1_KEY,
+            "mdi:thermometer-chevron-up",
+        ),
+        "hydraulik_systemvorlauf_2_soll": (
+            "31017T",
+            POLLING_GROUP_1_KEY,
+            "mdi:thermometer-chevron-up",
+        ),
+        "hydraulik_systemruecklauf": (
+            "31010T",
+            POLLING_GROUP_1_KEY,
+            "mdi:thermometer-chevron-down",
+        ),
+        "hydraulik_anforderung_heizung": (
+            "31005T",
+            POLLING_GROUP_2_KEY,
+            "mdi:radiator",
+        ),
+        "hydraulik_anforderung_brauchwasser": (
+            "31006T",
+            POLLING_GROUP_2_KEY,
+            "mdi:water-boiler",
+        ),
+        "hydraulik_anforderung_kuehlung": (
+            "31015T",
+            POLLING_GROUP_2_KEY,
+            "mdi:snowflake",
+        ),
+        "hydraulik_angeforderte_quelle": (
+            "31016T",
+            POLLING_GROUP_2_KEY,
+            "mdi:thermometer-alert",
+        ),
+        "puffer_ladung_ein_aktiv": (
+            "24004T",
+            POLLING_GROUP_2_KEY,
+            "mdi:thermometer-chevron-up",
+        ),
+        "puffer_ladung_aus_aktiv": (
+            "24006T",
+            POLLING_GROUP_2_KEY,
+            "mdi:thermometer-chevron-down",
+        ),
+        "heizstab_aussentemperatur_freigabe": (
+            "9462T",
+            POLLING_GROUP_4_KEY,
+            "mdi:thermometer-check",
+        ),
+    }
+    _expand_wp_table(defs, _temps, create_temp_sensor)
+
+    _percents: Final[dict[str, tuple[str, str, str]]] = {
+        "wp_ventilatorleistung": ("30014T", POLLING_GROUP_1_KEY, "mdi:fan"),
+        "wp_expansionsventil": ("30022T", POLLING_GROUP_1_KEY, "mdi:valve"),
+        "hydraulik_pwm_systempumpe": ("31007T", POLLING_GROUP_1_KEY, "mdi:pump"),
+    }
+    _expand_wp_table(defs, _percents, create_percentage_sensor)
+
+    _texts: Final[dict[str, tuple[str, str, str]]] = {
+        "wp_betriebsphase": ("30006T", POLLING_GROUP_1_KEY, "mdi:heat-pump"),
+        "wp_betriebsstatus": ("30007T", POLLING_GROUP_1_KEY, "mdi:information-outline"),
+        "wp_anforderungsart": ("30008T", POLLING_GROUP_1_KEY, "mdi:call-received"),
+        "hydraulik_heizstab_status": (
+            "31004T",
+            POLLING_GROUP_2_KEY,
+            "mdi:heating-coil",
+        ),
+        "hydraulik_vorlaufumschaltung": (
+            "31012T",
+            POLLING_GROUP_2_KEY,
+            "mdi:swap-horizontal",
+        ),
+        "hydraulik_ruecklaufumschaltung": (
+            "31013T",
+            POLLING_GROUP_2_KEY,
+            "mdi:swap-horizontal",
+        ),
+        "hydraulik_umschaltung_kuehlung": (
+            "31014T",
+            POLLING_GROUP_2_KEY,
+            "mdi:snowflake",
+        ),
+        "hydraulik_smart_grid_1": (
+            "31018T",
+            POLLING_GROUP_2_KEY,
+            "mdi:transmission-tower",
+        ),
+        "hydraulik_smart_grid_2": (
+            "31019T",
+            POLLING_GROUP_2_KEY,
+            "mdi:transmission-tower",
+        ),
+        "hydraulik_anforderung_kuehlung_extern": (
+            "31026T",
+            POLLING_GROUP_2_KEY,
+            "mdi:snowflake-alert",
+        ),
+        "puffer_heizzone_anforderung_dynamisch": (
+            "4214T",
+            POLLING_GROUP_4_KEY,
+            "mdi:auto-mode",
+        ),
+        "heizstab_betriebsart": ("9460T", POLLING_GROUP_4_KEY, "mdi:heating-coil"),
+        "heizstab_freigabe_bei_fehler": (
+            "9461T",
+            POLLING_GROUP_4_KEY,
+            "mdi:alert-circle-check",
+        ),
+        "heizstab_hoechste_stufe": ("9463T", POLLING_GROUP_4_KEY, "mdi:stairs"),
+    }
+    _expand_wp_table(
+        defs, _texts, create_general_sensor, hdg_data_type="10", parse_as_type="text"
+    )
+
+    _floats: Final[dict[str, tuple[str, str, str, SensorDeviceClass, str]]] = {
+        "hydraulik_druck_primaer": (
+            "31001T",
+            POLLING_GROUP_2_KEY,
+            "mdi:gauge",
+            SensorDeviceClass.PRESSURE,
+            UnitOfPressure.BAR,
+        ),
+        "hydraulik_systemdruck": (
+            "31002T",
+            POLLING_GROUP_2_KEY,
+            "mdi:gauge",
+            SensorDeviceClass.PRESSURE,
+            UnitOfPressure.BAR,
+        ),
+        "hydraulik_volumenstrom": (
+            "31011T",
+            POLLING_GROUP_1_KEY,
+            "mdi:waves-arrow-right",
+            SensorDeviceClass.VOLUME_FLOW_RATE,
+            UnitOfVolumeFlowRate.LITERS_PER_HOUR,
+        ),
+    }
+    for key, (node_id, group, icon, device_class, unit) in _floats.items():
+        defs[key] = create_general_sensor(
+            key=key,
+            node_id=node_id,
+            polling_group=group,
+            hdg_data_type="2",
+            parse_as_type="float",
+            icon=icon,
+            ha_device_class=device_class,
+            ha_native_unit_of_measurement=unit,
+            ha_state_class=SensorStateClass.MEASUREMENT,
+            entity_registry_enabled_default=False,
+        )
+
+    # Elapsed time of the current operating phase; the boiler reports it
+    # as an hours/minutes/seconds triple around 30024T.
+    for suffix, node, unit in (
+        ("stunden", 30023, UnitOfTime.HOURS),
+        ("minuten", 30024, UnitOfTime.MINUTES),
+        ("sekunden", 30025, UnitOfTime.SECONDS),
+    ):
+        key = f"wp_betriebsphase_laufzeit_{suffix}"
+        defs[key] = create_general_sensor(
+            key=key,
+            node_id=f"{node}T",
+            polling_group=POLLING_GROUP_1_KEY,
+            hdg_data_type="2",
+            parse_as_type="float",
+            icon="mdi:timer-outline",
+            ha_device_class=SensorDeviceClass.DURATION,
+            ha_native_unit_of_measurement=unit,
+            ha_state_class=SensorStateClass.MEASUREMENT,
+            entity_registry_enabled_default=False,
+        )
+
+    # Base node of the *_ein_temperatur threshold; the boiler lays out
+    # ein/aus fuehler + threshold pairs around it in steps of one node.
+    _puffer_ladungen: Final[dict[str, int]] = {
+        "puffer_heizzone": 4211,
+        "puffer_minimalladung": 4026,
+        "puffer_zwangsladung": 4030,
+    }
+    for base, node in _puffer_ladungen.items():
+        for edge, (temp_node, fuehler_node) in (
+            ("ein", (node, node - 1)),
+            ("aus", (node + 2, node + 1)),
+        ):
+            defs[f"{base}_{edge}_fuehler"] = create_general_sensor(
+                key=f"{base}_{edge}_fuehler",
+                node_id=f"{fuehler_node}T",
+                polling_group=POLLING_GROUP_4_KEY,
+                hdg_data_type="10",
+                parse_as_type="text",
+                icon="mdi:thermometer-lines",
+                entity_registry_enabled_default=False,
+            )
+            threshold_def = create_number_entity(
+                key=f"{base}_{edge}_temperatur",
+                node_id=f"{temp_node}T",
+                polling_group=POLLING_GROUP_4_KEY,
+                icon=(
+                    "mdi:thermometer-chevron-up"
+                    if edge == "ein"
+                    else "mdi:thermometer-chevron-down"
+                ),
+                setter_type="int",
+                setter_min_val=0.0,
+                setter_max_val=60.0,
+                setter_step=1.0,
+                ha_device_class=SensorDeviceClass.TEMPERATURE,
+                ha_native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+                hdg_formatter="iTEMP",
+                entity_registry_enabled_default=False,
+            )
+            # Ein/Aus are hardware-coupled: the WebControl expects 'Aus' to sit
+            # at least 2 K above 'Ein'; enforce the same gap client-side.
+            threshold_def["setter_partner_node_id"] = str(
+                node + 2 if edge == "ein" else node
+            )
+            threshold_def["setter_partner_relation"] = (
+                "below" if edge == "ein" else "above"
+            )
+            threshold_def["setter_partner_gap"] = 2.0
+            defs[f"{base}_{edge}_temperatur"] = threshold_def
+
+    for stage, node in enumerate((31023, 31024, 31025), start=1):
+        defs[f"heizstab_stufe_{stage}_betriebsstunden"] = _create_wp_stat_entity(
+            f"heizstab_stufe_{stage}_betriebsstunden", f"{node}T", "betriebsstunden"
+        )
+
+    # Base node -> resets sit at +0, commissioning totals at +1.
+    _stat_pairs: Final[dict[str, tuple[int, str]]] = {
+        "wp_stat_start": (31035, "start"),
+        "wp_stat_jaz": (31037, "jaz"),
+        "wp_stat_energieaufnahme": (31039, "energieaufnahme"),
+        "wp_stat_energieabgabe": (31041, "energieabgabe"),
+        "wp_stat_betriebsstunden": (31043, "betriebsstunden"),
+        "wp_stat_schaltzyklen": (31045, "schaltzyklen"),
+        "wp_stat_heizen_jaz": (31047, "jaz"),
+        "wp_stat_heizen_energieaufnahme": (31049, "energieaufnahme"),
+        "wp_stat_heizen_energieabgabe": (31051, "energieabgabe"),
+        "wp_stat_heizen_betriebsstunden": (31053, "betriebsstunden"),
+        "wp_stat_heizen_schaltzyklen": (31055, "schaltzyklen"),
+    }
+    for base, (node, kind) in _stat_pairs.items():
+        for suffix, offset in (("_reset", 0), ("_inbetriebnahme", 1)):
+            key = f"{base}{suffix}"
+            defs[key] = _create_wp_stat_entity(key, f"{node + offset}T", kind)
+
+    return _tag_component_group(defs, "waermepumpe")
 
 
 def get_sensor_definitions(
@@ -873,6 +1282,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     **get_netzpumpe_param_definitions(1, 7000),
     **get_netzpumpe_param_definitions(2, 7100),
     **get_netzpumpe_param_definitions(3, 7200),
+    **get_waermepumpe_definitions(),
     "sprache": create_enum_sensor(
         key="sprache",
         node_id="1T",
@@ -1441,55 +1851,35 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         icon="mdi:fire",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "kessel_betriebsstunden": create_duration_sensor(
+    "kessel_betriebsstunden": create_operating_hours_sensor(
         key="kessel_betriebsstunden",
         node_id="22011T",
         polling_group=POLLING_GROUP_5_KEY,
         icon="mdi:timer-outline",
-        hdg_formatter="iSTD",
-        unit=UnitOfTime.HOURS,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "laufzeit_wt_reinigung": create_duration_sensor(
+    "laufzeit_wt_reinigung": create_operating_hours_sensor(
         key="laufzeit_wt_reinigung",
         node_id="22012T",
         polling_group=POLLING_GROUP_5_KEY,
         icon="mdi:broom",
-        hdg_formatter="iSTD",
-        unit=UnitOfTime.HOURS,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "laufzeit_entaschung": create_duration_sensor(
+    "laufzeit_entaschung": create_operating_hours_sensor(
         key="laufzeit_entaschung",
         node_id="22013T",
         polling_group=POLLING_GROUP_5_KEY,
         icon="mdi:delete-sweep-outline",
-        hdg_formatter="iSTD",
-        unit=UnitOfTime.HOURS,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "laufzeit_hauptgeblase": create_duration_sensor(
+    "laufzeit_hauptgeblase": create_operating_hours_sensor(
         key="laufzeit_hauptgeblase",
         node_id="22014T",
         polling_group=POLLING_GROUP_5_KEY,
         icon="mdi:fan-clock",
-        hdg_formatter="iSTD",
-        unit=UnitOfTime.HOURS,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "laufzeit_zundgeblase": create_duration_sensor(
+    "laufzeit_zundgeblase": create_operating_hours_sensor(
         key="laufzeit_zundgeblase",
         node_id="22015T",
         polling_group=POLLING_GROUP_5_KEY,
         icon="mdi:fan-plus",
-        hdg_formatter="iSTD",
-        unit=UnitOfTime.HOURS,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     "anzahl_rostkippungen": create_general_sensor(
         key="anzahl_rostkippungen",
@@ -1585,35 +1975,23 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         polling_group=POLLING_GROUP_1_KEY,
         icon="mdi:valve-closed",
     ),
-    "betriebsstunden_rostmotor": create_duration_sensor(
+    "betriebsstunden_rostmotor": create_operating_hours_sensor(
         key="betriebsstunden_rostmotor",
         node_id="22037T",
         polling_group=POLLING_GROUP_5_KEY,
         icon="mdi:cog-counterclockwise",
-        hdg_formatter="iSTD",
-        unit=UnitOfTime.HOURS,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "betriebsstunden_stokerschnecke": create_duration_sensor(
+    "betriebsstunden_stokerschnecke": create_operating_hours_sensor(
         key="betriebsstunden_stokerschnecke",
         node_id="22038T",
         polling_group=POLLING_GROUP_5_KEY,
         icon="mdi:screw-lag",
-        hdg_formatter="iSTD",
-        unit=UnitOfTime.HOURS,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "betriebsstunden_ascheschnecke": create_duration_sensor(
+    "betriebsstunden_ascheschnecke": create_operating_hours_sensor(
         key="betriebsstunden_ascheschnecke",
         node_id="22039T",
         polling_group=POLLING_GROUP_5_KEY,
         icon="mdi:screw-lag",
-        hdg_formatter="iSTD",
-        unit=UnitOfTime.HOURS,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     "restlaufzeit_schornsteinfeger": create_duration_sensor(
         key="restlaufzeit_schornsteinfeger",
@@ -1706,15 +2084,11 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         polling_group=POLLING_GROUP_1_KEY,
         icon="mdi:basket-alert-outline",
     ),
-    "zeit_kesseluberhitzung_10_abbrande_std": create_duration_sensor(
+    "zeit_kesseluberhitzung_10_abbrande_std": create_operating_hours_sensor(
         key="zeit_kesseluberhitzung_10_abbrande_std",
         node_id="22064T",
         polling_group=POLLING_GROUP_5_KEY,
         icon="mdi:timer-alert-outline",
-        hdg_formatter="iSTD",
-        unit=UnitOfTime.HOURS,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     "zeit_kesseluberhitzung_10_abbrande_prozent": create_percentage_sensor(
         key="zeit_kesseluberhitzung_10_abbrande_prozent",
@@ -1723,15 +2097,11 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         icon="mdi:alert-circle-check-outline",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "zeit_kesseluberhitzung_gesamt_std": create_duration_sensor(
+    "zeit_kesseluberhitzung_gesamt_std": create_operating_hours_sensor(
         key="zeit_kesseluberhitzung_gesamt_std",
         node_id="22066T",
         polling_group=POLLING_GROUP_5_KEY,
         icon="mdi:timer-alert",
-        hdg_formatter="iSTD",
-        unit=UnitOfTime.HOURS,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     "zeit_kesseluberhitzung_gesamt_prozent": create_percentage_sensor(
         key="zeit_kesseluberhitzung_gesamt_prozent",
@@ -1758,15 +2128,11 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         ha_state_class=SensorStateClass.TOTAL_INCREASING,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    "kessel_stillstandszeit": create_duration_sensor(
+    "kessel_stillstandszeit": create_operating_hours_sensor(
         key="kessel_stillstandszeit",
         node_id="22070T",
         polling_group=POLLING_GROUP_1_KEY,
         icon="mdi:timer-sand-complete",
-        hdg_formatter="iSTD",
-        unit=UnitOfTime.HOURS,
-        ha_state_class=SensorStateClass.TOTAL_INCREASING,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     "angeforderte_temperatur_abnehmer": create_temp_sensor(
         key="angeforderte_temperatur_abnehmer",
@@ -2535,6 +2901,11 @@ for _k, _defn in SENSOR_DEFINITIONS.items():
         if _k.startswith(_prefix):
             _defn["component_group"] = _group
             break
+
+for _k in FEUERUNG_ENTITY_KEYS:
+    _defn = SENSOR_DEFINITIONS[_k]
+    assert not _defn.get("component_group"), f"{_k} already grouped"
+    _defn["component_group"] = "feuerung"
 
 # Import-time guard: a component_group must be a known option key, else the
 # options-driven enabled-default resolution silently misses it.
