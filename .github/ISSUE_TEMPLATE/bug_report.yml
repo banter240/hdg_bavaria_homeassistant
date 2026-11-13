@@ -15,11 +15,12 @@ body:
     id: boiler_model
     attributes:
       label: Boiler Model
-      description: Which HDG Bavaria boiler is this?
+      description: Which HDG Bavaria unit is this?
       options:
         - Euro
         - K-series
         - Compact
+        - Heat pump (A11/A18)
         - Other
         - Not sure
     validations:

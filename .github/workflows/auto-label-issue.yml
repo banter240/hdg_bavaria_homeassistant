@@ -1,0 +1,55 @@
+# Automatically assign `model:*` labels based on the issue form's boiler
+# model dropdown selection (matches the English and German templates).
+name: Auto-assign model label
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+jobs:
+  apply-model-label:
+    name: Apply model:* label
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract model from issue body
+        id: extract-model
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          # Pull the answer under "### Boiler Model" / "### Kesselmodell" and
+          # the feature-request equivalents.
+          SECTION=$(printf '%s' "$BODY" | awk '
+            /^### (Boiler Model|Kesselmodell|Relevant HDG Model|Relevantes HDG-Modell)/ {capture=1; next}
+            capture && /^### / {exit}
+            capture {print}
+          ' | tr '[:upper:]' '[:lower:]' | tr -d '\r')
+
+          MODEL=""
+          case "$SECTION" in
+            *euro*)                                     MODEL="model:euro" ;;
+            *f-serie*|*f-series*)                       MODEL="model:f-series" ;;
+            *k-serie*|*k-series*)                       MODEL="model:k-series" ;;
+            *compact*)                                  MODEL="model:compact" ;;
+            *wärmepumpe*|*waermepumpe*|*heat\ pump*)    MODEL="model:heatpump" ;;
+          esac
+
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
+          echo "Section matched: '$SECTION' -> $MODEL"
+
+      - name: Apply model label
+        if: steps.extract-model.outputs.model != ''
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const label = process.env.MODEL_LABEL;
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: [label],
+            });
+        env:
+          MODEL_LABEL: ${{ steps.extract-model.outputs.model }}

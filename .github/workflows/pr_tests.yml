@@ -3,15 +3,21 @@ name: PR Tests
 on:
   pull_request:
     branches: ['dev', 'main']
-    paths: ['custom_components/hdg_boiler/**']
+    paths:
+      - 'custom_components/hdg_boiler/**'
+      - 'scripts/check_translation_consistency.py'
+      - '.github/workflows/pr_tests.yml'
 
 jobs:
-  # Job 1: Call the reusable linting workflow.
   lint:
     name: "Run Linter"
     uses: ./.github/workflows/lint.yml
 
-  # Job 2: Call the reusable HACS and hassfest validation workflow.
   validation:
     name: "Run Validation"
     uses: ./.github/workflows/validate.yml
+
+  # Job 3: Check per-circuit translations against the Python sources.
+  translation-validation:
+    name: "Validate Translations"
+    uses: ./.github/workflows/translations.yml

@@ -9,6 +9,7 @@ on:
       - 'main'
       - 'rc'
       - 'dev'
+      - 'ai/release'
 
 jobs:
   # -- Prerequisite Job: Linting --
@@ -22,10 +23,13 @@ jobs:
     uses: ./.github/workflows/validate.yml
 
   # -- Main Release Job --
-  # This job runs only after linting and validation succeed.
+  # This job runs only after linting and validation succeed. ai/release
+  # publishes alpha-channel prereleases (AI-built snapshots).
   semantic_release:
     name: "Create Semantic Release"
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/dev'
+    if: >-
+      github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' ||
+      github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/ai/release'
     needs: [linting, validation]
     runs-on: ubuntu-latest
     permissions:

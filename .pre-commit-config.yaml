@@ -54,6 +54,13 @@ repos:
   # Local hooks for Home Assistant & HACS validation (Parity with GitHub Actions)
   - repo: local
     hooks:
+      - id: commit-message
+        name: commit message validation
+        entry: "../.venv/bin/python3 scripts/check_commit_message.py"
+        language: system
+        stages: [commit-msg]
+        always_run: true
+        description: "Validate the commit message against the conventional-commit release rules."
       - id: hassfest
         name: local hassfest validation
         entry: "../.venv/bin/python3 -m homeassistant.helpers.check_config --config ."

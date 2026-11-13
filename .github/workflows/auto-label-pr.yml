@@ -1,0 +1,57 @@
+# Derive type:* and model:* labels from the PR template checkboxes
+# (Type of Change + Affected Model(s)). Unchecked boxes add nothing, and
+# "All / not model-specific" intentionally maps to no model label.
+name: Auto-assign PR labels
+
+on:
+  pull_request:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  apply-pr-labels:
+    name: Apply type:* and model:* labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect labels from the PR body
+        id: collect
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          CHECKED=$(printf '%s' "$BODY" | grep -iE '^[[:space:]]*- \[[xX]\]' || true)
+
+          LABELS=""
+          add_label() { LABELS="${LABELS:+$LABELS,}$1"; }
+          has_checked() { printf '%s' "$CHECKED" | grep -iqF -- "$1"; }
+
+          has_checked "Bug fix"            && add_label "type:bug"
+          has_checked "New feature"        && add_label "type:feature"
+          has_checked "Refactor / cleanup" && add_label "type:refactor"
+          has_checked "Documentation"      && add_label "type:docs"
+          has_checked "CI / tooling"       && add_label "type:ci"
+          has_checked "Euro"               && add_label "model:euro"
+          has_checked "F-series"           && add_label "model:f-series"
+          has_checked "K-series"           && add_label "model:k-series"
+          has_checked "Compact"            && add_label "model:compact"
+          has_checked "Heat pump"          && add_label "model:heatpump"
+
+          echo "labels=$LABELS" >> "$GITHUB_OUTPUT"
+          echo "Matched labels: '$LABELS'"
+
+      - name: Apply labels
+        if: steps.collect.outputs.labels != ''
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const labels = process.env.PR_LABELS.split(",").filter(Boolean);
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels,
+            });
+        env:
+          PR_LABELS: ${{ steps.collect.outputs.labels }}

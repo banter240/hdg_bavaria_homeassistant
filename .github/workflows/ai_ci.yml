@@ -1,0 +1,27 @@
+# Full CI for AI working branches (ai/**). Runs the complete check suite
+# (lint, type-check, hassfest, HACS validation, translation checks) on every
+# push, but never triggers a semantic release. The ai/release branch is
+# excluded here on purpose: it runs through the CI & Release workflow instead
+# and publishes alpha-channel prereleases.
+
+name: "AI Branch CI"
+
+on:
+  push:
+    branches:
+      - "ai/**"
+      - "!ai/release"
+  workflow_dispatch:
+
+jobs:
+  linting:
+    name: "Run Linter"
+    uses: ./.github/workflows/lint.yml
+
+  validation:
+    name: "Run Validation"
+    uses: ./.github/workflows/validate.yml
+
+  translation-validation:
+    name: "Validate Translations"
+    uses: ./.github/workflows/translations.yml

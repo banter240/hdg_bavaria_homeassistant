@@ -17,11 +17,12 @@ body:
     id: boiler_model
     attributes:
       label: Kesselmodell
-      description: Welcher HDG-Bavaria-Kessel ist das?
+      description: Welche HDG-Bavaria-Anlage ist das?
       options:
         - Euro
         - K-Serie
         - Compact
+        - Wärmepumpe (A11/A18)
         - Anderes
         - Weiß ich nicht
     validations:

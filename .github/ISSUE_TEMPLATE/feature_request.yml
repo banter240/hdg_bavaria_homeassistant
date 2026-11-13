@@ -10,6 +10,23 @@ body:
           and [discussions](https://github.com/banter240/hdg_bavaria_homeassistant/discussions).
           Someone might have already requested this.
 
+  - type: dropdown
+    id: model
+    attributes:
+      label: Relevant HDG Model
+      description: Which model is this feature relevant for?
+      options:
+        - Euro (log wood)
+        - F-series (log wood)
+        - K-series (pellet)
+        - Compact (pellet)
+        - Heat pump (A11/A18)
+        - All models
+        - Not model-specific
+      default: 6
+    validations:
+      required: true
+
   - type: textarea
     id: problem
     attributes:

@@ -10,6 +10,23 @@ body:
           und [Discussions](https://github.com/banter240/hdg_bavaria_homeassistant/discussions)
           prüfen. Vielleicht hat das schon jemand vorgeschlagen.
 
+  - type: dropdown
+    id: model
+    attributes:
+      label: Relevantes HDG-Modell
+      description: Für welches Modell ist der Wunsch relevant?
+      options:
+        - Euro (Scheitholz)
+        - F-Serie (Scheitholz)
+        - K-Serie (Pellets)
+        - Compact (Pellets)
+        - Wärmepumpe (A11/A18)
+        - Alle Modelle
+        - Nicht modellspezifisch
+      default: 6
+    validations:
+      required: true
+
   - type: textarea
     id: problem
     attributes:
