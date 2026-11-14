@@ -39,6 +39,7 @@ _COMMON_UNITS_REGEX: Final = re.compile(
 # Datetime formats to attempt parsing, in order of preference.
 _DATETIME_FORMATS: Final[list[str]] = [
     "%d.%m.%Y %H:%M",  # Standard HDG format
+    "%d.%m.%Y, %H:%M",  # WebControl prints a comma between date and time
     "%Y-%m-%d %H:%M:%S%z",  # ISO-like format with timezone
 ]
 
