@@ -239,6 +239,10 @@ class HdgApiAccessManager:
                         "Skipping superseded request for context '%s'",
                         request.command.context_key,
                     )
+                    if not request.future.done():
+                        request.future.set_exception(
+                            asyncio.CancelledError("Request superseded by a newer SET.")
+                        )
                     self._request_queue.task_done()
                     continue
 
