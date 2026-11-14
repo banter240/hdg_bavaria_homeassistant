@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any, Final, cast
 
+from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
     PERCENTAGE,
@@ -28,6 +29,8 @@ from homeassistant.const import (
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import (
+    A18_MODBUS_GROUP_PREFIX,
+    A18_NODE_PREFIX,
     COMPONENT_GROUP_OPTIONS,
     FEUERUNG_ENTITY_KEYS,
     POLLING_GROUP_DEFINITIONS,
@@ -1238,6 +1241,254 @@ def get_waermepumpe_definitions() -> dict[str, SensorDefinition]:
     return _tag_component_group(defs, "waermepumpe")
 
 
+def get_a18_modbus_definitions() -> dict[str, SensorDefinition]:
+    """Generate the Modbus side-channel entities for the HDG A18 (Lambda OEM).
+
+    hdg_node_id is a pseudo node ("a18:<decode key>"); the coordinator fills
+    those nodes from the Modbus register map instead of the WebControl API.
+    Everything starts disabled behind the optional "a18_modbus" component
+    group, so existing installs see no change until the toggle is set.
+    """
+    fast = f"{A18_MODBUS_GROUP_PREFIX}fast"
+    medium = f"{A18_MODBUS_GROUP_PREFIX}medium"
+    slow = f"{A18_MODBUS_GROUP_PREFIX}slow"
+
+    def node(key: str) -> str:
+        return f"{A18_NODE_PREFIX}{key}"
+
+    defs: dict[str, SensorDefinition] = {}
+
+    _a18_temps: Final[dict[str, tuple[str, str, bool]]] = {
+        "a18_vorlauf": (fast, "mdi:thermometer-chevron-up", True),
+        "a18_ruecklauf": (fast, "mdi:thermometer-chevron-down", True),
+        "a18_quelle_ein": (fast, "mdi:thermometer", True),
+        "a18_quelle_aus": (fast, "mdi:thermometer", False),
+        "a18_anf_vorlauf": (medium, "mdi:thermometer-chevron-up", True),
+        "a18_anf_ruecklauf": (medium, "mdi:thermometer-chevron-down", True),
+        "a18_aussentemperatur": (slow, "mdi:thermometer", True),
+        "a18_aussentemperatur_1h": (slow, "mdi:thermometer-clock", False),
+        "a18_aussentemperatur_berechnet": (slow, "mdi:thermometer-auto", False),
+    }
+    for key, (group, icon, enabled) in _a18_temps.items():
+        defs[key] = create_temp_sensor(
+            key=key,
+            node_id=node(key.removeprefix("a18_")),
+            polling_group=group,
+            icon=icon,
+            entity_registry_enabled_default=enabled,
+        )
+
+    for key, (group, icon) in {
+        "a18_spreizung": (fast, "mdi:arrow-expand-vertical"),
+        "a18_anf_spreizung": (medium, "mdi:arrow-expand-vertical"),
+    }.items():
+        defs[key] = create_kelvin_sensor(
+            key=key,
+            node_id=node(key.removeprefix("a18_")),
+            polling_group=group,
+            icon=icon,
+        )
+
+    defs["a18_verdichter"] = create_percentage_sensor(
+        key="a18_verdichter",
+        node_id=node("verdichter"),
+        polling_group=fast,
+        icon="mdi:gauge",
+    )
+
+    _a18_floats: Final[
+        dict[
+            str,
+            tuple[
+                str,
+                str,
+                str | None,
+                SensorDeviceClass | None,
+                EntityCategory | None,
+                Any,
+                bool,
+            ],
+        ]
+    ] = {
+        "a18_volumenstrom": (
+            fast,
+            "mdi:waves-arrow-right",
+            UnitOfVolumeFlowRate.LITERS_PER_HOUR,
+            SensorDeviceClass.VOLUME_FLOW_RATE,
+            None,
+            {"ha_state_class": SensorStateClass.MEASUREMENT},
+            True,
+        ),
+        "a18_volumenstrom_quelle": (
+            fast,
+            "mdi:waves-arrow-right",
+            UnitOfVolumeFlowRate.LITERS_PER_HOUR,
+            SensorDeviceClass.VOLUME_FLOW_RATE,
+            None,
+            {"ha_state_class": SensorStateClass.MEASUREMENT},
+            False,
+        ),
+        "a18_qp_heizen": (
+            fast,
+            "mdi:radiator",
+            UnitOfPower.KILO_WATT,
+            SensorDeviceClass.POWER,
+            None,
+            {"ha_state_class": SensorStateClass.MEASUREMENT},
+            True,
+        ),
+        "a18_leistung_el": (
+            fast,
+            "mdi:lightning-bolt",
+            UnitOfPower.WATT,
+            SensorDeviceClass.POWER,
+            None,
+            {"ha_state_class": SensorStateClass.MEASUREMENT},
+            True,
+        ),
+        "a18_cop_geraet": (
+            fast,
+            "mdi:heat-pump",
+            None,
+            None,
+            None,
+            {"ha_state_class": SensorStateClass.MEASUREMENT},
+            True,
+        ),
+        "a18_cop_gesamt": (
+            fast,
+            "mdi:heat-pump",
+            None,
+            None,
+            None,
+            {"ha_state_class": SensorStateClass.MEASUREMENT},
+            True,
+        ),
+        "a18_energie_el_kwh": (
+            fast,
+            "mdi:lightning-bolt",
+            UnitOfEnergy.KILO_WATT_HOUR,
+            SensorDeviceClass.ENERGY,
+            None,
+            {"ha_state_class": SensorStateClass.TOTAL_INCREASING},
+            True,
+        ),
+        "a18_energie_th_kwh": (
+            fast,
+            "mdi:heat-wave",
+            UnitOfEnergy.KILO_WATT_HOUR,
+            SensorDeviceClass.ENERGY,
+            None,
+            {"ha_state_class": SensorStateClass.TOTAL_INCREASING},
+            True,
+        ),
+        "a18_fehlernummer": (
+            medium,
+            "mdi:alert-circle-outline",
+            None,
+            None,
+            EntityCategory.DIAGNOSTIC,
+            {},
+            True,
+        ),
+        "a18_fehlernummer_regler": (
+            slow,
+            "mdi:alert-circle-outline",
+            None,
+            None,
+            EntityCategory.DIAGNOSTIC,
+            {},
+            False,
+        ),
+    }
+    for key, (group, icon, unit, dc, category, extra, enabled) in _a18_floats.items():
+        defs[key] = create_general_sensor(
+            key=key,
+            node_id=node(key.removeprefix("a18_")),
+            polling_group=group,
+            hdg_data_type="2",
+            parse_as_type="float",
+            icon=icon,
+            ha_device_class=dc,
+            ha_native_unit_of_measurement=unit,
+            entity_category=category,
+            entity_registry_enabled_default=enabled,
+            **extra,
+        )
+
+    defs["a18_kompressorstarts"] = create_general_sensor(
+        key="a18_kompressorstarts",
+        node_id=node("kompressorstarts"),
+        polling_group=medium,
+        hdg_data_type="2",
+        parse_as_type="int",
+        icon="mdi:counter",
+        ha_state_class=SensorStateClass.TOTAL_INCREASING,
+    )
+
+    # Status texts arrive pre-decoded as display strings from the backend.
+    _a18_texts: Final[dict[str, tuple[str, str, EntityCategory | None]]] = {
+        "a18_wp_status": (medium, "mdi:heat-pump", None),
+        "a18_betriebszustand": (medium, "mdi:information-outline", None),
+        "a18_anf_typ": (medium, "mdi:call-received", None),
+        "a18_fehlerzustand": (
+            medium,
+            "mdi:alert-circle-outline",
+            EntityCategory.DIAGNOSTIC,
+        ),
+        "a18_betriebsmodus_regler": (slow, "mdi:tune", EntityCategory.DIAGNOSTIC),
+    }
+    for key, (group, icon, category) in _a18_texts.items():
+        defs[key] = create_general_sensor(
+            key=key,
+            node_id=node(key.removeprefix("a18_")),
+            polling_group=group,
+            hdg_data_type="4",
+            parse_as_type="text",
+            icon=icon,
+            entity_category=category,
+        )
+
+    def _a18_binary(
+        key: str,
+        group: str,
+        icon: str,
+        device_class: Any = None,
+        entity_category: EntityCategory | None = None,
+    ) -> SensorDefinition:
+        definition: dict[str, object | None] = {
+            "hdg_node_id": node(key.removeprefix("a18_")),
+            "translation_key": key,
+            "polling_group": group,
+            "hdg_data_type": "3",
+            "parse_as_type": "bool",
+            "ha_platform": "binary_sensor",
+            "writable": False,
+            "entity_registry_enabled_default": True,
+            "icon": icon,
+            "ha_device_class": device_class,
+            "entity_category": entity_category,
+        }
+        return cast(SensorDefinition, definition)
+
+    defs["a18_verdichter_laeuft"] = _a18_binary(
+        "a18_verdichter_laeuft", fast, "mdi:heat-pump", BinarySensorDeviceClass.RUNNING
+    )
+    defs["a18_abtauung"] = _a18_binary("a18_abtauung", medium, "mdi:snowflake-melt")
+    defs["a18_heizstab_relais"] = _a18_binary(
+        "a18_heizstab_relais", medium, "mdi:heating-coil"
+    )
+    defs["a18_stoerung"] = _a18_binary(
+        "a18_stoerung",
+        medium,
+        "mdi:alert-circle",
+        BinarySensorDeviceClass.PROBLEM,
+        EntityCategory.DIAGNOSTIC,
+    )
+
+    return _tag_component_group(defs, "a18_modbus")
+
+
 def get_sensor_definitions(
     options: Mapping[str, Any] | None = None,
 ) -> dict[str, SensorDefinition]:
@@ -1283,6 +1534,7 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
     **get_netzpumpe_param_definitions(2, 7100),
     **get_netzpumpe_param_definitions(3, 7200),
     **get_waermepumpe_definitions(),
+    **get_a18_modbus_definitions(),
     "sprache": create_enum_sensor(
         key="sprache",
         node_id="1T",

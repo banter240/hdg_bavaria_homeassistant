@@ -21,6 +21,7 @@ from homeassistant.util import dt as dt_util
 
 from .api import HdgApiClient
 from .classes.polling_response_processor import HdgPollingResponseProcessor
+from .helpers.a18_side_channel import HdgA18SideChannel
 from .const import (
     CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
@@ -91,6 +92,7 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
 
         self._polling_response_processor = HdgPollingResponseProcessor(self)
+        self.a18_side_channel: HdgA18SideChannel | None = None
         self._active_node_ids: set[str] = (
             self.hdg_entity_registry.get_default_active_node_ids()
         )
@@ -161,6 +163,12 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _fetch_group_data(self, group_key: str, priority: ApiPriority) -> bool:
         """Fetch and process data for a single polling group."""
+        if HdgA18SideChannel.is_a18_group(group_key):
+            # A18 groups never reach the WebControl API; without a side
+            # channel (toggle off) they are simply not polled.
+            if self.a18_side_channel is None:
+                return True
+            return await self.a18_side_channel.fetch_group(group_key, self.update_node)
         optimized_nodes, active_count, total_count = (
             self.hdg_entity_registry.get_optimized_payload_for_group(
                 group_key, self._active_node_ids
@@ -550,6 +558,8 @@ class HdgDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         for cancel_fn, _, _ in self._pending_set_timers.values():
             cancel_fn()
         self._pending_set_timers.clear()
+        if self.a18_side_channel:
+            await self.a18_side_channel.async_close()
         await self.api_access_manager.stop()
 
 

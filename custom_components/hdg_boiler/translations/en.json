@@ -36,7 +36,8 @@
               "enable_netzpumpe_2": "Network Pump 2",
               "enable_netzpumpe_3": "Network Pump 3",
               "enable_waermepumpe": "Heat pump (A11/A18)",
-              "enable_feuerung": "Boiler (Euro, F, K, Compact, …)"
+              "enable_feuerung": "Boiler (Euro, F, K, Compact, …)",
+              "enable_a18_modbus": "A18 heat pump (Modbus side channel)"
             },
             "data_description": {
               "enable_hk1": "Enable entities for the first heating circuit (HK1). Turn this off only if the boiler does not control or monitor this circuit.",
@@ -55,7 +56,21 @@
               "enable_netzpumpe_2": "Enable entities for network pump 2 (NP2). Only activate if this pump is physically installed.",
               "enable_netzpumpe_3": "Enable entities for network pump 3 (NP3). Only activate if this pump is physically installed.",
               "enable_waermepumpe": "Enable entities for an HDG heat pump: refrigerant circuit, hydraulic module, heating rod, operating statistics and buffer charging thresholds. Only activate if the Web-Control manages an HDG heat pump.",
-              "enable_feuerung": "Enable the boiler entities: combustion chamber, blowers, ignition, O2 control, refueling and ash logistics, plus exhaust and boiler statistics. Disable only for plants without a boiler (heat pump only)."
+              "enable_feuerung": "Enable the boiler entities: combustion chamber, blowers, ignition, O2 control, refueling and ash logistics, plus exhaust and boiler statistics. Disable only for plants without a boiler (heat pump only).",
+              "enable_a18_modbus": "Adds Modbus TCP sensors for the A18 heat pump (Lambda OEM): temperatures, compressor, COP, energies and status — read directly from the Lambda controller's Modbus server alongside the WebControl API. Only activate if the heat pump is reachable via Modbus TCP (port 502)."
+            }
+          },
+          "a18_modbus": {
+            "name": "A18 Heat Pump (Modbus Side Channel)",
+            "data": {
+              "modbus_port": "Modbus TCP Port",
+              "modbus_slave_id": "Modbus Slave ID",
+              "modbus_int32_order": "Int32 Byte Order"
+            },
+            "data_description": {
+              "modbus_port": "TCP port of the Lambda controller's Modbus server. Default: 502.",
+              "modbus_slave_id": "Modbus slave/unit ID of the heat pump controller. Default: 1.",
+              "modbus_int32_order": "Word order for 32-bit registers. 'Low word first' matches the Lambda default; only change this if Modbus values look implausible."
             }
           },
           "puffer": {
@@ -178,7 +193,8 @@
               "enable_netzpumpe_2": "Network Pump 2",
               "enable_netzpumpe_3": "Network Pump 3",
               "enable_waermepumpe": "Heat pump (A11/A18)",
-              "enable_feuerung": "Boiler (Euro, F, K, Compact, …)"
+              "enable_feuerung": "Boiler (Euro, F, K, Compact, …)",
+              "enable_a18_modbus": "A18 heat pump (Modbus side channel)"
             },
             "data_description": {
               "enable_hk1": "Enable entities for the first heating circuit (HK1). Turn this off only if the boiler does not control or monitor this circuit.",
@@ -197,7 +213,21 @@
               "enable_netzpumpe_2": "Enable entities for network pump 2 (NP2). Only activate if this pump is physically installed.",
               "enable_netzpumpe_3": "Enable entities for network pump 3 (NP3). Only activate if this pump is physically installed.",
               "enable_waermepumpe": "Enable entities for an HDG heat pump: refrigerant circuit, hydraulic module, heating rod, operating statistics and buffer charging thresholds. Only activate if the Web-Control manages an HDG heat pump.",
-              "enable_feuerung": "Enable the boiler entities: combustion chamber, blowers, ignition, O2 control, refueling and ash logistics, plus exhaust and boiler statistics. Disable only for plants without a boiler (heat pump only)."
+              "enable_feuerung": "Enable the boiler entities: combustion chamber, blowers, ignition, O2 control, refueling and ash logistics, plus exhaust and boiler statistics. Disable only for plants without a boiler (heat pump only).",
+              "enable_a18_modbus": "Adds Modbus TCP sensors for the A18 heat pump (Lambda OEM): temperatures, compressor, COP, energies and status — read directly from the Lambda controller's Modbus server alongside the WebControl API. Only activate if the heat pump is reachable via Modbus TCP (port 502)."
+            }
+          },
+          "a18_modbus": {
+            "name": "A18 Heat Pump (Modbus Side Channel)",
+            "data": {
+              "modbus_port": "Modbus TCP Port",
+              "modbus_slave_id": "Modbus Slave ID",
+              "modbus_int32_order": "Int32 Byte Order"
+            },
+            "data_description": {
+              "modbus_port": "TCP port of the Lambda controller's Modbus server. Default: 502.",
+              "modbus_slave_id": "Modbus slave/unit ID of the heat pump controller. Default: 1.",
+              "modbus_int32_order": "Word order for 32-bit registers. 'Low word first' matches the Lambda default; only change this if Modbus values look implausible."
             }
           },
           "puffer": {
@@ -290,7 +320,105 @@
         "name": "Poll everything"
       }
     },
+    "binary_sensor": {
+      "a18_verdichter_laeuft": {
+        "name": "A18 Compressor Running"
+      },
+      "a18_abtauung": {
+        "name": "A18 Defrost"
+      },
+      "a18_heizstab_relais": {
+        "name": "A18 Heating Element Relay"
+      },
+      "a18_stoerung": {
+        "name": "A18 Malfunction"
+      }
+    },
     "sensor": {
+      "a18_vorlauf": {
+        "name": "A18 Flow Temperature"
+      },
+      "a18_ruecklauf": {
+        "name": "A18 Return Temperature"
+      },
+      "a18_quelle_ein": {
+        "name": "A18 Source Inlet Temperature"
+      },
+      "a18_quelle_aus": {
+        "name": "A18 Source Outlet Temperature"
+      },
+      "a18_anf_vorlauf": {
+        "name": "A18 Consumers Flow Temperature"
+      },
+      "a18_anf_ruecklauf": {
+        "name": "A18 Consumers Return Temperature"
+      },
+      "a18_aussentemperatur": {
+        "name": "A18 Outdoor Temperature"
+      },
+      "a18_aussentemperatur_1h": {
+        "name": "A18 Outdoor Temperature (1h Average)"
+      },
+      "a18_aussentemperatur_berechnet": {
+        "name": "A18 Outdoor Temperature (Calculated)"
+      },
+      "a18_spreizung": {
+        "name": "A18 Temperature Spread"
+      },
+      "a18_anf_spreizung": {
+        "name": "A18 Consumers Temperature Spread"
+      },
+      "a18_verdichter": {
+        "name": "A18 Compressor Capacity"
+      },
+      "a18_volumenstrom": {
+        "name": "A18 Volume Flow"
+      },
+      "a18_volumenstrom_quelle": {
+        "name": "A18 Source Volume Flow"
+      },
+      "a18_qp_heizen": {
+        "name": "A18 Heating Output"
+      },
+      "a18_leistung_el": {
+        "name": "A18 Electrical Power"
+      },
+      "a18_cop_geraet": {
+        "name": "A18 COP (Device)"
+      },
+      "a18_cop_gesamt": {
+        "name": "A18 COP (Total)"
+      },
+      "a18_energie_el_kwh": {
+        "name": "A18 Electrical Energy"
+      },
+      "a18_energie_th_kwh": {
+        "name": "A18 Thermal Energy"
+      },
+      "a18_kompressorstarts": {
+        "name": "A18 Compressor Starts (Total)"
+      },
+      "a18_fehlernummer": {
+        "name": "A18 Error Number"
+      },
+      "a18_fehlernummer_regler": {
+        "name": "A18 Controller Error Number"
+      },
+      "a18_wp_status": {
+        "name": "A18 Heat Pump Status"
+      },
+      "a18_betriebszustand": {
+        "name": "A18 Operating Condition"
+      },
+      "a18_anf_typ": {
+        "name": "A18 Consumer Request Type"
+      },
+      "a18_fehlerzustand": {
+        "name": "A18 Fault Condition"
+      },
+      "a18_betriebsmodus_regler": {
+        "name": "A18 Controller Operating Mode"
+      },
       "abgasleitwert_ist": {
         "name": "Flue Gas Conductance Actual"
       },
@@ -2568,6 +2696,12 @@
     }
   },
   "selector": {
+    "modbus_int32_order": {
+      "options": {
+        "low_first": "Low word first (little-endian)",
+        "high_first": "High word first (big-endian)"
+      }
+    },
     "language": {
       "options": {
         "system": "System Default",

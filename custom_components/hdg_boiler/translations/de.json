@@ -36,7 +36,8 @@
               "enable_netzpumpe_2": "Netzpumpe 2",
               "enable_netzpumpe_3": "Netzpumpe 3",
               "enable_waermepumpe": "Wärmepumpe (A11/A18)",
-              "enable_feuerung": "Heizkessel (Euro, F, K, Compact, …)"
+              "enable_feuerung": "Heizkessel (Euro, F, K, Compact, …)",
+              "enable_a18_modbus": "A18-Wärmepumpe (Modbus-Nebenkanal)"
             },
             "data_description": {
               "enable_hk1": "Aktiviert die Entitäten für Heizkreis 1 (HK1). Nur ausschalten, wenn der Kessel diesen Heizkreis nicht steuert und nicht überwacht.",
@@ -55,7 +56,21 @@
               "enable_netzpumpe_2": "Aktiviert die Entitäten für Netzpumpe 2 (NP2). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
               "enable_netzpumpe_3": "Aktiviert die Entitäten für Netzpumpe 3 (NP3). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
               "enable_waermepumpe": "Aktiviert die Entitäten einer HDG-Wärmepumpe: Kältekreis, Hydraulikmodul, Heizstab, Betriebsstatistik und die Pufferladungs-Schwellen. Nur aktivieren, wenn die Web-Control eine HDG-Wärmepumpe steuert.",
-              "enable_feuerung": "Aktiviert die Entitäten des Heizkessels: Brennraum, Gebläse, Zündung, O2-Regelung, Nachlege- und Asche-Logistik sowie Abgas- und Kesselstatistik. Nur deaktivieren, wenn die Anlage ohne Heizkessel betrieben wird (reine Wärmepumpe)."
+              "enable_feuerung": "Aktiviert die Entitäten des Heizkessels: Brennraum, Gebläse, Zündung, O2-Regelung, Nachlege- und Asche-Logistik sowie Abgas- und Kesselstatistik. Nur deaktivieren, wenn die Anlage ohne Heizkessel betrieben wird (reine Wärmepumpe).",
+              "enable_a18_modbus": "Ergänzt Modbus-TCP-Sensoren für die A18-Wärmepumpe (Lambda-OEM): Temperaturen, Verdichter, COP, Energien und Status – direkt vom Modbus-Server der Lambda-Steuerung zusätzlich zur WebControl-API. Nur aktivieren, wenn die Wärmepumpe per Modbus TCP (Port 502) erreichbar ist."
+            }
+          },
+          "a18_modbus": {
+            "name": "A18-Wärmepumpe (Modbus-Nebenkanal)",
+            "data": {
+              "modbus_port": "Modbus-TCP-Port",
+              "modbus_slave_id": "Modbus-Slave-ID",
+              "modbus_int32_order": "Int32-Wortreihenfolge"
+            },
+            "data_description": {
+              "modbus_port": "TCP-Port des Modbus-Servers der Lambda-Steuerung. Standard: 502.",
+              "modbus_slave_id": "Modbus-Slave-/Unit-ID der Wärmepumpen-Steuerung. Standard: 1.",
+              "modbus_int32_order": "Wortreihenfolge für 32-Bit-Register. ‚Niederwertiges Wort zuerst' entspricht dem Lambda-Standard; nur ändern, wenn Modbus-Werte unplausibel erscheinen."
             }
           },
           "puffer": {
@@ -178,7 +193,8 @@
               "enable_netzpumpe_2": "Netzpumpe 2",
               "enable_netzpumpe_3": "Netzpumpe 3",
               "enable_waermepumpe": "Wärmepumpe (A11/A18)",
-              "enable_feuerung": "Heizkessel (Euro, F, K, Compact, …)"
+              "enable_feuerung": "Heizkessel (Euro, F, K, Compact, …)",
+              "enable_a18_modbus": "A18-Wärmepumpe (Modbus-Nebenkanal)"
             },
             "data_description": {
               "enable_hk1": "Aktiviert die Entitäten für Heizkreis 1 (HK1). Nur ausschalten, wenn der Kessel diesen Heizkreis nicht steuert und nicht überwacht.",
@@ -197,7 +213,21 @@
               "enable_netzpumpe_2": "Aktiviert die Entitäten für Netzpumpe 2 (NP2). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
               "enable_netzpumpe_3": "Aktiviert die Entitäten für Netzpumpe 3 (NP3). Nur aktivieren, wenn diese Pumpe physisch installiert ist.",
               "enable_waermepumpe": "Aktiviert die Entitäten einer HDG-Wärmepumpe: Kältekreis, Hydraulikmodul, Heizstab, Betriebsstatistik und die Pufferladungs-Schwellen. Nur aktivieren, wenn die Web-Control eine HDG-Wärmepumpe steuert.",
-              "enable_feuerung": "Aktiviert die Entitäten des Heizkessels: Brennraum, Gebläse, Zündung, O2-Regelung, Nachlege- und Asche-Logistik sowie Abgas- und Kesselstatistik. Nur deaktivieren, wenn die Anlage ohne Heizkessel betrieben wird (reine Wärmepumpe)."
+              "enable_feuerung": "Aktiviert die Entitäten des Heizkessels: Brennraum, Gebläse, Zündung, O2-Regelung, Nachlege- und Asche-Logistik sowie Abgas- und Kesselstatistik. Nur deaktivieren, wenn die Anlage ohne Heizkessel betrieben wird (reine Wärmepumpe).",
+              "enable_a18_modbus": "Ergänzt Modbus-TCP-Sensoren für die A18-Wärmepumpe (Lambda-OEM): Temperaturen, Verdichter, COP, Energien und Status – direkt vom Modbus-Server der Lambda-Steuerung zusätzlich zur WebControl-API. Nur aktivieren, wenn die Wärmepumpe per Modbus TCP (Port 502) erreichbar ist."
+            }
+          },
+          "a18_modbus": {
+            "name": "A18-Wärmepumpe (Modbus-Nebenkanal)",
+            "data": {
+              "modbus_port": "Modbus-TCP-Port",
+              "modbus_slave_id": "Modbus-Slave-ID",
+              "modbus_int32_order": "Int32-Wortreihenfolge"
+            },
+            "data_description": {
+              "modbus_port": "TCP-Port des Modbus-Servers der Lambda-Steuerung. Standard: 502.",
+              "modbus_slave_id": "Modbus-Slave-/Unit-ID der Wärmepumpen-Steuerung. Standard: 1.",
+              "modbus_int32_order": "Wortreihenfolge für 32-Bit-Register. ‚Niederwertiges Wort zuerst' entspricht dem Lambda-Standard; nur ändern, wenn Modbus-Werte unplausibel erscheinen."
             }
           },
           "puffer": {
@@ -290,7 +320,105 @@
         "name": "Alles aktualisieren"
       }
     },
+    "binary_sensor": {
+      "a18_verdichter_laeuft": {
+        "name": "A18 Verdichter läuft"
+      },
+      "a18_abtauung": {
+        "name": "A18 Abtauung"
+      },
+      "a18_heizstab_relais": {
+        "name": "A18 Heizstab-Relais"
+      },
+      "a18_stoerung": {
+        "name": "A18 Störung"
+      }
+    },
     "sensor": {
+      "a18_vorlauf": {
+        "name": "A18 Vorlauftemperatur"
+      },
+      "a18_ruecklauf": {
+        "name": "A18 Rücklauftemperatur"
+      },
+      "a18_quelle_ein": {
+        "name": "A18 Quelleneintrittstemperatur"
+      },
+      "a18_quelle_aus": {
+        "name": "A18 Quellenaustrittstemperatur"
+      },
+      "a18_anf_vorlauf": {
+        "name": "A18 Vorlauftemperatur Abnehmer"
+      },
+      "a18_anf_ruecklauf": {
+        "name": "A18 Rücklauftemperatur Abnehmer"
+      },
+      "a18_aussentemperatur": {
+        "name": "A18 Außentemperatur"
+      },
+      "a18_aussentemperatur_1h": {
+        "name": "A18 Außentemperatur (1h-Mittel)"
+      },
+      "a18_aussentemperatur_berechnet": {
+        "name": "A18 Außentemperatur (berechnet)"
+      },
+      "a18_spreizung": {
+        "name": "A18 Spreizung"
+      },
+      "a18_anf_spreizung": {
+        "name": "A18 Spreizung Abnehmer"
+      },
+      "a18_verdichter": {
+        "name": "A18 Verdichterleistung"
+      },
+      "a18_volumenstrom": {
+        "name": "A18 Volumenstrom"
+      },
+      "a18_volumenstrom_quelle": {
+        "name": "A18 Quellvolumenstrom"
+      },
+      "a18_qp_heizen": {
+        "name": "A18 Heizleistung"
+      },
+      "a18_leistung_el": {
+        "name": "A18 Elektrische Leistung"
+      },
+      "a18_cop_geraet": {
+        "name": "A18 COP (Gerät)"
+      },
+      "a18_cop_gesamt": {
+        "name": "A18 COP (Gesamt)"
+      },
+      "a18_energie_el_kwh": {
+        "name": "A18 Elektrische Energie"
+      },
+      "a18_energie_th_kwh": {
+        "name": "A18 Thermische Energie"
+      },
+      "a18_kompressorstarts": {
+        "name": "A18 Kompressorstarts gesamt"
+      },
+      "a18_fehlernummer": {
+        "name": "A18 Fehlernummer"
+      },
+      "a18_fehlernummer_regler": {
+        "name": "A18 Regler-Fehlernummer"
+      },
+      "a18_wp_status": {
+        "name": "A18 Wärmepumpenstatus"
+      },
+      "a18_betriebszustand": {
+        "name": "A18 Betriebszustand"
+      },
+      "a18_anf_typ": {
+        "name": "A18 Anforderungstyp"
+      },
+      "a18_fehlerzustand": {
+        "name": "A18 Fehlerzustand"
+      },
+      "a18_betriebsmodus_regler": {
+        "name": "A18 Regler-Betriebsmodus"
+      },
       "abgasleitwert_ist": {
         "name": "Abgasleitwert Ist"
       },
@@ -2568,6 +2696,12 @@
     }
   },
   "selector": {
+    "modbus_int32_order": {
+      "options": {
+        "low_first": "Niederwertiges Wort zuerst (Little-Endian)",
+        "high_first": "Höherwertiges Wort zuerst (Big-Endian)"
+      }
+    },
     "language": {
       "options": {
         "system": "Systemstandard",

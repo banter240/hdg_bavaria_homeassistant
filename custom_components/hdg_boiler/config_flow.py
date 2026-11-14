@@ -35,6 +35,10 @@ from .const import (
     CONF_CONNECT_TIMEOUT,
     CONF_DEVICE_ALIAS,
     CONF_ERROR_THRESHOLD,
+    CONF_INT32_ORDERS,
+    CONF_MODBUS_INT32_ORDER,
+    CONF_MODBUS_PORT,
+    CONF_MODBUS_SLAVE_ID,
     CONF_PUFFER_MITTE_OBEN_NODE_ID,
     CONF_PUFFER_MITTE_UNTEN_NODE_ID,
     CONF_FALLBACK_PING_INTERVAL,
@@ -59,6 +63,9 @@ from .const import (
     DEFAULT_LOG_VERSION_PREFIX,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
+    DEFAULT_MODBUS_INT32_ORDER,
+    DEFAULT_MODBUS_PORT,
+    DEFAULT_MODBUS_SLAVE_ID,
     DEFAULT_POLLING_PREEMPTION_TIMEOUT,
     DEFAULT_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
     DEFAULT_SOURCE_TIMEZONE,
@@ -70,6 +77,8 @@ from .const import (
     MAX_FALLBACK_PING_INTERVAL,
     MAX_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     MAX_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
+    MAX_MODBUS_PORT,
+    MAX_MODBUS_SLAVE_ID,
     MAX_POLLING_PREEMPTION_TIMEOUT,
     MAX_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
     MAX_SCAN_INTERVAL,
@@ -79,6 +88,8 @@ from .const import (
     MIN_FALLBACK_PING_INTERVAL,
     MIN_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     MIN_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
+    MIN_MODBUS_PORT,
+    MIN_MODBUS_SLAVE_ID,
     MIN_POLLING_PREEMPTION_TIMEOUT,
     MIN_RECENTLY_SET_POLL_IGNORE_WINDOW_S,
     MIN_SCAN_INTERVAL,
@@ -112,6 +123,11 @@ _SECTION_KEYS: dict[str, list[str]] = {
         CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
     ],
     "components": [conf for conf, _default in COMPONENT_GROUP_OPTIONS.values()],
+    "a18_modbus": [
+        CONF_MODBUS_PORT,
+        CONF_MODBUS_SLAVE_ID,
+        CONF_MODBUS_INT32_ORDER,
+    ],
     "puffer": [
         CONF_PUFFER_MITTE_OBEN_NODE_ID,
         CONF_PUFFER_MITTE_UNTEN_NODE_ID,
@@ -370,11 +386,34 @@ class HdgBoilerCommonFlow:
             ): TextSelector(),
         }
 
+        # Section: A18 Modbus side channel (optional, off by default).
+        a18_fields: dict[Any, Any] = {
+            vol.Optional(
+                CONF_MODBUS_PORT, default=get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT)
+            ): num(MIN_MODBUS_PORT, MAX_MODBUS_PORT),
+            vol.Optional(
+                CONF_MODBUS_SLAVE_ID,
+                default=get(CONF_MODBUS_SLAVE_ID, DEFAULT_MODBUS_SLAVE_ID),
+            ): num(MIN_MODBUS_SLAVE_ID, MAX_MODBUS_SLAVE_ID),
+            vol.Optional(
+                CONF_MODBUS_INT32_ORDER,
+                default=get(CONF_MODBUS_INT32_ORDER, DEFAULT_MODBUS_INT32_ORDER),
+            ): SelectSelector(
+                SelectSelectorConfig(
+                    options=CONF_INT32_ORDERS, mode=SelectSelectorMode.DROPDOWN
+                )
+            ),
+        }
+
         return vol.Schema(
             {
                 vol.Required("components"): data_entry_flow.section(
                     vol.Schema(components_fields),
                     {"collapsed": False},
+                ),
+                vol.Required("a18_modbus"): data_entry_flow.section(
+                    vol.Schema(a18_fields),
+                    {"collapsed": True},
                 ),
                 vol.Required("puffer"): data_entry_flow.section(
                     vol.Schema(puffer_fields),

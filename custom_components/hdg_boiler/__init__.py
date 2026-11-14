@@ -23,14 +23,22 @@ from .const import (
     CONF_CONNECT_TIMEOUT,
     CONF_HOST_IP,
     CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    CONF_MODBUS_INT32_ORDER,
+    CONF_MODBUS_PORT,
+    CONF_MODBUS_SLAVE_ID,
+    CONF_ENABLE_A18_MODBUS,
     DEFAULT_API_TIMEOUT,
     DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    DEFAULT_MODBUS_INT32_ORDER,
+    DEFAULT_MODBUS_PORT,
+    DEFAULT_MODBUS_SLAVE_ID,
     DOMAIN,
     PUFFER_MITTE_NODE_MAP,
     puffer_node_id_is_set,
 )
 from .coordinator import HdgDataUpdateCoordinator, async_create_and_refresh_coordinator
+from .helpers.a18_side_channel import HdgA18SideChannel
 from .definitions import (
     POLLING_GROUP_DEFINITIONS,
     get_sensor_definitions,
@@ -48,6 +56,7 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.NUMBER,
     Platform.SELECT,
+    Platform.BINARY_SENSOR,
 ]
 
 
@@ -117,6 +126,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: HdgConfigEntry) -> bool:
     except ConfigEntryNotReady:
         await api_access_manager.stop()
         return False
+
+    if entry.options.get(CONF_ENABLE_A18_MODBUS):
+        coordinator.a18_side_channel = HdgA18SideChannel(
+            hass,
+            entry.data[CONF_HOST_IP],
+            entry.options.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT),
+            entry.options.get(CONF_MODBUS_SLAVE_ID, DEFAULT_MODBUS_SLAVE_ID),
+            entry.options.get(CONF_MODBUS_INT32_ORDER, DEFAULT_MODBUS_INT32_ORDER),
+            entry.entry_id,
+        )
+        await coordinator.a18_side_channel.async_load_state()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "coordinator": coordinator,

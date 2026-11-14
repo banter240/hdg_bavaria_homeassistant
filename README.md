@@ -65,6 +65,11 @@ It is designed to work reliably with the relatively weak built-in web server of 
   - Only nodes for *currently enabled* entities are polled.
   - Dynamic node selection via entity registry sync.
 
+- **A18 Heat Pump Modbus Side Channel (read-only)**
+  - Direct Modbus TCP view into the Lambda OEM controller of the HDG A18.
+  - Energy counters, COP, volume flow, compressor starts — values the WebControl does not expose.
+  - Independent polling groups (fast/medium/slow), off by default.
+
 - **Robust Control**
   - Writable Number and Select entities for setpoints and modes.
   - Optimistic updates + debounce + automatic rollback on failure.
@@ -109,6 +114,8 @@ It is designed to work reliably with the relatively weak built-in web server of 
 | Network Pumps 1–3 | `enable_netzpumpe_X` | Off  | District heating / net pumps |
 | External Heat Source | `enable_ext_wq` | Off | External heat source, including its temperature |
 | Pellet Storage  | `enable_lager`     | Off    | Detailed pellet storage monitoring (total consumption, since last fill, etc.) |
+| Heat Pump (WebControl view) | `enable_waermepumpe` | Off | Refrigerant cycle (evaporator, suction gas, hot gas), hydraulic module, heating element, operating statistics via the boiler's web interface |
+| A18 Modbus (Lambda view) | `enable_a18_modbus` | Off | Read-only Modbus TCP side channel for the A18 heat pump: temperatures, flow, power, energy counters, COP, compressor starts (see [Two Heat Pump Views](#two-heat-pump-views)) |
 
 Heating circuit 1 stays enabled when `enable_hk1` is missing. Every other component starts disabled. Turn a component on in the integration options.
 
@@ -204,7 +211,8 @@ You only need the **Host IP** (static IP recommended) of the boiler.
 
 The options are organized in collapsible sections:
 
-- **Components** — Toggle which optional hardware you have (HK2–6, WW2, Solar, Puffer 2, Netzpumpen, etc.).
+- **Components** — Toggle which optional hardware you have (HK2–6, WW2, Solar, Puffer 2, Netzpumpen, heat pump views, etc.).
+- **A18 Modbus** — Modbus TCP port, slave ID, and 32-bit word order for the A18 side channel (only relevant with `enable_a18_modbus` on).
 - **Puffer** — Enter node IDs for additional middle buffer temperature sensors.
 - **Polling** — Individual intervals for the 5 polling groups.
 - **Connection** — Timeouts and fallback ping.
@@ -232,6 +240,19 @@ Entities are created from a central definition file. Only nodes belonging to ena
 Optional components start with their entities disabled. Enable the component in the options and the matching entities are enabled through the registry. Startup runs that sync again.
 
 See the Component Support table above.
+
+### Two Heat Pump Views
+
+If you have an HDG A18 heat pump, there are two component groups describing the *same physical device* — deliberately, because they read two different controllers:
+
+| | `waermepumpe` (WebControl) | `a18_modbus` (Modbus TCP) |
+|---|---|---|
+| Source | Boiler's web interface (nodes 30xxx/31xxx) | Lambda controller directly (Modbus TCP, port 502) |
+| Unique data | Refrigerant cycle (evaporator, suction gas, hot gas, condenser, subcooling), fan, expansion valve, PWM, hydraulic switching valves | Energy counters (kWh), COP (device & total), volume flow, compressor capacity, source temperatures, persistent compressor starts |
+| Overlapping data | Outdoor temperature, heat pump status, heating-element status | Same physical values, read independently |
+| Direction | Read **and** write (setpoints, modes) | **Strictly read-only** — the write path is not wired, nothing can ever send values to the heat pump |
+
+A few values exist in both groups (e.g. outdoor temperature). That is intentional: the WebControl lifetime counters have proven implausible on some installs (megawatt-scale totals from a freshly commissioned plant), while the Modbus energy counters come straight from the Lambda controller. With both groups enabled you can cross-check them; enable only one and nothing breaks. Statistics from the WebControl (operating hours, cycles, reset/inception timestamps) keep working regardless — the A18 side channel adds data, it never replaces the web interface.
 
 ---
 
@@ -291,6 +312,9 @@ A: Yes — enter the node IDs in the integration options under the Puffer sectio
 
 **Q: Does it support my second hot water tank (WW2)?**
 A: Yes. Enable `enable_ww2` in the options.
+
+**Q: Why do some heat pump values exist twice (e.g. outdoor temperature)?**
+A: There are two heat pump views reading different controllers — see [Two Heat Pump Views](#two-heat-pump-views). The Modbus view adds energy counters, COP and flow; the WebControl view keeps the refrigerant cycle. Pick either or both.
 
 ---
 

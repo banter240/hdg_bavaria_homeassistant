@@ -19,44 +19,8 @@ warn_redundant_casts = true
 warn_return_any = true
 warn_unused_configs = true
 warn_unused_ignores = true
-exclude = ["testing_config/", "dev/"]
+exclude = ["testing_config/", "dev/", "tests/"]
 
-[tool.ruff]
-target-version = "py314"
-line-length = 88
-
-[tool.ruff.lint]
-select = ["B", "C", "E", "F", "W", "I", "UP", "PL", "RUF", "TID"]
-
-ignore = [
-    "E501",    # Line too long (handled by formatter)
-    "PLR0911", # Too many return statements (common in HA entity handlers and checkers)
-    "PLR0912", # Too many branches (branchy coordinator/checker functions)
-    "PLR0915", # Too many statements (complex setup/service functions)
-    "PLW0603", # Using the global statement (module-level flags for patches and log level)
-    "TID252",  # Relative imports are HA integration convention (..const, ..models etc.)
-]
-
-[tool.ruff.lint.per-file-ignores]
-"custom_components/hdg_boiler/**/*.py" = ["PLC0415"]  # Conditional/lazy imports by design in HA
-"custom_components/hdg_boiler/definitions.py" = ["PLR0913", "PLR0917"]  # Entity factory functions have many args by design
-
-[tool.ruff.lint.pylint]
-max-args = 10
-
-[tool.ruff.lint.mccabe]
-max-complexity = 25
-
-[tool.ruff.lint.isort]
-known-first-party = ["custom_components.hdg_boiler"]
-
-[tool.ruff.lint.flake8-pytest-style]
-fixture-parentheses = false
-
-[tool.ruff.lint.pyupgrade]
-keep-runtime-typing = true
-
-# --- Poetry Configuration ---
 # Project metadata lives in custom_components/hdg_boiler/manifest.json
 # (owned by semantic-release) and hacs.json. This is an unpackaged Home
 # Assistant custom component: dev tool pins are in requirements.txt.

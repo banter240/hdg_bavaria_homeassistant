@@ -48,6 +48,11 @@ ignore = [
 [lint.flake8-pytest-style]
 fixture-parentheses = false
 
+# Self-describing test method names; PLR2004 is not selected but kept for
+# symmetry with the pyproject fallback config.
+[lint.per-file-ignores]
+"tests/**/*.py" = ["D", "PLR2004", "PLC0415"]
+
 [lint.pyupgrade]
 # Helps with compatibility for older Python versions if needed.
 keep-runtime-typing = true

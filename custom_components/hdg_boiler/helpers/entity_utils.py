@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 
+from homeassistant.components.binary_sensor import BinarySensorEntityDescription
 from homeassistant.components.number import NumberEntityDescription, NumberMode
 from homeassistant.components.select import SelectEntityDescription
 from homeassistant.components.sensor import SensorEntityDescription
@@ -65,6 +66,8 @@ def create_entity_description(
     elif platform == "select":
         platform_specific_kwargs["options"] = entity_definition.get("options", [])
         description_class = SelectEntityDescription
+    elif platform == "binary_sensor":
+        description_class = BinarySensorEntityDescription
     else:
         raise ValueError(f"Unsupported platform for entity description: {platform}")
 

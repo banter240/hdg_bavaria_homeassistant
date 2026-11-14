@@ -29,6 +29,15 @@ __all__: Final[list[str]] = [
     "CONF_ERROR_THRESHOLD",
     "CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS",
     "CONF_FALLBACK_PING_INTERVAL",
+    "CONF_MODBUS_PORT",
+    "CONF_MODBUS_SLAVE_ID",
+    "CONF_MODBUS_INT32_ORDER",
+    "CONF_INT32_ORDERS",
+    "INT32_LOW_FIRST",
+    "INT32_HIGH_FIRST",
+    "A18_NODE_PREFIX",
+    "A18_MODBUS_GROUP_PREFIX",
+    "CONF_ENABLE_A18_MODBUS",
     "CONF_ENABLE_HK1",
     "CONF_ENABLE_HK2",
     "CONF_ENABLE_HK3",
@@ -174,6 +183,26 @@ CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS: Final[str] = (
 )
 CONF_FALLBACK_PING_INTERVAL: Final[str] = "fallback_ping_interval"
 
+CONF_MODBUS_PORT: Final[str] = "modbus_port"
+CONF_MODBUS_SLAVE_ID: Final[str] = "modbus_slave_id"
+CONF_MODBUS_INT32_ORDER: Final[str] = "modbus_int32_order"
+DEFAULT_MODBUS_PORT: Final[int] = 502
+MIN_MODBUS_PORT: Final[int] = 1
+MAX_MODBUS_PORT: Final[int] = 65535
+DEFAULT_MODBUS_SLAVE_ID: Final[int] = 1
+MIN_MODBUS_SLAVE_ID: Final[int] = 0
+MAX_MODBUS_SLAVE_ID: Final[int] = 255
+
+# Word order of 32-bit Modbus counters; verified low-first on the live A18.
+INT32_LOW_FIRST: Final[str] = "low_first"
+INT32_HIGH_FIRST: Final[str] = "high_first"
+DEFAULT_MODBUS_INT32_ORDER: Final[str] = INT32_LOW_FIRST
+CONF_INT32_ORDERS: Final[list[str]] = [INT32_LOW_FIRST, INT32_HIGH_FIRST]
+
+# Pseudo node prefix and polling-group prefix for the A18 Modbus side channel.
+A18_NODE_PREFIX: Final[str] = "a18:"
+A18_MODBUS_GROUP_PREFIX: Final[str] = "group_a18_"
+
 CONF_ENABLE_WW1: Final[str] = "enable_ww1"
 CONF_ENABLE_WW2: Final[str] = "enable_ww2"
 CONF_ENABLE_HK1: Final[str] = "enable_hk1"
@@ -191,6 +220,7 @@ CONF_ENABLE_NETZPUMPE_2: Final[str] = "enable_netzpumpe_2"
 CONF_ENABLE_NETZPUMPE_3: Final[str] = "enable_netzpumpe_3"
 CONF_ENABLE_WAERMEPUMPE: Final[str] = "enable_waermepumpe"
 CONF_ENABLE_FEUERUNG: Final[str] = "enable_feuerung"
+CONF_ENABLE_A18_MODBUS: Final[str] = "enable_a18_modbus"
 
 CONF_ANLAGENTYP: Final[str] = "anlagentyp"
 ANLAGE_KESSEL: Final[str] = "kessel"
@@ -220,6 +250,7 @@ DEFAULT_ENABLE_NETZPUMPE_2: Final[bool] = False
 DEFAULT_ENABLE_NETZPUMPE_3: Final[bool] = False
 DEFAULT_ENABLE_WAERMEPUMPE: Final[bool] = False
 DEFAULT_ENABLE_FEUERUNG: Final[bool] = True
+DEFAULT_ENABLE_A18_MODBUS: Final[bool] = False
 
 CONF_PUFFER_MITTE_OBEN_NODE_ID: Final[str] = "puffer_mitte_oben_node_id"
 CONF_PUFFER_MITTE_UNTEN_NODE_ID: Final[str] = "puffer_mitte_unten_node_id"
@@ -256,6 +287,7 @@ COMPONENT_GROUP_OPTIONS: Final[dict[str, tuple[str, bool]]] = {
     "netzpumpe_3": (CONF_ENABLE_NETZPUMPE_3, DEFAULT_ENABLE_NETZPUMPE_3),
     "waermepumpe": (CONF_ENABLE_WAERMEPUMPE, DEFAULT_ENABLE_WAERMEPUMPE),
     "feuerung": (CONF_ENABLE_FEUERUNG, DEFAULT_ENABLE_FEUERUNG),
+    "a18_modbus": (CONF_ENABLE_A18_MODBUS, DEFAULT_ENABLE_A18_MODBUS),
 }
 
 # Combustion-only entities: everything a pellet/log boiler reports that a
@@ -470,4 +502,11 @@ POLLING_GROUP_DEFINITIONS: Final[list[PollingGroupStaticDefinition]] = [
     {"key": "group_3", "default_interval": 86410},
     {"key": "group_4", "default_interval": 86420},
     {"key": "group_5", "default_interval": 86430},
+    # A18 Modbus side channel: the Lambda controller closes the TCP
+    # connection after 60 s idle and locks out ~20 min after a shutdown,
+    # so the fast group keeps the link warm and the status group still
+    # sees every restart.
+    {"key": f"{A18_MODBUS_GROUP_PREFIX}fast", "default_interval": 30},
+    {"key": f"{A18_MODBUS_GROUP_PREFIX}medium", "default_interval": 300},
+    {"key": f"{A18_MODBUS_GROUP_PREFIX}slow", "default_interval": 900},
 ]

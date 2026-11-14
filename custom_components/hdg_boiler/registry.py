@@ -37,6 +37,7 @@ class HdgEntityRegistry:
             "sensor": 0,
             "number": 0,
             "select": 0,
+            "binary_sensor": 0,
         }
         self._build_registry()
 
