@@ -23,6 +23,7 @@ from .const import (
     CONF_CONNECT_TIMEOUT,
     CONF_HOST_IP,
     CONF_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
+    CONF_MODBUS_HOST,
     CONF_MODBUS_INT32_ORDER,
     CONF_MODBUS_PORT,
     CONF_MODBUS_SLAVE_ID,
@@ -128,9 +129,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: HdgConfigEntry) -> bool:
         return False
 
     if entry.options.get(CONF_ENABLE_A18_MODBUS):
+        modbus_host = (
+            str(entry.options.get(CONF_MODBUS_HOST) or "").strip()
+            or entry.data[CONF_HOST_IP]
+        )
         coordinator.a18_side_channel = HdgA18SideChannel(
             hass,
-            entry.data[CONF_HOST_IP],
+            modbus_host,
             entry.options.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT),
             entry.options.get(CONF_MODBUS_SLAVE_ID, DEFAULT_MODBUS_SLAVE_ID),
             entry.options.get(CONF_MODBUS_INT32_ORDER, DEFAULT_MODBUS_INT32_ORDER),

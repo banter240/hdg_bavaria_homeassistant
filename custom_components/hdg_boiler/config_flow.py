@@ -36,6 +36,7 @@ from .const import (
     CONF_DEVICE_ALIAS,
     CONF_ERROR_THRESHOLD,
     CONF_INT32_ORDERS,
+    CONF_MODBUS_HOST,
     CONF_MODBUS_INT32_ORDER,
     CONF_MODBUS_PORT,
     CONF_MODBUS_SLAVE_ID,
@@ -63,6 +64,7 @@ from .const import (
     DEFAULT_LOG_VERSION_PREFIX,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     DEFAULT_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS,
+    DEFAULT_MODBUS_HOST,
     DEFAULT_MODBUS_INT32_ORDER,
     DEFAULT_MODBUS_PORT,
     DEFAULT_MODBUS_SLAVE_ID,
@@ -124,6 +126,7 @@ _SECTION_KEYS: dict[str, list[str]] = {
     ],
     "components": [conf for conf, _default in COMPONENT_GROUP_OPTIONS.values()],
     "a18_modbus": [
+        CONF_MODBUS_HOST,
         CONF_MODBUS_PORT,
         CONF_MODBUS_SLAVE_ID,
         CONF_MODBUS_INT32_ORDER,
@@ -388,6 +391,12 @@ class HdgBoilerCommonFlow:
 
         # Section: A18 Modbus side channel (optional, off by default).
         a18_fields: dict[Any, Any] = {
+            vol.Optional(
+                CONF_MODBUS_HOST,
+                description={
+                    "suggested_value": get(CONF_MODBUS_HOST, DEFAULT_MODBUS_HOST) or ""
+                },
+            ): TextSelector(),
             vol.Optional(
                 CONF_MODBUS_PORT, default=get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT)
             ): num(MIN_MODBUS_PORT, MAX_MODBUS_PORT),

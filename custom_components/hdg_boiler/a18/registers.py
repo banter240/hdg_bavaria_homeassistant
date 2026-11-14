@@ -25,8 +25,6 @@ INT32_INVALID = 0x80000000
 
 UNKNOWN = "Unbekannt"
 
-# Read ranges per poll group: (start, count). 1014 is undefined and never
-# read. All ranges are defined in the document.
 REGISTER_GROUPS: dict[str, tuple[tuple[int, int], ...]] = {
     # fast: temperatures, flow, compressor, power, COP, energy counters
     "fast": ((1004, 10), (1020, 4)),
@@ -99,8 +97,8 @@ class Reg:
 
     key: str
     address: int
-    kind: str  # I16 | U16 | I32
-    div: int = 1  # divisor: 1, 10, 100
+    kind: str
+    div: int = 1
     enum: str | None = None
 
 

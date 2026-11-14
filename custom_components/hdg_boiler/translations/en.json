@@ -63,11 +63,13 @@
           "a18_modbus": {
             "name": "A18 Heat Pump (Modbus Side Channel)",
             "data": {
+              "modbus_host": "Modbus Host (Lambda controller IP/hostname)",
               "modbus_port": "Modbus TCP Port",
               "modbus_slave_id": "Modbus Slave ID",
               "modbus_int32_order": "Int32 Byte Order"
             },
             "data_description": {
+              "modbus_host": "Address of the Lambda controller (a separate device on the network). Leave empty only if the controller shares the Web-Control's address.",
               "modbus_port": "TCP port of the Lambda controller's Modbus server. Default: 502.",
               "modbus_slave_id": "Modbus slave/unit ID of the heat pump controller. Default: 1.",
               "modbus_int32_order": "Word order for 32-bit registers. 'Low word first' matches the Lambda default; only change this if Modbus values look implausible."
@@ -220,11 +222,13 @@
           "a18_modbus": {
             "name": "A18 Heat Pump (Modbus Side Channel)",
             "data": {
+              "modbus_host": "Modbus Host (Lambda controller IP/hostname)",
               "modbus_port": "Modbus TCP Port",
               "modbus_slave_id": "Modbus Slave ID",
               "modbus_int32_order": "Int32 Byte Order"
             },
             "data_description": {
+              "modbus_host": "Address of the Lambda controller (a separate device on the network). Leave empty only if the controller shares the Web-Control's address.",
               "modbus_port": "TCP port of the Lambda controller's Modbus server. Default: 502.",
               "modbus_slave_id": "Modbus slave/unit ID of the heat pump controller. Default: 1.",
               "modbus_int32_order": "Word order for 32-bit registers. 'Low word first' matches the Lambda default; only change this if Modbus values look implausible."

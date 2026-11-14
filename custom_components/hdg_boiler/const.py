@@ -29,6 +29,7 @@ __all__: Final[list[str]] = [
     "CONF_ERROR_THRESHOLD",
     "CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS",
     "CONF_FALLBACK_PING_INTERVAL",
+    "CONF_MODBUS_HOST",
     "CONF_MODBUS_PORT",
     "CONF_MODBUS_SLAVE_ID",
     "CONF_MODBUS_INT32_ORDER",
@@ -183,9 +184,11 @@ CONF_LOG_LEVEL_THRESHOLD_FOR_PREEMPTION_ERRORS: Final[str] = (
 )
 CONF_FALLBACK_PING_INTERVAL: Final[str] = "fallback_ping_interval"
 
+CONF_MODBUS_HOST: Final[str] = "modbus_host"
 CONF_MODBUS_PORT: Final[str] = "modbus_port"
 CONF_MODBUS_SLAVE_ID: Final[str] = "modbus_slave_id"
 CONF_MODBUS_INT32_ORDER: Final[str] = "modbus_int32_order"
+DEFAULT_MODBUS_HOST: Final[str] = ""
 DEFAULT_MODBUS_PORT: Final[int] = 502
 MIN_MODBUS_PORT: Final[int] = 1
 MAX_MODBUS_PORT: Final[int] = 65535
@@ -487,7 +490,10 @@ PROCESSOR_LOGGER_NAME: Final[str] = f"{DOMAIN}.processor"
 USER_ACTION_LOGGER_NAME: Final[str] = f"{DOMAIN}.user_action"
 
 
-DIAGNOSTICS_TO_REDACT_CONFIG_KEYS: Final[set[str]] = {CONF_HOST_IP}
+DIAGNOSTICS_TO_REDACT_CONFIG_KEYS: Final[set[str]] = {
+    CONF_HOST_IP,
+    CONF_MODBUS_HOST,
+}
 # 20026 Anlagenbezeichnung (serial / plant name), 20031 MAC address.
 DIAGNOSTICS_SENSITIVE_COORDINATOR_DATA_NODE_IDS: Final[set[str]] = {
     "20026",

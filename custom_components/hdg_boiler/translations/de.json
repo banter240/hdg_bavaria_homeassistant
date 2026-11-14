@@ -63,11 +63,13 @@
           "a18_modbus": {
             "name": "A18-Wärmepumpe (Modbus-Nebenkanal)",
             "data": {
+              "modbus_host": "Modbus-Host (IP/Hostname der Lambda-Steuerung)",
               "modbus_port": "Modbus-TCP-Port",
               "modbus_slave_id": "Modbus-Slave-ID",
               "modbus_int32_order": "Int32-Wortreihenfolge"
             },
             "data_description": {
+              "modbus_host": "Adresse der Lambda-Steuerung (eigenes Gerät im Netzwerk). Leer lassen, wenn die Steuerung dieselbe Adresse wie das Web-Control nutzt.",
               "modbus_port": "TCP-Port des Modbus-Servers der Lambda-Steuerung. Standard: 502.",
               "modbus_slave_id": "Modbus-Slave-/Unit-ID der Wärmepumpen-Steuerung. Standard: 1.",
               "modbus_int32_order": "Wortreihenfolge für 32-Bit-Register. ‚Niederwertiges Wort zuerst' entspricht dem Lambda-Standard; nur ändern, wenn Modbus-Werte unplausibel erscheinen."
@@ -220,11 +222,13 @@
           "a18_modbus": {
             "name": "A18-Wärmepumpe (Modbus-Nebenkanal)",
             "data": {
+              "modbus_host": "Modbus-Host (IP/Hostname der Lambda-Steuerung)",
               "modbus_port": "Modbus-TCP-Port",
               "modbus_slave_id": "Modbus-Slave-ID",
               "modbus_int32_order": "Int32-Wortreihenfolge"
             },
             "data_description": {
+              "modbus_host": "Adresse der Lambda-Steuerung (eigenes Gerät im Netzwerk). Leer lassen, wenn die Steuerung dieselbe Adresse wie das Web-Control nutzt.",
               "modbus_port": "TCP-Port des Modbus-Servers der Lambda-Steuerung. Standard: 502.",
               "modbus_slave_id": "Modbus-Slave-/Unit-ID der Wärmepumpen-Steuerung. Standard: 1.",
               "modbus_int32_order": "Wortreihenfolge für 32-Bit-Register. ‚Niederwertiges Wort zuerst' entspricht dem Lambda-Standard; nur ändern, wenn Modbus-Werte unplausibel erscheinen."
