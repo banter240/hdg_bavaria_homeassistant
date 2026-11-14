@@ -1,3 +1,17 @@
+## [2.2.0-alpha.4](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.3...v2.2.0-alpha.4) (2026-11-14)
+
+### 🐛 Bug Fixes
+
+* fix(hdg_boiler): add a configurable Modbus host for the A18 side channel
+
+  The side channel dialed the WebControl host for Modbus TCP, but the
+  Lambda controller is a separate device with its own address on typical
+  installations. Add an optional modbus_host setting to the a18_modbus
+  section; an empty value keeps the previous WebControl-host fallback
+  for setups where both share one address. The host is redacted from
+  diagnostics like the WebControl host. Also drop two register-map
+  comments that restated the module docstring.
+
 ## [2.2.0-alpha.3](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.2...v2.2.0-alpha.3) (2026-11-14)
 
 ### ✨ New Features
