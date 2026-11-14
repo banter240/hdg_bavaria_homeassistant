@@ -1,3 +1,19 @@
+## [2.2.0-alpha.2](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.1...v2.2.0-alpha.2) (2026-11-14)
+
+### 🐛 Bug Fixes
+
+* fix(hdg_boiler): complete the future of skipped superseded requests
+
+  When a newer SET superseded a queued request, the worker skipped it
+  without resolving its future, leaving the setter coroutine blocked
+  forever. Cancel the future instead, like the shutdown drain does.
+* fix(hdg_boiler): parse the WebControl datetime with comma separator
+
+  The WebControl renders statistic timestamps as 'DD.MM.YYYY, HH:MM'
+  (comma between date and time, no seconds), which the parser rejected,
+  leaving wp_stat_start_reset (31035) and wp_stat_start_inbetriebnahme
+  (31036) unavailable. Add the format to _DATETIME_FORMATS.
+
 ## [2.2.0-alpha.1](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.1.1...v2.2.0-alpha.1) (2026-11-13)
 
 ### ✨ New Features
