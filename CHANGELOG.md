@@ -1,3 +1,30 @@
+## [2.2.0-alpha.3](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.2...v2.2.0-alpha.3) (2026-11-14)
+
+### ✨ New Features
+
+* feat(hdg_boiler): add the A18 Modbus side channel for the Lambda OEM heat pump
+
+  Integrate the HDG A18 (Lambda OEM) as a read-only Modbus TCP side channel
+  alongside the WebControl API, behind the optional 'a18_modbus' component
+  group (off by default).
+
+  - stdlib-only backend (hdg_boiler.a18): register map verified against a
+    live dump, Modbus TCP client with on-demand reconnect, poll-group
+    scheduling, compressor start counter; 24 unit tests
+  - side channel: group_a18_fast/medium/slow polls bypass the HTTP path,
+    register retention keeps slow values alive between their own polls,
+    block reads fall back to per-register reads on exception replies
+  - entities: 32 sensors/binary sensors via the existing definition
+    factories, fed from pseudo nodes (a18:<key>)
+  - config flow: collapsed a18_modbus section (port, slave ID, int32 word
+    order) plus enable toggle; polling intervals ride the generic options
+  - translations: en/de entity names, section labels, selector options
+  - README: two heat pump views explained (WebControl refrigerant cycle vs
+    Lambda energy counters/COP), component toggles, FAQ entry
+
+  The write path stays unwired: nothing can send values to the heat pump.
+  The Lambda register map is confidential derived data — do not publish.
+
 ## [2.2.0-alpha.2](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.1...v2.2.0-alpha.2) (2026-11-14)
 
 ### 🐛 Bug Fixes
