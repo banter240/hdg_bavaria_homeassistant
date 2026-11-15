@@ -1884,6 +1884,9 @@
           "3x400v": "3x400V"
         }
       },
+      "systemwarnungen": {
+        "name": "Systemwarnungen"
+      },
       "ww1_anforderung_abnehmer": {
         "name": "WW1 Anforderung Abnehmer"
       },

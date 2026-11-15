@@ -2012,6 +2012,12 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         polling_group=POLLING_GROUP_5_KEY,
         icon="mdi:network-outline",
     ),
+    "systemwarnungen": create_diagnostic_text_sensor(
+        key="systemwarnungen",
+        node_id="20029T",
+        polling_group=POLLING_GROUP_5_KEY,
+        icon="mdi:message-alert-outline",
+    ),
     "anlage_betriebsart": create_enum_sensor(
         key="anlage_betriebsart",
         node_id="20032T",
