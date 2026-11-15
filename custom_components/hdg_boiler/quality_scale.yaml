@@ -1,0 +1,47 @@
+# Home Assistant quality scale readiness tracker.
+#
+# Audited 2026-11-15 against the scale definition
+# (https://www.home-assistant.io/docs/quality_scale/) and the actual
+# codebase: every entry cites its evidence. Tiers stack (a tier requires
+# all rules of the tiers below), so per-item notes matter more than tier
+# status. Custom integrations never carry an official badge (Core-only);
+# this file keeps the gaps visible.
+
+scale:
+  bronze:
+    status: met
+    notes:
+      ui_setup: done  # config_flow: user + anlagentyp presets + options flow
+      basic_docs: done  # README: install, config, entities, troubleshooting, FAQ
+      coding_standards: done  # ruff ruleset aligned with HA core + full pre-commit gate
+      automated_setup_tests: done  # 5 harness tests: entry, presets, duplicate abort, cannot_connect, options
+
+  silver:
+    status: met  # reauth is na: the WebControl exposes no authentication
+    notes:
+      reliability_patterns: done  # coordinator, group backoff, retry queue, start-counter store
+      reauth: na  # the WebControl exposes no authentication
+      codeowners: done  # @banter240, active, alphas field-tested on live plants
+      user_facing_docs: done  # README Entities & Controls, services, known constraints
+      # restart-availability issue from alpha.5 fixed in d4732d3 (side channel
+      # attaches before the first refresh)
+
+  gold:
+    status: met  # discovery and firmware_update are na by design (plain-HTTP device)
+    notes:
+      reconfigure_ui: done  # options flow: host, intervals, toggles, a18 modbus
+      translations: done  # en + de, key parity enforced in CI
+      diagnostics: done  # redacted host/serial/MAC before export
+      entity_registry_quality: done  # unique_id per entry+node, device/state classes set
+      discovery: na  # WebControl is plain HTTP, no SSDP/mDNS/zeroconf surface
+      firmware_update: na  # controller offers none
+      full_test_coverage: done  # 75 tests / 7 suites: a18, formats, flows, entities, processor, coordinator, optimistic
+      usage_examples: done  # README example automations, built from shipped entities
+
+  platinum:
+    status: met  # every item done; the official badge stays Core-only
+    notes:
+      strict_typing: done  # mypy disallow_untyped_defs/calls/decorators, green on HA 2026.11.1
+      async_codebase: done  # injected aiohttp session; a18 client asyncio-native
+      efficient_data_handling: done  # active-node payload pruning, concurrency semaphore
+      zero_static_ignores: done  # no noqa/type: ignore left in the component
