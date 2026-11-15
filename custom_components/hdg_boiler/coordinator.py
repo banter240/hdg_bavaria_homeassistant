@@ -570,6 +570,7 @@ async def async_create_and_refresh_coordinator(
     entry: ConfigEntry,
     log_level_threshold_for_connection_errors: int,
     hdg_entity_registry: HdgEntityRegistry,
+    a18_side_channel: HdgA18SideChannel | None = None,
 ) -> HdgDataUpdateCoordinator:
     """Create, initialize, and perform the first data refresh for the coordinator."""
     coordinator = HdgDataUpdateCoordinator(
@@ -580,5 +581,6 @@ async def async_create_and_refresh_coordinator(
         log_level_threshold_for_connection_errors,
         hdg_entity_registry,
     )
+    coordinator.a18_side_channel = a18_side_channel
     await coordinator.async_config_entry_first_refresh()
     return coordinator

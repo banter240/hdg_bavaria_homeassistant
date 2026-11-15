@@ -115,25 +115,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: HdgConfigEntry) -> bool:
         DEFAULT_LOG_LEVEL_THRESHOLD_FOR_CONNECTION_ERRORS,
     )
 
-    try:
-        coordinator = await async_create_and_refresh_coordinator(
-            hass,
-            api_client,
-            api_access_manager,
-            entry,
-            log_level_threshold,
-            hdg_entity_registry,
-        )
-    except ConfigEntryNotReady:
-        await api_access_manager.stop()
-        return False
-
+    a18_side_channel: HdgA18SideChannel | None = None
     if entry.options.get(CONF_ENABLE_A18_MODBUS):
         modbus_host = (
             str(entry.options.get(CONF_MODBUS_HOST) or "").strip()
             or entry.data[CONF_HOST_IP]
         )
-        coordinator.a18_side_channel = HdgA18SideChannel(
+        a18_side_channel = HdgA18SideChannel(
             hass,
             modbus_host,
             # The number selector hands floats (502.0, 1.0) to the options;
@@ -143,7 +131,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: HdgConfigEntry) -> bool:
             entry.options.get(CONF_MODBUS_INT32_ORDER, DEFAULT_MODBUS_INT32_ORDER),
             entry.entry_id,
         )
-        await coordinator.a18_side_channel.async_load_state()
+        await a18_side_channel.async_load_state()
+
+    try:
+        coordinator = await async_create_and_refresh_coordinator(
+            hass,
+            api_client,
+            api_access_manager,
+            entry,
+            log_level_threshold,
+            hdg_entity_registry,
+            a18_side_channel=a18_side_channel,
+        )
+    except ConfigEntryNotReady:
+        await api_access_manager.stop()
+        return False
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "coordinator": coordinator,
