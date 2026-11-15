@@ -24,3 +24,6 @@ exclude = ["testing_config/", "dev/", "tests/"]
 # Project metadata lives in custom_components/hdg_boiler/manifest.json
 # (owned by semantic-release) and hacs.json. This is an unpackaged Home
 # Assistant custom component: dev tool pins are in requirements.txt.
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
