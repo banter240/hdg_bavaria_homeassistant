@@ -26,7 +26,7 @@ from homeassistant.const import (
     UnitOfVolume,
     UnitOfVolumeFlowRate,
 )
-from homeassistant.helpers.entity import EntityCategory
+from homeassistant.const import EntityCategory
 
 from .const import (
     A18_MODBUS_GROUP_PREFIX,
@@ -1423,6 +1423,9 @@ def get_a18_modbus_definitions() -> dict[str, SensorDefinition]:
         hdg_data_type="2",
         parse_as_type="int",
         icon="mdi:counter",
+        # Utility meters inherit the source unit; shipping none now means a
+        # repair prompt for every user the day a unit gets added later.
+        ha_native_unit_of_measurement="Starts",
         ha_state_class=SensorStateClass.TOTAL_INCREASING,
     )
 

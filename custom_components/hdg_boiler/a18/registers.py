@@ -26,10 +26,12 @@ INT32_INVALID = 0x80000000
 UNKNOWN = "Unbekannt"
 
 REGISTER_GROUPS: dict[str, tuple[tuple[int, int], ...]] = {
-    # fast: temperatures, flow, compressor, power, COP, energy counters
-    "fast": ((1004, 10), (1020, 4)),
+    # fast: temperatures, flow, compressor, power, COP, energy counters;
+    # wp_status rides along so the start counter catches stops shorter
+    # than the medium interval
+    "fast": ((1002, 1), (1004, 10), (1020, 4)),
     # medium: status, operating state, faults, request, heating element
-    "medium": ((1000, 4), (1015, 5)),
+    "medium": ((1000, 2), (1003, 1), (1015, 5)),
     # slow: controller general (outside temperature, mode)
     "slow": ((0, 5),),
 }
