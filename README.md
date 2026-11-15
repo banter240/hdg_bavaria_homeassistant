@@ -272,6 +272,74 @@ Read the current raw value from the integration's cache (debugging).
 
 <br>
 
+## Example Automations
+
+Entity IDs derive from the friendly names below (your device name becomes the prefix — adjust accordingly, or copy the entity from the UI's entity picker).
+
+**Notify on a heat pump fault** (requires the `a18_modbus` component):
+
+```yaml
+alias: Heat pump fault
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.a18_storung
+    to: "on"
+actions:
+  - action: notify.persistent_notification
+    data:
+      title: "Heat pump fault"
+      message: "The Lambda controller reports a fault — check the system warnings."
+```
+
+**Track daily compressor starts** with the `utility_meter` helper:
+
+```yaml
+utility_meter:
+  daily_compressor_starts:
+    source: sensor.a18_kompressorstarts
+    name: Daily compressor starts
+    cycle: daily
+```
+
+**Plausibility check for the lifetime counters** — the WebControl totals have proven implausible on some plants (megawatt-scale on a fresh install); cross-check against the Modbus counters:
+
+```yaml
+alias: Compare energy counters
+triggers:
+  - trigger: time
+    at: "06:00:00"
+actions:
+  - if:
+      - condition: template
+        value_template: >
+          {{ (states('sensor.a18_energie_el_kwh') | float(0)) > 0 and
+             (states('sensor.wp_stat_energieaufnahme_inbetriebnahme') | float(0))
+             > states('sensor.a18_energie_el_kwh') | float(0) * 3 }}
+    then:
+      - action: notify.persistent_notification
+        data:
+          message: "WebControl lifetime counter deviates strongly from the Modbus counter."
+```
+
+**Solar pump watch** — a collector above 110 °C at full sunshine suggests stagnation:
+
+```yaml
+alias: Solar collector hot
+triggers:
+  - trigger: numeric_state
+    entity_id: sensor.solar_kollektortemperatur
+    above: 110
+    for: "00:15:00"
+actions:
+  - action: notify.persistent_notification
+    data:
+      message: "Collector over 110 °C for 15 minutes."
+```
+
+---
+
+<br>
+
 ## Known Constraints
 
 - The boiler's built-in web server is relatively weak — the integration is heavily optimized to avoid overloading it.
