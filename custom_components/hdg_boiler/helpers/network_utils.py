@@ -12,8 +12,6 @@ import platform
 import re
 from urllib.parse import urlparse, urlunparse
 
-import async_timeout
-
 from .logging_utils import _LOGGER
 
 __all__ = ["prepare_base_url", "async_execute_icmp_ping"]
@@ -88,7 +86,7 @@ async def async_execute_icmp_ping(host: str, timeout: int = 2) -> bool:
     )
 
     try:
-        async with async_timeout.timeout(timeout):
+        async with asyncio.timeout(timeout):
             process = await asyncio.create_subprocess_exec(
                 *ping_cmd,
                 stdout=asyncio.subprocess.DEVNULL,

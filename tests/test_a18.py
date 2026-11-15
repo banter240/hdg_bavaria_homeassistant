@@ -18,10 +18,10 @@ sys.path.insert(
     os.path.join(os.path.dirname(__file__), "..", "custom_components", "hdg_boiler"),
 )
 
-import a18.modbus_client as mc  # noqa: E402
-import a18.polling as polling  # noqa: E402
-import a18.registers as rg  # noqa: E402
-from a18.start_counter import StartCounter  # noqa: E402
+import a18.modbus_client as mc
+import a18.polling as polling
+import a18.registers as rg
+from a18.start_counter import StartCounter
 
 # Register dump of the plant, 2026-11-13 (last readout of the
 # lambda_heat_pumps integration).

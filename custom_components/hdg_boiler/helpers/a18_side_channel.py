@@ -101,7 +101,7 @@ class HdgA18SideChannel:
         try:
             for start, count in blocks:
                 await self._read_block(start, count)
-        except Exception as err:  # noqa: BLE001 - transport errors vary widely
+        except Exception as err:  # transport errors vary widely
             _LOGGER.warning("A18 Modbus fetch for '%s' failed: %s", group_key, err)
             return False
 
