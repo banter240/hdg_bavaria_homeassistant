@@ -1,3 +1,14 @@
+## [2.2.0-alpha.5](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.4...v2.2.0-alpha.5) (2026-11-15)
+
+### 🐛 Bug Fixes
+
+* fix(hdg_boiler): coerce Modbus port and unit id from float options
+
+  The options flow's number selectors hand floats (502.0, 1.0) to the
+  stored options, and the client packs the unit id into a single byte,
+  so setup failed for entries configured through the dialog. Verified
+  live by a tester on an A18 plant. Cast both values at the boundary.
+
 ## [2.2.0-alpha.4](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.3...v2.2.0-alpha.4) (2026-11-14)
 
 ### 🐛 Bug Fixes
