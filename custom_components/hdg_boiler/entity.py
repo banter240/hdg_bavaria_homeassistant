@@ -325,14 +325,15 @@ class HdgNodeEntity(HdgBaseEntity):
         if (set_fn := self._entity_definition.get("set_fn")) is not None:
             await set_fn(self.coordinator, value)
             return
+        entity_name_for_log = cast(str, self.name) or str(self.entity_id)
         validate_setter_partner_constraint(
             value,
             self._entity_definition,
             self.coordinator.data,
-            self.name or str(self.entity_id),
+            entity_name_for_log,
         )
         await self.coordinator.async_set_node_value(
             node_id=self._node_id,
             value=value,
-            entity_name_for_log=self.name or str(self.entity_id),
+            entity_name_for_log=entity_name_for_log,
         )

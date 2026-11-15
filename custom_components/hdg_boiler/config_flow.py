@@ -225,10 +225,13 @@ class HdgBoilerCommonFlow:
             return await self._async_finish_flow(processed)
 
         show_form = cast(Any, self).async_show_form
-        return show_form(
-            step_id="init",
-            data_schema=self._build_options_schema(),
-            description_placeholders=self._build_description_placeholders(),
+        return cast(
+            config_entries.ConfigFlowResult,
+            show_form(
+                step_id="init",
+                data_schema=self._build_options_schema(),
+                description_placeholders=self._build_description_placeholders(),
+            ),
         )
 
     async def _async_finish_flow(
@@ -262,7 +265,7 @@ class HdgBoilerCommonFlow:
             }
             if unit:
                 cfg["unit_of_measurement"] = unit
-            return NumberSelector(NumberSelectorConfig(**cfg))
+            return NumberSelector(NumberSelectorConfig(**cast(Any, cfg)))
 
         # Section: Polling intervals
         polling_fields: dict[Any, Any] = {}
@@ -414,33 +417,36 @@ class HdgBoilerCommonFlow:
             ),
         }
 
+        def section(schema: vol.Schema, options: Any) -> Any:
+            return data_entry_flow.section(cast(Any, schema), options)
+
         return vol.Schema(
             {
-                vol.Required("components"): data_entry_flow.section(
+                vol.Required("components"): section(
                     vol.Schema(components_fields),
                     {"collapsed": False},
                 ),
-                vol.Required("a18_modbus"): data_entry_flow.section(
+                vol.Required("a18_modbus"): section(
                     vol.Schema(a18_fields),
                     {"collapsed": True},
                 ),
-                vol.Required("puffer"): data_entry_flow.section(
+                vol.Required("puffer"): section(
                     vol.Schema(puffer_fields),
                     {"collapsed": True},
                 ),
-                vol.Required("polling"): data_entry_flow.section(
+                vol.Required("polling"): section(
                     vol.Schema(polling_fields),
                     {"collapsed": True},
                 ),
-                vol.Required("connection"): data_entry_flow.section(
+                vol.Required("connection"): section(
                     vol.Schema(connection_fields),
                     {"collapsed": True},
                 ),
-                vol.Required("logging"): data_entry_flow.section(
+                vol.Required("logging"): section(
                     vol.Schema(logging_fields),
                     {"collapsed": True},
                 ),
-                vol.Required("advanced"): data_entry_flow.section(
+                vol.Required("advanced"): section(
                     vol.Schema(advanced_fields),
                     {"collapsed": True},
                 ),
@@ -547,7 +553,7 @@ class HdgBoilerConfigFlow(HdgBoilerCommonFlow, config_entries.ConfigFlow):
             }
         )
         return self.async_show_form(
-            step_id="user", data_schema=data_schema, errors=errors
+            step_id="user", data_schema=cast(Any, data_schema), errors=errors
         )
 
     async def async_step_anlagentyp(
@@ -569,7 +575,9 @@ class HdgBoilerConfigFlow(HdgBoilerCommonFlow, config_entries.ConfigFlow):
                 )
             }
         )
-        return self.async_show_form(step_id="anlagentyp", data_schema=data_schema)
+        return self.async_show_form(
+            step_id="anlagentyp", data_schema=cast(Any, data_schema)
+        )
 
     def _get_current_options(self) -> dict[str, Any]:
         """Seed the component form with the chosen plant-type preset."""

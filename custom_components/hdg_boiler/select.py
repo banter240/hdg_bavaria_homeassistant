@@ -10,6 +10,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from typing import cast
+
 from .coordinator import HdgDataUpdateCoordinator
 from .entity import HdgNodeEntity
 from .helpers.entity_utils import async_setup_hdg_platform
@@ -42,7 +44,7 @@ class HdgBoilerSelect(HdgNodeEntity, SelectEntity):
     ) -> None:
         """Initialize the HDG Boiler select entity."""
         super().__init__(coordinator, description, entity_definition)
-        self._attr_options = entity_definition.get("options", [])
+        self._attr_options = cast(list[str], entity_definition.get("options", []))
 
     @property
     def current_option(self) -> str | None:
