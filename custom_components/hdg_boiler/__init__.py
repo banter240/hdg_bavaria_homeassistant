@@ -136,8 +136,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: HdgConfigEntry) -> bool:
         coordinator.a18_side_channel = HdgA18SideChannel(
             hass,
             modbus_host,
-            entry.options.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT),
-            entry.options.get(CONF_MODBUS_SLAVE_ID, DEFAULT_MODBUS_SLAVE_ID),
+            # The number selector hands floats (502.0, 1.0) to the options;
+            # the client packs the unit id into a byte, so ints are required.
+            int(entry.options.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT)),
+            int(entry.options.get(CONF_MODBUS_SLAVE_ID, DEFAULT_MODBUS_SLAVE_ID)),
             entry.options.get(CONF_MODBUS_INT32_ORDER, DEFAULT_MODBUS_INT32_ORDER),
             entry.entry_id,
         )
