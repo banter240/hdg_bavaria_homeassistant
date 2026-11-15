@@ -1,3 +1,62 @@
+## [2.2.0-alpha.6](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.5...v2.2.0-alpha.6) (2026-11-15)
+
+### ✨ New Features
+
+* feat(hdg_boiler): expose system warnings (node 20029) as a sensor
+
+  The node exists in the WebControl CSV and delivers a numeric text
+  value (verified live), but had no entity, forcing users onto custom
+  REST polling for the one value the integration still missed. Ships as
+  a diagnostic text sensor in group 5 with de/en translations.
+
+  Also drop the helpers.entity EntityCategory import: the re-export is
+  gone in HA 2026.11, homeassistant.const is the canonical home.
+
+### 🐛 Bug Fixes
+
+* fix(hdg_boiler): attach the a18 side channel before the first refresh
+
+  The first refresh ran before the side channel existed, so all A18
+  poll groups returned empty-but-successful and their entities stayed
+  unavailable until each group's first scheduled poll (medium after 300s,
+  slow after 900s). Field-tested restart behavior reported on alpha.5:
+  fast group immediately present, medium only after five minutes, slow
+  still empty. Create and load the channel first, then hand it to the
+  coordinator factory so the initial refresh covers every group.
+* fix(hdg_boiler): count short compressor stops, unit the start sensor
+
+  Move wp_status (1002) from the medium register blocks into the fast
+  block, so the start counter samples every 30s instead of every 5min
+  and cannot miss a stop shorter than the medium interval. The medium
+  blocks reshuffle around it; register 1014 stays excluded and full
+  coverage is asserted by test_groups_cover_all_registers.
+
+  Give the compressor-starts sensor the unit 'Starts': utility meters
+  inherit the source unit, and adding one later would trigger the
+  'unit of measurement has changed' repair for every user who already
+  built helpers on the unitless source.
+
+### 📚 Documentation
+
+* docs: add an audited quality scale readiness tracker
+
+  Tracks each tier expectation as a checklist inside the integration,
+  every entry citing codebase evidence. Honest assessment after the
+  session's work: bronze met (setup flows automated), silver met
+  (restart-availability fixed by attaching the side channel before the
+  first refresh), gold partial (57 tests over five suites, coordinator
+  internals open), platinum items met but stacked on the gold gaps.
+  Custom integrations never carry an official badge (Core-only); this
+  file keeps the gaps visible.
+* docs(readme): add example automations
+
+  Four ready-to-copy recipes built only from entities the integration
+  actually ships (verified against the definitions and translations):
+  an a18 fault notification, a daily utility meter on the compressor
+  starts, a plausibility check cross-referencing the WebControl
+  lifetime counters against the Modbus energy counters, and a solar
+  collector stagnation watch.
+
 ## [2.2.0-alpha.5](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.4...v2.2.0-alpha.5) (2026-11-15)
 
 ### 🐛 Bug Fixes
