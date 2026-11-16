@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity_registry import RegistryEntryDisabler
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .api import HdgApiClient
 from .const import (
@@ -143,6 +144,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HdgConfigEntry) -> bool:
             hdg_entity_registry,
             a18_side_channel=a18_side_channel,
         )
+    except UpdateFailed as err:
+        await api_access_manager.stop()
+        raise ConfigEntryNotReady(str(err)) from err
     except ConfigEntryNotReady:
         await api_access_manager.stop()
         return False

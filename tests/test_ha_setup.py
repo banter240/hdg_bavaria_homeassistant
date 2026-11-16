@@ -11,6 +11,9 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import patch
 
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.helpers.update_coordinator import UpdateFailed
+
 from custom_components.hdg_boiler.const import (
     ANLAGE_KESSEL,
     ANLAGE_WP,
@@ -142,6 +145,37 @@ async def test_unreachable_host_shows_error(hass: Any) -> None:
     assert result["type"] == "form"
     assert result["step_id"] == "user"
     assert result["errors"] == {"base": "cannot_connect"}
+
+
+async def test_unreachable_webcontrol_setups_into_retry(hass: Any) -> None:
+    """A failed first refresh must land in SETUP_RETRY (auto-retry), not SETUP_ERROR."""
+    with (
+        patch(
+            "custom_components.hdg_boiler.config_flow._validate_host_connectivity",
+            return_value=True,
+        ),
+        patch(
+            "custom_components.hdg_boiler.async_create_and_refresh_coordinator",
+            side_effect=UpdateFailed("Initial data refresh failed."),
+        ),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": "user"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_HOST_IP: HOST}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_ANLAGENTYP: ANLAGE_KESSEL}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], _sections()
+        )
+
+    assert result["type"] == "create_entry"
+    await hass.async_block_till_done()
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_options_flow_updates_entry(hass: Any) -> None:
