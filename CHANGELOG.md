@@ -1,3 +1,16 @@
+## [2.2.0-alpha.7](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.6...v2.2.0-alpha.7) (2026-11-16)
+
+### 🐛 Bug Fixes
+
+* fix(hdg_boiler): retry setup when the WebControl is unreachable
+
+  The first refresh raises UpdateFailed, but async_setup_entry only
+  caught ConfigEntryNotReady — the UpdateFailed escaped, parked the
+  entry in SETUP_ERROR (no auto-retry, manual reload needed). Observed
+  live on an install with the boiler offline. Convert UpdateFailed to
+  ConfigEntryNotReady so HA's own backoff keeps retrying, and pin the
+  behavior with a harness regression test asserting SETUP_RETRY.
+
 ## [2.2.0-alpha.6](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.5...v2.2.0-alpha.6) (2026-11-15)
 
 ### ✨ New Features
