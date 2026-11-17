@@ -2306,6 +2306,12 @@ SENSOR_DEFINITIONS: Final[dict[str, SensorDefinition]] = {
         polling_group=POLLING_GROUP_1_KEY,
         icon="mdi:target-variant",
     ),
+    "kessel_puffer_ladegrad": create_percentage_sensor(
+        key="kessel_puffer_ladegrad",
+        node_id="22051T",
+        polling_group=POLLING_GROUP_1_KEY,
+        icon="mdi:battery-charging-70",
+    ),
     "kessel_nachlegemenge": create_percentage_sensor(
         key="kessel_nachlegemenge",
         node_id="22052T",

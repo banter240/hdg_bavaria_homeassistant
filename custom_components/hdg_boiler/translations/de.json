@@ -1248,6 +1248,9 @@
       "kessel_o2_sollwert": {
         "name": "Kessel O2 Sollwert"
       },
+      "kessel_puffer_ladegrad": {
+        "name": "Kessel Puffer-Ladegrad"
+      },
       "kessel_restlaufzeit_wartung": {
         "name": "Kessel Restlaufzeit Wartung"
       },

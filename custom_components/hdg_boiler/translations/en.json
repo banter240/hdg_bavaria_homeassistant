@@ -1248,6 +1248,9 @@
       "kessel_o2_sollwert": {
         "name": "Boiler O2 Target Value"
       },
+      "kessel_puffer_ladegrad": {
+        "name": "Boiler Buffer Charge Level"
+      },
       "kessel_restlaufzeit_wartung": {
         "name": "Boiler Remaining Maintenance Time"
       },
