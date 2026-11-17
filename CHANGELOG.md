@@ -1,3 +1,13 @@
+## [2.2.0-alpha.8](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.7...v2.2.0-alpha.8) (2026-11-17)
+
+### ✨ New Features
+
+* feat(hdg_boiler): expose the web UI buffer charge level (node 22051)
+
+  The web interface displays "Puffer-Ladegrad" from node 22051
+
+  Fixes #71
+
 ## [2.2.0-alpha.7](https://github.com/banter240/hdg_bavaria_homeassistant/compare/v2.2.0-alpha.6...v2.2.0-alpha.7) (2026-11-16)
 
 ### 🐛 Bug Fixes
